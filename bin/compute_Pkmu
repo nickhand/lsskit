@@ -1,0 +1,345 @@
+#!/usr/bin/env python
+"""
+ compute_Pkmu
+ 
+ author: Nick Hand
+ contact: nhand@berkeley.edu
+ creation date: 06/12/2014
+"""
+import argparse
+from flipper import flipperDict
+import pkmu_driver, hod_mock
+import os
+from utils import pytools
+import numpy as np
+import sys
+
+#-------------------------------------------------------------------------------
+def package_results(tag, object_file, options_dict):
+    """
+    Package the results
+    """
+    # delete the original plot
+    with pytools.ignored(OSError):
+        os.remove('comovingPDT.pdf')
+    
+    # file names    
+    DTPBA_file = options_dict['DTBPAresultsfile']
+    CPFA_file  = options_dict['CPFAresultsfile']
+    DTF_file   = options_dict['DTF_info_file']
+
+    # check the output files exist; (fuck you Harris, I do exist)
+    if not os.path.exists(DTPBA_file):
+        raise ValueError("Cannot find '%s' output file" %DTPBA_file)
+    if not os.path.exists(CPFA_file):
+        raise ValueError("Cannot find '%s' output file" %CPFA_file)
+    if not os.path.exists(DTF_file):
+        raise ValueError("Cannot find '%s' output file" %DTF_file)
+
+    # extract the power spectrum measurement as a pandas DataFrame
+    power_df = pkmu_driver.extract_Pkmu(DTPBA_file)
+        
+    output_files_dir = "output_files"
+    with pytools.ignored(OSError):
+        os.makedirs(output_files_dir)
+    
+    power_data_dir = "power_data"
+    with pytools.ignored(OSError):
+        os.makedirs(power_data_dir)
+        
+    # now rename the output files
+    with pytools.ignored(OSError):
+        os.rename(DTPBA_file, "%s/%s_Pdtbpa.dat" %(output_files_dir, tag))
+    
+    with pytools.ignored(OSError):
+        os.rename(CPFA_file, "%s/%s_fitTSAL.dat" %(output_files_dir, tag))
+    
+    # make the header
+    header = {}
+    for line in open(DTF_file, 'r'):
+        fields = line.split('=')
+        key = fields[0].strip()
+        try:
+            value = float(fields[1].strip())
+        except:
+            value = fields[1].strip()
+            
+        header[key] = value
+    
+    header['units'] = options_dict['units']
+    header['space'] = options_dict['space']
+
+    with pytools.ignored(OSError):
+        os.remove(DTF_file)
+    
+    # now save the frame with the header
+    pkmu_driver.save_Pkmu(power_df, "%s/%s_Pkmu.dat" %(power_data_dir, tag), header=header)
+
+#end package_results
+
+#-------------------------------------------------------------------------------
+def set_cosmo_options(cosmo, options_dict):
+    """
+    Add the necessary cosmology parameter options to the dictionary
+    """  
+    options_dict['default_omega_b'] = cosmo.omegab * cosmo.h**2
+    options_dict['default_omega_cdm'] = cosmo.omegac * cosmo.h**2
+    options_dict['default_omega_de'] = cosmo.omegal * cosmo.h**2
+    options_dict['default_A_s'] = -1. # so that we use sigma8 instead
+    options_dict['default_n_s'] = cosmo.n
+    options_dict['default_tau'] = cosmo.tau
+    options_dict['default_sigma_8'] = cosmo.sigma_8
+
+#end set_cosmo_options
+
+#-------------------------------------------------------------------------------
+def compute_Pkmu(args):
+    """
+    Compute P(k, mu)
+    """
+    # first, set up the options dict to send
+    # convert arguments to a dictionary
+    options_dict = {k : v for k, v in vars(args).iteritems() if v is not None}
+    
+    # pop certain args
+    show_help = options_dict.pop('show_help')
+    param_file = options_dict.pop('param_file')
+    log = options_dict.pop('log')
+    no_package = options_dict.pop('no_package')
+    
+    # only showing the help message
+    if show_help:
+        pkmu_driver.compute_PB_Pkmu(None, show_help=show_help)
+        return    
+        
+    # first, write out the coordinates file
+    params = flipperDict.flipperDict()
+    params.readFromFile(param_file)
+    
+    tag = params['output_tag']
+    
+    # if real space, set velocity bias to zero
+    if not params['redshift_space']:
+        options_dict['TPT_free_eta_bias'] = 0
+        options_dict['b_eta'] = 0.
+    
+    # redirect stdout ouput if we are logging
+    logs_dir = "logs"
+    if log:
+        with pytools.ignored(OSError):
+            os.makedirs(logs_dir)
+        stdout = open("%s/%s.log" %(logs_dir, tag), 'w')
+        sys.stdout = stdout
+    else:
+        with pytools.ignored(OSError):
+            os.remove("%s/%s.log" %(logs_dir, tag))
+        stdout = None
+    
+    # the dirty work
+    object_file = ""
+    
+    # set the output config file
+    options_dir = "options"
+    with pytools.ignored(OSError):
+        os.makedirs(options_dir)
+    options_dict['config'] = "%s/%s.config" %(options_dir, tag)
+    
+    # load the mock file
+    if params['mock_file'] is None:
+         pkmu_driver.compute_PB_Pkmu(None, options=options_dict, show_help=False, stdout=stdout)
+    
+    else:
+            
+        print "loading mock catalog..."
+        mock = hod_mock.load(params['mock_file'])
+    
+        # set the restrictions
+        if params['galaxy_restrict'] is not None:
+            mock.restrict_galaxies(params['galaxy_restrict'])
+
+        if params['halo_restrict'] is not None:
+            mock.restrict_halos(params['halo_restrict'])
+        
+        # set the subsample 
+        if params.get('random_subsample', 0) > 0:
+            mock.random_subsample(params['random_subsample'])
+    
+        try:
+            if params.get('object_file', None) is None:
+    
+                # now write the temporary coordinate file
+                object_file = mock.write_coordinates(None, params['file_fields'], 
+                                                     units=params['file_units'], 
+                                                     header=params['header'], 
+                                                     temporary=True)
+                
+            else:
+                object_file = params['object_file']
+    
+            # add the cosmology parameters to the options dict
+            set_cosmo_options(mock.cosmo, options_dict)
+
+            # call the P(k, mu) code
+            pkmu_driver.compute_PB_Pkmu(object_file, options=options_dict, show_help=False, stdout=stdout)
+
+        except:
+            raise ValueError("Cannot compute P(k, mu)")
+        finally:
+            with pytools.ignored(OSError):
+                os.remove(object_file)
+
+    if not no_package:
+    
+        # add some options for use in the header
+        options_dict['units'] = "(%s)^3" %params['file_units']
+        options_dict['space'] = 'redshift' if params['redshift_space'] else 'real'
+
+        # now package the results
+        package_results(tag, object_file, options_dict)
+            
+#end compute_Pkmu
+
+
+#-------------------------------------------------------------------------------
+if __name__ == '__main__':
+    
+    # parse the input arguments
+    desc = "wrapper for Pat McDonald's P(k, mu) code for periodic boxes"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    #---------------------------------------------------------------------------
+    # arguments not passed to the ``measure_and_fit_discrete`` command
+    #---------------------------------------------------------------------------
+    parser.add_argument('param_file', type=str, help="the parameter file")
+    
+    h = 'whether to only show the help message of the P(k, mu) code; (=False)'
+    parser.add_argument('--show_help', action='store_true', default=False, help=h)
+    
+    h = 'whether to log the output to a log file'
+    parser.add_argument('--log', action='store_true', default=False, help=h)
+    
+    h = "don't package the results nicely"
+    parser.add_argument('--no_package', action='store_true', default=False, help=h)
+    
+    
+    #---------------------------------------------------------------------------
+    # Command-line options for ``measure_and_fit_discrete``
+    #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    # Discrete Tracer Band Power Theory parameters
+    #---------------------------------------------------------------------------
+    h = 'number of cells per side of the box for the density field; (=128)'
+    parser.add_argument('--DTBPT_Ncells', type=int, help=h)
+    
+    h = "In DTBPT, the density field sampling technique. Either 'NGP' or 'CIC' (='NGP')"
+    parser.add_argument('--DTBPT_sampling', type=str, choices=['NGP', 'CIC'], help=h)
+    
+    #---------------------------------------------------------------------------
+    # Band Power Theory parameters
+    #---------------------------------------------------------------------------
+    h = 'the maximum k value to compute in 1/Mpc; (=0.2)'
+    parser.add_argument('--BPT_k_max', type=float, help=h)
+    
+    h = 'the minimum k value to compute in 1/Mpc; (=0.01)'
+    parser.add_argument('--BPT_kmin', type=float, help=h)
+     
+    h = 'the linear band width in 1/Mpc; (=0.01)'
+    parser.add_argument('--BPT_dk', type=float, default=0.01, help=h)
+    
+    h = 'the natural logarithmic band width in 1/Mpc; (=1/15)'
+    parser.add_argument('--BPT_dlnk', type=float, help=h)
+    
+    h = 'the number of mu bins to compute; (=7)'
+    parser.add_argument('--BPT_Nmu', type=int, help=h)
+    
+    h = 'whether to switch from linear to log spaced bands when log bins become larger; (=0)'
+    parser.add_argument('--use_linlog_spacing', choices=[0, 1], help=h)
+    
+    h = 'use log spaced bands starting at k_min; (=0)'
+    parser.add_argument('--use_log_spacing', choices=[0, 1], help=h)
+    
+    #---------------------------------------------------------------------------
+    # parameters for fitting the bias model
+    #---------------------------------------------------------------------------
+    h = 'max order in k for short-range non-locality (only even powers used) (=2)'
+    parser.add_argument('--k_order', type=int, help=h)
+    
+    h = 'max order in k_parallel for short-range non-locality (only even powers used) (=2)'
+    parser.add_argument('--kpar_order', type=int, help=h)
+    
+    h = 'make eta bias a free param (=1)'
+    parser.add_argument('--TPT_free_eta_bias', choices=[0,1], type=int, help=h)
+    
+    h = 'default value for EtaBiasParam (=1)'
+    parser.add_argument('--b_eta', type=float, help=h)
+    
+    h = 'In TracerPowerTheory, make noise a free param (=1)'
+    parser.add_argument('--TPT_free_noise', choices=[0,1], type=int, help=h)
+    
+    h = 'White noise power in low-k limit [Mpc^3]; (=5000)'
+    parser.add_argument('--LSSNoise', type=float, help=h)
+    
+    h = 'In TracerBandPowerTheory, tell member ComovingBandPowerTheory to make correction for cell kernel, or not. (=1)'
+    parser.add_argument('--TBPT_cellcorrect', choices=[0,1], type=int, help=h)
+        
+    h = 'number of fit reruns to do (=1)'
+    parser.add_argument('--reruns', type=int, help=h)
+    
+    #---------------------------------------------------------------------------
+    # sample parameters if we aren't reading from file
+    #---------------------------------------------------------------------------
+    h = 'size of box (=2000)'
+    parser.add_argument('--Box_L', type=float, help=h)
+    
+    h = 'number of cells per side in GriddedBox (=128)'
+    parser.add_argument('--Box_N', type=float, help=h)
+    
+    h = 'redshift of SimFields (=1)'
+    parser.add_argument('--Sim_z', type=float, help=h)
+    
+    h = 'In TracerFieldGenerator, default number density, per cubic Mpc. (=0.0002)'
+    parser.add_argument('--TFG_default_n_Mpc', type=float, help=h)
+    
+    h = 'In DiscreteTracerFieldGenerator, if this is true, just distribute the ' + \
+        "points completely randomly within a box, with total number generated by " + \
+        "Poisson sampling the mean total. (=0)"
+    parser.add_argument('--pure_Poisson_noise', type=int, choices=[0, 1], help=h)
+    
+    #---------------------------------------------------------------------------
+    # verbosity arguments
+    #---------------------------------------------------------------------------
+    h = 'LikelihoodFromDataTheory: verbosity level (=0)'
+    parser.add_argument('--LFDT_verbose', type=int, choices=[0, 1], help=h)
+    
+    h = 'k-mu Band Power Theory: verbosity levell (=0)'
+    parser.add_argument('--KMBPT_verbose', type=int, choices=[0, 1], help=h)
+    
+    h = 'verbosity for FourierBandPowerTheory (=0)'
+    parser.add_argument('-v', '--verbose', type=int, choices=[0, 1], help=h)             
+    
+    h = 'DataAnalysisDriver: verbosity level (=0)'
+    parser.add_argument('--DAD_verbose', type=int, choices=[0, 1], help=h)
+    
+    h = 'TaylorSeriesApproximatedLikelihood: verbosity level (=0)'
+    parser.add_argument('--TSAL_verbose', type=int, choices=[0, 1], help=h)
+    
+    #---------------------------------------------------------------------------
+    # output file names
+    #---------------------------------------------------------------------------
+    h = "file to DiscreteTracerField information to (='DTF_info.txt')"
+    parser.add_argument('--DTF_info_file', type=str,  default='DTF_info.txt', help=h)
+    
+    h = "file to print DiscreteTracerBandPowerAnalysis results as TSAL (='Pdtbpa.cbpm')"
+    parser.add_argument('--DTBPAresultsfile', type=str,  default='Pdtbpa.cbpm', help=h)
+    
+    h = "file to print ComovingPowerFitAnalysis results as TSAL"
+    parser.add_argument('--CPFAresultsfile', type=str,  default='cPfitAnalysisTSAL.txt', help=h)
+    
+    #---------------------------------------------------------------------------
+    args = parser.parse_args()
+    compute_Pkmu(args)
+    
+#-------------------------------------------------------------------------------
+#end main
+
