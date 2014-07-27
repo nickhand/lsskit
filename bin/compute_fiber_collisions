@@ -16,13 +16,14 @@ def main(args):
     """
     params = flipperDict.flipperDict()
     params.readFromFile(args.param_file)
-    
-    # load the mock
-    print "loading mock file..."
-    mock = hod_mock.load(params['mock_file'])            
+               
     
     # compute the collision groups
     if args.compute_groups:
+    
+        # load the mock
+        print "loading mock file..."
+        mock = hod_mock.load(params['mock_file'])
         
         print "computing collision groups..."
         mock.compute_collision_groups(params['radius'], 
@@ -35,6 +36,10 @@ def main(args):
     
     # assign fibers
     if args.assign_fibers:
+        
+        # load the mock
+        print "loading mock file..."
+        mock = hod_mock.load(params['mock_file'])
         
         print "assigning fibers..."
         mock.assign_fibers(params['resolution_fraction'])

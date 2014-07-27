@@ -71,7 +71,7 @@ def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
 #end compute_PB_Pkmu
 
 #-------------------------------------------------------------------------------
-def extract_Pkmu(tsal_file):
+def extract_Pkmu_data(tsal_file):
     """
     Extract the P(k, mu) given the output file TSAL file holding the 
     power spectrum measurement from the ``measure_and_fit_discrete.out`` code.
@@ -94,41 +94,7 @@ def extract_Pkmu(tsal_file):
     frame = pd.DataFrame(columns, index=index, columns=['power', 'error', 'noise', 'baseline'])
     
     return frame
-#end extract_Pkmu
-
-#-------------------------------------------------------------------------------
-def save_Pkmu(power_df, filename, header=None):
-    """
-    Save the input ``pandas.DataFrame`` as an hdf5 object with an optional 
-    header dictionary attached
-    """
-    store = pd.HDFStore(filename, 'w')
-    
-    # store the galaxies DataFrame
-    store['power_df'] = power_df
-    
-    # now also store the header
-    store.get_storer('power_df').attrs.header = header
-    store.close()
-#end save_Pkmu
-
-#-------------------------------------------------------------------------------
-def load_Pkmu(filename):
-    """
-    Load the ``pandas.DataFrame`` and return it as well as the header 
-    """
-    store = pd.HDFStore(filename, 'r')
-    header = store.get_storer('power_df').attrs.header
-    frame = store['power_df']
-    store.close()
-    
-    # now let's set the mus and ks attributes 
-    # remember, these won't be saved since they are custom attributes
-    frame.mus = frame.index.levels[0]
-    frame.ks = frame.index.levels[1]
-    
-    return header, frame
-#end load_Pkmu
+#end extract_Pkmu_data
 
 #-------------------------------------------------------------------------------
 def fit_bias(params):
@@ -165,7 +131,7 @@ def fit_bias(params):
         if 'h' in mock.units:
             volume /= mock.cosmo.h**3
         Pshot = volume / mock.total_galaxies
-    
+        
         # set the missing parameters
         params['redshift_space'] = False
         params['object_file'] = None

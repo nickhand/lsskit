@@ -27,7 +27,7 @@ def main(params):
     halo_restricts = [None, None, "(N_sat == 0)", "(N_sat > 0)", None, "(N_sat == 1)", "(N_sat > 1)"]
     
     collided_tags = [None, "uncollided_0.4Mpc"]
-    space_tags = ['redshift'] #, 'redshift'
+    space_tags = ['real', 'redshift'] #, 'redshift'
     
     # loop over each sample type
     for i, sample_tag in enumerate(sample_tags):

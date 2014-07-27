@@ -7,8 +7,11 @@
  creation date: 07/18/2014
 """
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+from pandas import HDFStore
+
+import plotify as pfy
+import pkmu_driver
+from cosmology.growth import Power, growth_rate
 
 #-------------------------------------------------------------------------------
 def load(filename):
@@ -25,7 +28,7 @@ def load(filename):
     pkmu : PkmuMeasurement object
         The PkmuMeasurement class holding the pandas.DataFrame as `self.data`
     """
-    store = pd.HDFStore(filename, 'r')
+    store = HDFStore(filename, 'r')
     
     pkmu = store.get_storer('data').attrs.Pkmu
     pkmu.data = store['data']
@@ -55,15 +58,19 @@ class PkmuMeasurement(object):
                 `error` : the error on the power measurement
                 `baseline` : the baseline power measurement that the power 
                              is measured with respect to
-                `noise` : the component of the baseline that is `noise-like`
+                `noise` : the component of the baseline that is "noise-like"
         cosmo : `cosmology.Cosmology`
             The cosmology with which the power measurement was made 
         """
         self.data = data_frame
         self.cosmo = cosmo
         
+        # the keywords 
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+            
+        # compute the growth rate f for convenience
+        self.f = growth_rate(self.redshift, params=self.cosmo)
         
     #end __init__
     
@@ -141,7 +148,7 @@ class PkmuMeasurement(object):
         ks : np.ndarray
             An array holding the k values at which the power is measured
         """
-        return np.ndarray(self.data.index.levels[self._k_level], dtype=float)
+        return np.asarray(self.data.index.levels[self._k_level], dtype=float)
     #end ks
     
     #---------------------------------------------------------------------------
@@ -172,7 +179,9 @@ class PkmuMeasurement(object):
             err_average = lambda row: np.mean(1./row['error']**(-2.))
         
             avg_data['power'] = grouped.apply(power_average)
-            avg_data['error'] = np.sqrt(grouped.apply(power_average))
+            avg_data['error'] = np.sqrt(grouped.apply(err_average))
+        else:
+            avg_data['error'] /= np.sqrt(len(self.mus))
             
         return avg_data
     #end mu_averaged
@@ -222,6 +231,83 @@ class PkmuMeasurement(object):
     #end Pmu
     
     #---------------------------------------------------------------------------
+    def Pk_kaiser(self, bias, power_kwargs):
+        """
+        Return the biased, Kaiser real-space power spectrum at the `k` 
+        values defined for this measurement. This is independent of `mu`.
+        """
+        if hasattr(self, 'power_kwargs') and self.power_kwargs == power_kwargs:
+            return bias**2 * self._Pk_lin
+        else:
+            self.power_kwargs = power_kwargs
+            
+            ks = self.ks / self.cosmo.h if 'h' not in self.units else self.ks
+            power = Power(k=ks, z=self.redshift, cosmo=self.cosmo, **self.power_kwargs)
+            
+            self._Pk_lin = power.power
+            return bias**2 * self._Pk_lin
+            
+    #---------------------------------------------------------------------------
+    def Pkmu_kaiser(self, mu, bias, power_kwargs):
+        """
+        Return the biased, Kaiser redshift-space power spectrum at the `k` values 
+        defined for this measurement and the input `mu` value. 
+        """
+        beta = self.f / bias
+        return (1. + beta*mu**2)**2 * self.Pk_kaiser(bias, power_kwargs)
+            
+    #---------------------------------------------------------------------------
+    def mu_averaged_Pkmu_kaiser(self, bias, power_kwargs):
+        """
+        Return the mu-averaged, biased, Kaiser redshift-space power spectrum 
+        at the `k` values defined for this measurement and the input `mu` value. 
+        """
+        norms = []
+        for mu in self.mus:
+            norms.append(self.Pkmu_kaiser(mu, bias, power_kwargs))
+        Plin_norm = np.mean(norms, axis=0)
+        return Plin_norm
+            
+    #---------------------------------------------------------------------------
+    def normalization(self, bias, power_kwargs, mu=None, mu_avg=False):
+        """
+        Return the proper Kaiser normalization for this power measurement
+        """
+        # determine which normalization to use
+        if self.space == 'real':
+            Plin_norm = self.Pk_kaiser(bias, power_kwargs)
+        elif self.space == 'redshift':
+            
+            if mu_avg:
+                Plin_norm = self.mu_averaged_Pkmu_kaiser(bias, power_kwargs)
+            else:
+                Plin_norm = self.Pkmu_kaiser(mu, bias, power_kwargs)
+        else:
+            raise ValueError("Attribute `space` must be one of {`real`, `redshift`}")
+        
+        return Plin_norm
+            
+    #---------------------------------------------------------------------------
+    @property
+    def Pshot(self):
+        """
+        Return the shot noise, in (Mpc/h)^3
+        """
+        try:
+            return self._Pshot
+        except AttributeError:
+            if not hasattr(self, 'volume'):
+                raise AttributeError("Need to specify the `volume` attribute.")
+            if not hasattr(self, 'sample_size'):
+                raise AttributeError("Need to specify the `sample_size` attribute.")
+
+            volume = self.volume
+            if 'h' not in self.units:
+                volume *= self.cosmo.h**3
+            self._Pshot = (volume / self.sample_size)
+            return self._Pshot
+        
+    #---------------------------------------------------------------------------
     def save(self, filename):
         """
         Save the `PkmuMeasurement` instance as a pickle to the filename specified
@@ -232,7 +318,7 @@ class PkmuMeasurement(object):
             the filename to output to
         """        
         # first write out the galaxies
-        store = pd.HDFStore(filename, 'w')
+        store = HDFStore(filename, 'w')
         
         # store the data DataFrame
         store['data'] = self.data
@@ -244,11 +330,9 @@ class PkmuMeasurement(object):
     #end save   
     
     #---------------------------------------------------------------------------
-    def plot_Pk(self, mu, bias=1., norm_linear=True, plot_linear=False, 
-                subtract_shot_noise=False, power_kwargs={}, 
-                plot_kwargs={}, curr_ax=None, label=None):
+    def plot_Pk(self, *args, **kwargs):
         """
-        Plot the measurement
+        Plot the P(k, mu) measurement
 
         Parameters
         ----------
@@ -271,83 +355,123 @@ class PkmuMeasurement(object):
             If `True`, subtract the shot noise
         plot_kwargs : dict, optional
             Any plotting keywords to use.
-        curr_ax : Axes, optional
-            The current axes to plot on
+        ax : plotify.Axes, optional
+            This can be specified as the first positional argument, or as the
+            keyword `ax`. If not specified, the plot will be added to 
+            the axes returned by `plotify.gca()`
+        label : str, optional
+            The label to attach to this plot lines
+        offset : float, optional
+            Offset the plot in the y-direction by this amount.
+        weighted_mean : bool, optional
+            Take the weighted mu-average. Default is `False`
+        
+        Returns
+        -------
+        fig : plotify.Figure
+            The figure where the lines were plotted
+        ax : plotify.Axes
+            The axes where the lines were plotted
+        Pshot : float
+            The shot noise for this sample
         """
-       from cosmology.growth import Power, growth_rate
-       from scipy.interpolate import InterpolatedUnivariateSpline as spline
+        from os.path import exists
+        
+        # first parse the arguments to see if we have an axis instance
+        ax, args, kwargs = pfy.parse_arguments(*args, **kwargs)       
+        
+        # default keyword values
+        weighted_mean = kwargs.get('weighted_mean', False)
+        label = kwargs.get('label', None)
+        y_offset = kwargs.get('offset', 0.)
+        plot_kwargs = kwargs.get('plot_kwargs', {})
+        power_kwargs = kwargs.get('power_kwargs', {})
+        subtract_shot_noise = kwargs.get('subtract_shot_noise', False)
+        bias = kwargs.get('bias', 1.)
+        if isinstance(bias, basestring):
+            assert exists(bias), "Specified bias TSAL file does not exist"
+            bias, bias_err = pkmu_driver.extract_bias(bias)
+            
+        # determine the keywords for normalization
+        plot_linear = kwargs.get('plot_linear', False)
+        norm_linear = kwargs.get('norm_linear', False)
+        assert not (plot_linear == True and norm_linear == True), "Boolean keywords `norm_linear` and `plot_linear` must take different values."
+       
+        # let's get the data
+        mu_avg = False
+        if kwargs.get('mu', None) is None:
+            mu_avg = True
+            mu   = np.mean(self.mus)
+            data = self.mu_averaged(weighted=weighted_mean)
+        else:
+            # get the mu value, correctly 
+            mu = kwargs['mu']
+            if isinstance(mu, int):
+                mu = self.mus[mu]
+            data = self.Pk(mu)
+        k    = self.ks
+        Pk   = data.power
+        err  = data.error
+      
+        # now let's make sure we have units
+        if not hasattr(self, 'units'):
+            raise AttributeError("Need to specify the `units` attribute.")
+        
+        # this goes from (Mpc)^3 to (Mpc/h)^3)
+        # this transforms
+        if 'h' not in self.units:
+            k /= self.cosmo.h      # should be in h/Mpc
+            Pk *= self.cosmo.h**3  # should be in (Mpc/h)^3
+            err *= self.cosmo.h**3 # should be in (Mpc/h)^3
 
-       default = {'ls':'', 'c':'DodgerBlue', 'marker': '.'}
-       default.update(plot_kwargs)
+        # the shot noise
+        Pshot_sub = 0.
+        if subtract_shot_noise: Pshot_sub = self.Pshot
+          
+        # plot the linear theory result
+        if plot_linear or norm_linear:
 
-       if curr_ax is None:
-           curr_ax = plt.gca()
+            # the normalization
+            Plin_norm = self.normalization(bias, power_kwargs, mu=mu, mu_avg=mu_avg)
+    
+            # plot both the linear and result separately
+            if plot_linear:
+                if label is None: label = r'linear $P(k, \mu)$'
+                pfy.loglog(ax, k, Plin_norm, c='k', label=label)
+                
+                if label is None: label = r"$P(k, \mu = %.3f)$ "%mu
+                pfy.errorbar(ax, k, Pk-Pshot_sub, err, label=label, **plot_kwargs)
+            else:
+                # plot the normalized result
+                data_to_plot = (k, (Pk-Pshot_sub)/Plin_norm, err/Plin_norm)
+                pfy.plot_data(ax, data=data_to_plot, labels=label, y_offset=y_offset, plot_kwargs=plot_kwargs)
+        else:
+            
+            if label is None: label = r"$P(k, \mu = %.3f)$" %mu
+            pfy.errorbar(ax, k, (Pk - Pshot_sub), err, label=label, **plot_kwargs)
+            ax.x_log_scale()
+            ax.y_log_scale()
 
-       # now read in the k, Pk, err data
-       k = np.asarray(list(data.index))
-       Pk = np.asarray(data.power)
-       err = np.asarray(data.error)
+        # let's set the xlabels and return
+        if ax.xlabel.text == "":
+            ax.xlabel.update(r"$\mathrm{k \ (h/Mpc)}$")
+            
+        if ax.ylabel.text == "":
+            if norm_linear:
+                if subtract_shot_noise:
+                    ax.ylabel.update(r"$\mathrm{(P(k, \mu) - \bar{n}^{-1}) \ / \ P_\mathrm{nw}(k, \mu)}$")
+                else:
+                    ax.ylabel.update(r"$\mathrm{P(k, \mu) \ / \ P_\mathrm{nw}(k, \mu)}$")
+            
+            else:    
+                ax.ylabel.update(r"$\mathrm{P(k, \mu) \ (Mpc/h)^3}$")
 
-       # put into right units
-       if 'h' not in header['units'] and self.units == 'Mpc/h':
-           k /= self.cosmo.h
-           Pk *= self.cosmo.h**3
-           err *= self.cosmo.h**3 
-
-       Pshot = 0.
-       if subtract_shot_noise:
-
-           volume = self.box_size**3
-           if 'h' not in self.units:
-               volume *= self.cosmo.h**3
-           Pshot = (volume / header['sample_size'])
-
-       # plot the linear theory result
-       if plot_linear or norm_linear:
-
-           k_th = np.logspace(np.log10(np.amin(k)), np.log10(np.amax(k)), 1000)
-           power = Power(k=k_th, z=self.redshift, cosmo=self.cosmo, **power_kwargs)
-
-           if header['space'] == 'real':
-               Plin_norm = bias**2 * power.power
-           else:
-               f = growth_rate(self.redshift, params=self.cosmo)
-               Plin_norm = (bias + f*mu**2)**2 * power.power
-
-           if plot_linear:
-
-               # plot both the linear and result separately
-               curr_ax.loglog(power.k, Plin_norm, c='k', label=r'linear $P(k, \mu)$')
-               curr_ax.errorbar(k, Pk-Pshot, err, label=r"$P(k, \mu = %.3f)$" %mu, **default)
-           else:
-               norm_spline = spline(power.k, Plin_norm)
-               Plin_norm = norm_spline(k)
-
-               # plot the normalized result
-               curr_ax.errorbar(k, (Pk - Pshot)/Plin_norm, err/Plin_norm, 
-                                   label=r"$P(k, \mu = %.3f)$" %mu, **default)
-       else:
-           curr_ax.errorbar(k, (Pk - Pshot), err, label=r"$P(k, \mu = %.3f)$" %mu, **default)
-           curr_ax.set_xscale('log')
-           curr_ax.set_yscale('log')
-
-       if self.units == 'Mpc':
-           k_units = '1/Mpc'
-       else:
-           k_units = 'h/Mpc'
-       curr_ax.set_xlabel(r"$\mathrm{k \ (%s)}$" %k_units, fontsize=18)
-
-       if subtract_shot_noise:
-           s = r"P(k, \mu) - \bar{n}^{-1}"
-       else:
-           s = r"P(k, \mu)"
-
-       if norm_linear:
-           curr_ax.set_ylabel(r"$\mathrm{(%s) \ / \ P_{NW}(k, \mu)}$" %s, fontsize=18)
-       else:    
-           curr_ax.set_ylabel(r"$\mathrm{%s %s}$" %(s, header['units']), fontsize=18)
-
-       return curr_ax
+        return ax.get_figure(), ax
+    
     #end plot_Pkmu    
+    #---------------------------------------------------------------------------
+
+#endclass PkmuMeasurement
+#-------------------------------------------------------------------------------
         
         
