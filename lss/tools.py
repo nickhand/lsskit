@@ -6,13 +6,35 @@
  contact: nhand@berkeley.edu
  creation date: 08/24/2014
 """
+import tsal
+import numpy as np
+import itertools
+from ComovingPowerMeasurement import *
+
 #-------------------------------------------------------------------------------
 def extract_multipoles(tsal_file):
     """
     Extract the multipoles (monopole/quadrupole) from a TSAL file
-    """
-    import tsal
     
+    Parameters
+    ----------
+    tsal_file : str 
+        The name of the file holding this TaylorSerierApproximatedLikelihood
+        for the multipoles fit
+        
+    Returns
+    -------
+    ks : np.ndarray
+        The array of wavenumbers where the multipoles are defined
+    monopole : np.ndarray
+        The monopole moment values
+    monopole_err : np.narray
+        The errors on the monopole
+    quadrupole : np.ndarray
+        The quadrpole moment values
+    quadrupole_err : np.narray
+        The errors on the quadrupole    
+    """
     # read in the tsal file
     tsal_fit = tsal.TSAL(tsal_file)
     
@@ -36,8 +58,6 @@ def extract_bias(tsal_file):
     """
     Extract the measured linear bias from the tsal file
     """
-    import tsal
-        
     # now the file exists, so extract the bias
     tsal_fit = tsal.TSAL(tsal_file)
     if "bX0" not in tsal_fit.pars:
@@ -55,7 +75,7 @@ def extract_Pkmu_data(tsal_file):
     
     Return a ``pandas.DataFrame`` holding the power spectrum data
     """
-    import itertools
+    import pandas as pd
     
     # read in the measurement
     data = ComovingPowerMeasurement(tsal_file)

@@ -9,11 +9,9 @@
 """
 import numpy as np
 import subprocess 
-import pandas as pd
 import os
 
 from . import hod_mock, tools
-from ComovingPowerMeasurement import *
 from utils import pytools
 from cosmology.growth import Power, growth_rate
 from cosmology.parameters import Cosmology, default_params
