@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 06/13/2014
 """
-import hod_mock
+from lss import hod_mock
 from flipper import flipperDict
 import argparse
 import pylab

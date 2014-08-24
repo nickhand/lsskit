@@ -7,7 +7,7 @@
  creation date: 07/02/2014
 """
 import argparse
-import hod_mock
+from lss import hod_mock
 import pylab
 from utils import utilities
 

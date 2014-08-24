@@ -7,12 +7,13 @@
  creation date: 06/12/2014
 """
 import argparse
-from flipper import flipperDict
-import pkmu_driver, pkmu_measurement, hod_mock
 import os
 from utils import pytools
 import numpy as np
 import sys
+
+from flipper import flipperDict
+from lss import pkmu_driver, pkmu_measurement, hod_mock, tools
 
 #-------------------------------------------------------------------------------
 def package_results(tag, options_dict, cosmo):
@@ -27,6 +28,7 @@ def package_results(tag, options_dict, cosmo):
     DTPBA_file = options_dict['DTBPAresultsfile']
     CPFA_file  = options_dict['CPFAresultsfile']
     DTF_file   = options_dict['DTF_info_file']
+    Pole_file  = options_dict['CPoleResultsfile'] 
 
     # check the output files exist; (fuck you Harris, I do exist)
     if not os.path.exists(DTPBA_file):
@@ -36,8 +38,12 @@ def package_results(tag, options_dict, cosmo):
     if not os.path.exists(DTF_file):
         raise ValueError("Cannot find '%s' output file" %DTF_file)
 
+    if options_dict['fit_poles']:
+        if not os.path.exists(Pole_file):
+            raise ValueError("Cannot find '%s' output file" %Pole_file)
+    
     # extract the power spectrum measurement as a pandas DataFrame
-    power_df = pkmu_driver.extract_Pkmu_data(DTPBA_file)
+    power_df = tools.extract_Pkmu_data(DTPBA_file)
         
     output_files_dir = "output_files"
     with pytools.ignored(OSError):
@@ -53,6 +59,10 @@ def package_results(tag, options_dict, cosmo):
     
     with pytools.ignored(OSError):
         os.rename(CPFA_file, "%s/%s_fitTSAL.dat" %(output_files_dir, tag))
+    
+    if if options_dict['fit_poles']:
+        with pytools.ignored(OSError):
+            os.rename(Pole_file, "%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag))
     
     # make the header
     header = {}
@@ -74,6 +84,11 @@ def package_results(tag, options_dict, cosmo):
     
     # make the PkmuMeasurement object and save it
     pkmu = pkmu_measurement.PkmuMeasurement(power_df, cosmo=cosmo, **header)
+    
+    # add the multipoles if we measured them
+    if options_dict['fit_poles']:
+        pkmu.add_multipoles("%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag))
+        
     pkmu.save("%s/%s_Pkmu.dat" %(power_data_dir, tag))
 
 #end package_results
@@ -230,6 +245,8 @@ if __name__ == '__main__':
     #---------------------------------------------------------------------------
     # Command-line options for ``measure_and_fit_discrete``
     #---------------------------------------------------------------------------
+    h = 'whether to also fit the monopole/quadrupole multipoles; (=0)'
+    parser.add_argument('--fit_poles', choices=[0, 1], help=h)
     
     #---------------------------------------------------------------------------
     # Discrete Tracer Band Power Theory parameters
@@ -315,19 +332,19 @@ if __name__ == '__main__':
     # verbosity arguments
     #---------------------------------------------------------------------------
     h = 'LikelihoodFromDataTheory: verbosity level (=0)'
-    parser.add_argument('--LFDT_verbose', type=int, choices=[0, 1], help=h)
+    parser.add_argument('--LFDT_verbose', type=int, choices=[0, 1, 2], help=h)
     
     h = 'k-mu Band Power Theory: verbosity levell (=0)'
-    parser.add_argument('--KMBPT_verbose', type=int, choices=[0, 1], help=h)
+    parser.add_argument('--KMBPT_verbose', type=int, choices=[0, 1, 2], help=h)
     
     h = 'verbosity for FourierBandPowerTheory (=0)'
-    parser.add_argument('-v', '--verbose', type=int, choices=[0, 1], help=h)             
+    parser.add_argument('-v', '--verbose', type=int, choices=[0, 1, 2], help=h)             
     
     h = 'DataAnalysisDriver: verbosity level (=0)'
-    parser.add_argument('--DAD_verbose', type=int, choices=[0, 1], help=h)
+    parser.add_argument('--DAD_verbose', type=int, choices=[0, 1, 2], help=h)
     
     h = 'TaylorSeriesApproximatedLikelihood: verbosity level (=0)'
-    parser.add_argument('--TSAL_verbose', type=int, choices=[0, 1], help=h)
+    parser.add_argument('--TSAL_verbose', type=int, choices=[0, 1, 2], help=h)
     
     #---------------------------------------------------------------------------
     # output file names
@@ -340,6 +357,9 @@ if __name__ == '__main__':
     
     h = "file to print ComovingPowerFitAnalysis results as TSAL"
     parser.add_argument('--CPFAresultsfile', type=str,  default='cPfitAnalysisTSAL.txt', help=h)
+    
+    h = "file to print ComovingPoleFitAnalysis results as TSAL"
+    parser.add_argument('--CPoleResultsfile', type=str,  default='cPoleitAnalysisTSAL.txt', help=h)
     
     #---------------------------------------------------------------------------
     args = parser.parse_args()

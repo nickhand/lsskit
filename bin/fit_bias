@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 06/24/2014
 """
-import pkmu_driver
+from lss import pkmu_driver
 from flipper import flipperDict
 import argparse
 

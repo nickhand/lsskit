@@ -8,7 +8,7 @@
 """
 import argparse
 from flipper import flipperDict
-import hod_mock
+from lss import hod_mock
 
 def main(args):
     """
