@@ -7,14 +7,10 @@
  contact: nhand@berkeley.edu
  creation date: 07/19/2014
 """
-import numpy as np
 import subprocess 
 import os
-
 from . import hod_mock, tools
 from utils import pytools
-from cosmology.growth import Power, growth_rate
-from cosmology.parameters import Cosmology, default_params
 
 #-------------------------------------------------------------------------------
 def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
