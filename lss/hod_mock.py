@@ -126,7 +126,7 @@ class MockHOD(object):
         """
         Total number of collided galaxies in the current sample
         """
-        cond = (self.sample.collided == 1)*(self.sample.resolved == 0)
+        cond = (self.sample.collided == 1)&(self.sample.resolved == 0)
         return len(self.sample[cond])
     
     #---------------------------------------------------------------------------
