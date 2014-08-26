@@ -60,7 +60,7 @@ def package_results(tag, options_dict, cosmo):
     with pytools.ignored(OSError):
         os.rename(CPFA_file, "%s/%s_fitTSAL.dat" %(output_files_dir, tag))
     
-    if if options_dict['fit_poles']:
+    if options_dict['fit_poles']:
         with pytools.ignored(OSError):
             os.rename(Pole_file, "%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag))
     
