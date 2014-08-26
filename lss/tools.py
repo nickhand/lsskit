@@ -6,10 +6,10 @@
  contact: nhand@berkeley.edu
  creation date: 08/24/2014
 """
-import tsal
 import numpy as np
 import itertools
-from ComovingPowerMeasurement import *
+import tsal
+from . import tsal, cpm_tsal
 
 #-------------------------------------------------------------------------------
 def extract_multipoles(tsal_file):
@@ -78,7 +78,7 @@ def extract_Pkmu_data(tsal_file):
     import pandas as pd
     
     # read in the measurement
-    data = ComovingPowerMeasurement(tsal_file)
+    data = cpm_tsal.CPM_TSAL(tsal_file)
     
     # all combinations of (mu, k)
     muks = list(itertools.product(sorted(data.mus), sorted(data.ks)))
