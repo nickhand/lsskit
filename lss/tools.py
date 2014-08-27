@@ -12,6 +12,50 @@ import tsal
 from . import tsal, cpm_tsal
 
 #-------------------------------------------------------------------------------
+def cosmo_from_config(config_file):
+    """
+    Return a cosmology.Cosmology object as read from the `compute_Pkmu`
+    config file, which stores the cosmology that was used
+    
+    Parameters
+    ----------
+    config_file : str
+        The name of the file holding the config options
+        
+    Return
+    ------
+    cosmo : cosmology.parameters.Cosmology
+    """
+    from cosmology.parameters import Cosmology
+    
+    incosmo = {'omb' : 'omegab', \
+               'omm' : 'omegac', \
+               'omde' : 'omegal',\
+               'omnu' : 'omegan',\
+               'h'   : 'h', \
+               'n_s' : 'n' , \
+               'tau' : 'tau', \
+               'sigma_8' : 'sigma_8'}
+    
+    outcosmo = {}
+    for line in open(config_file, 'r'):
+        try:
+            fields = line[1:].split('=')
+            key = fields[0].strip()
+            if key in incosmo.keys():
+                val = float(fields[-1].strip())
+                outcosmo[incosmo[key]] = val
+        except:
+            continue
+            
+    # assume flat, and compute h
+    outcosmo['omegac'] -= outcosmo['omegab']
+    omegas = ['omegab', 'omegac', 'omegal', 'omegan']
+    for omega in omegas: outcosmo[omega] /= outcosmo['h']**2
+    
+    return Cosmology(outcosmo)
+
+#-------------------------------------------------------------------------------
 def extract_multipoles(tsal_file):
     """
     Extract the multipoles (monopole/quadrupole) from a TSAL file
