@@ -25,10 +25,10 @@ def package_results(tag, options_dict, cosmo):
         os.remove('comovingPDT.pdf')
     
     # file names    
-    DTPBA_file = options_dict['DTBPAresultsfile']
-    CPFA_file  = options_dict['CPFAresultsfile']
-    DTF_file   = options_dict['DTF_info_file']
-    Pole_file  = options_dict['CPoleResultsfile'] 
+    DTPBA_file = options_dict['DTBPAResultsFile']
+    CPFA_file  = options_dict['CPFAResultsFile']
+    DTF_file   = options_dict['DTFInfoFile']
+    Pole_file  = options_dict['CPoleResultsFile'] 
 
     # check the output files exist; (fuck you Harris, I do exist)
     if not os.path.exists(DTPBA_file):
@@ -154,25 +154,31 @@ def compute_Pkmu(args):
     # the dirty work
     object_file = ""
     
-    # set the output config file
+    # set the output cosmo params file
     options_dir = "options"
     with pytools.ignored(OSError):
         os.makedirs(options_dir)
-    options_dict['config'] = "%s/%s.config" %(options_dir, tag)
+    options_dict['CosmoParamsFile'] = "%s/%s.cosmo" %(options_dir, tag)
     
-    print "loading mock catalog..."
-    mock = hod_mock.load(params['mock_file'])
-    
-    # load the mock file
-    if not params.get('use_mock', True):
+    # don't need the mock file
+    if params['mock_file'] is None or not params.get('use_mock', True):
         
-        # add the cosmology parameters to the options dict
-        set_cosmo_options(mock.cosmo, options_dict)
+        # using the default cosmology here
+        options_dict['default_A_s'] = -1. # use default sigma_8
         
         # compute P(k,mu) with a generated data set (since `object_file = None`)
         pkmu_driver.compute_PB_Pkmu(None, options=options_dict, show_help=False, stdout=stdout)
+        
+        # read default cosmo params
+        cosmo = tools.cosmo_from_config(os.path.abspath(options_dict['CosmoParamsFile']))
+    
+    # need the mock file
     else:
 
+        print "loading mock catalog..."
+        mock = hod_mock.load(params['mock_file'])
+        cosmo = mock.cosmo
+        
         # set the restrictions
         if params['galaxy_restrict'] is not None:
             mock.restrict_galaxies(params['galaxy_restrict'])
@@ -215,7 +221,7 @@ def compute_Pkmu(args):
         options_dict['space'] = 'redshift' if params['redshift_space'] else 'real'
 
         # now package the results
-        package_results(tag, options_dict, mock.cosmo)
+        package_results(tag, options_dict, cosmo)
             
 #end compute_Pkmu
 
@@ -225,14 +231,14 @@ if __name__ == '__main__':
     
     # parse the input arguments
     desc = "wrapper for Pat McDonald's P(k, mu) code for periodic boxes"
-    parser = argparse.ArgumentParser(description=desc)
+    parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     #---------------------------------------------------------------------------
     # arguments not passed to the ``measure_and_fit_discrete`` command
     #---------------------------------------------------------------------------
     parser.add_argument('param_file', type=str, help="the parameter file")
     
-    h = 'whether to only show the help message of the P(k, mu) code; (=False)'
+    h = 'whether to only show the help message of the P(k, mu) code'
     parser.add_argument('--show_help', action='store_true', default=False, help=h)
     
     h = 'whether to log the output to a log file'
@@ -245,121 +251,143 @@ if __name__ == '__main__':
     #---------------------------------------------------------------------------
     # Command-line options for ``measure_and_fit_discrete``
     #---------------------------------------------------------------------------
-    h = 'whether to also fit the monopole/quadrupole multipoles; (=0)'
-    parser.add_argument('--fit_poles', choices=[0, 1], help=h)
     
     #---------------------------------------------------------------------------
     # Discrete Tracer Band Power Theory parameters
     #---------------------------------------------------------------------------
-    h = 'number of cells per side of the box for the density field; (=128)'
-    parser.add_argument('--DTBPT_Ncells', type=int, help=h)
+    dtbpt = parser.add_argument_group("Discrete Tracer Band Power Theory")
     
-    h = "In DTBPT, the density field sampling technique. Either 'NGP' or 'CIC' (='NGP')"
-    parser.add_argument('--DTBPT_sampling', type=str, choices=['NGP', 'CIC'], help=h)
+    h = 'the number of cells per side of the box for the density field'
+    parser.add_argument('--Ncells', dest='DTBPT_Ncells', type=int, default=128, help=h)
+    
+    h = "the density field sampling technique. Either 'NGP' or 'CIC'"
+    parser.add_argument('--sampling', dest='DTBPT_sampling', choices=['NGP', 'CIC'], default='NGP', help=h)
     
     #---------------------------------------------------------------------------
     # Band Power Theory parameters
     #---------------------------------------------------------------------------
-    h = 'the maximum k value to compute in 1/Mpc; (=0.2)'
-    parser.add_argument('--BPT_k_max', type=float, help=h)
+    bpt = parser.add_argument_group("Band Power Theory")
     
-    h = 'the minimum k value to compute in 1/Mpc; (=0.01)'
-    parser.add_argument('--BPT_kmin', type=float, help=h)
+    h = 'whether to also fit the monopole/quadrupole multipoles'
+    bpt.add_argument('--fit_poles', choices=[0, 1], default=0, help=h)
+    
+    h = 'the maximum k value to compute in 1/Mpc'
+    bpt.add_argument('--kmax', dest='BPT_kmax', type=float, default=0.2, help=h)
+    
+    h = 'the minimum k value to compute in 1/Mpc'
+    bpt.add_argument('--kmin', dest='BPT_kmin', type=float, default=0.01, help=h)
      
-    h = 'the linear band width in 1/Mpc; (=0.01)'
-    parser.add_argument('--BPT_dk', type=float, default=0.01, help=h)
+    h = 'the linear band width in 1/Mpc'
+    bpt.add_argument('--dk', dest='BPT_dk', type=float, default=0.01, help=h)
     
-    h = 'the natural logarithmic band width in 1/Mpc; (=1/15)'
-    parser.add_argument('--BPT_dlnk', type=float, help=h)
+    h = 'the natural logarithmic band width in 1/Mpc'
+    bpt.add_argument('--dlnk', dest='BPT_dlnk', type=float, default=0.02/0.3, help=h)
     
-    h = 'the number of mu bins to compute; (=7)'
-    parser.add_argument('--BPT_Nmu', type=int, help=h)
+    h = 'the number of mu bins to compute'
+    bpt.add_argument('--Nmu', dest='BPT_Nmu', type=int, default=5, help=h)
+
+    h = 'whether to switch from linear to log spaced bands when log bins become larger'
+    bpt.add_argument('--use_linlog_spacing', choices=[0, 1], default=0, help=h)
     
-    h = 'whether to switch from linear to log spaced bands when log bins become larger; (=0)'
-    parser.add_argument('--use_linlog_spacing', choices=[0, 1], help=h)
-    
-    h = 'use log spaced bands starting at k_min; (=0)'
-    parser.add_argument('--use_log_spacing', choices=[0, 1], help=h)
+    h = 'use log spaced bands starting at k_min'
+    bpt.add_argument('--use_log_spacing', choices=[0, 1], default=0, help=h)
     
     #---------------------------------------------------------------------------
     # parameters for fitting the bias model
     #---------------------------------------------------------------------------
-    h = 'max order in k for short-range non-locality (only even powers used) (=2)'
-    parser.add_argument('--k_order', type=int, help=h)
+    model = parser.add_argument_group("Model Fitting")
     
-    h = 'max order in k_parallel for short-range non-locality (only even powers used) (=2)'
-    parser.add_argument('--kpar_order', type=int, help=h)
+    h = 'Max order in k for short-range non-locality (only even powers used)'
+    model.add_argument('--k_order', type=int, default=2, help=h)
     
-    h = 'make eta bias a free param (=1)'
-    parser.add_argument('--TPT_free_eta_bias', choices=[0,1], type=int, help=h)
+    h = 'Max order in k_parallel for short-range non-locality (only even powers used)'
+    model.add_argument('--kpar_order', type=int, default=2, help=h)
     
-    h = 'default value for EtaBiasParam (=1)'
-    parser.add_argument('--b_eta', type=float, help=h)
+    h = 'In TracerPowerTheory, make eta bias (velocity bias) a free param'
+    model.add_argument('--vary_eta_bias', dest='TPT_free_eta_bias', choices=[0,1], default=1, help=h)
     
-    h = 'In TracerPowerTheory, make noise a free param (=1)'
-    parser.add_argument('--TPT_free_noise', choices=[0,1], type=int, help=h)
+    h = 'The default value for EtaBiasParam (velocity bias)'
+    model.add_argument('--default_b_eta', dest='b_eta', type=float, default=1., help=h)
     
-    h = 'White noise power in low-k limit [Mpc^3]; (=5000)'
-    parser.add_argument('--LSSNoise', type=float, help=h)
+    h = 'In TracerPowerTheory, make noise a free param'
+    model.add_argument('--vary_noise', dest='TPT_free_noise', choices=[0,1], default=1, help=h)
     
-    h = 'In TracerBandPowerTheory, tell member ComovingBandPowerTheory to make correction for cell kernel, or not. (=1)'
-    parser.add_argument('--TBPT_cellcorrect', choices=[0,1], type=int, help=h)
+    h = 'White noise power in low-k limit [Mpc^3]'
+    model.add_argument('--shot_noise', dest='LSSNoise', type=float, default=5000., help=h)
+    
+    h = 'Whether to correct for the mass assignment window function'
+    model.add_argument('--correct_window', dest='TBPT_cellcorrect', choices=[0,1], default=1, help=h)
+    
+    h = 'Whether to correct for the aliasing of shot noise'
+    model.add_argument('--correct_aliasing', dest='CBPT_default_aliascorrect', choices=[0,1], default=1, help=h)
         
-    h = 'number of fit reruns to do (=1)'
-    parser.add_argument('--reruns', type=int, help=h)
+    h = 'After initial band measurement and fit, rerun this many times to re-estimate errors and refit'
+    model.add_argument('--reruns', type=int, default=1, help=h)
     
     #---------------------------------------------------------------------------
     # sample parameters if we aren't reading from file
     #---------------------------------------------------------------------------
-    h = 'size of box (=2000)'
-    parser.add_argument('--Box_L', type=float, help=h)
+    mock = parser.add_argument_group("Mock Data Set")
     
-    h = 'number of cells per side in GriddedBox (=128)'
-    parser.add_argument('--Box_N', type=float, help=h)
+    h = 'The size of the box in Mpc'
+    mock.add_argument('--box_L', dest='Box_L', type=float, default=2000., help=h)
     
-    h = 'redshift of SimFields (=1)'
-    parser.add_argument('--Sim_z', type=float, help=h)
+    h = 'The number of cells per side in GriddedBox'
+    mock.add_argument('--box_N', dest='Box_N', type=float, default=128, help=h)
     
-    h = 'In TracerFieldGenerator, default number density, per cubic Mpc. (=0.0002)'
-    parser.add_argument('--DTFG_default_n_Mpc', type=float, help=h)
+    h = 'The redshift of SimFields'
+    mock.add_argument('--redshift', dest='Sim_z', type=float, default=1., help=h)
+    
+    h = 'In TracerFieldGenerator, default number density, per cubic Mpc'
+    mock.add_argument('--default_n_Mpc', dest='DTFG_default_n_Mpc', type=float, default=2e-4, help=h)
     
     h = 'In DiscreteTracerFieldGenerator, if this is true, just distribute the ' + \
         "points completely randomly within a box, with total number generated by " + \
-        "Poisson sampling the mean total. (=0)"
-    parser.add_argument('--pure_Poisson_noise', type=int, choices=[0, 1], help=h)
+        "Poisson sampling the mean total"
+    mock.add_argument('--pure_Poisson_noise', choices=[0, 1], default=0, help=h)
     
     #---------------------------------------------------------------------------
     # verbosity arguments
     #---------------------------------------------------------------------------
-    h = 'LikelihoodFromDataTheory: verbosity level (=0)'
-    parser.add_argument('--LFDT_verbose', type=int, choices=[0, 1, 2], help=h)
+    verbose = parser.add_argument_group("Verbosity")
     
-    h = 'k-mu Band Power Theory: verbosity levell (=0)'
-    parser.add_argument('--KMBPT_verbose', type=int, choices=[0, 1, 2], help=h)
+    h = 'GSL_PSMinimizer: verbosity level'
+    verbose.add_argument('--GSLPSM_verbose', choices=[0, 1, 2], default=0, help=h)    
     
-    h = 'verbosity for FourierBandPowerTheory (=0)'
-    parser.add_argument('-v', '--verbose', type=int, choices=[0, 1, 2], help=h)             
+    h = 'LikelihoodFromDataTheory: verbosity level'
+    verbose.add_argument('--LFDT_verbose', choices=[0, 1, 2], default=0, help=h)
     
-    h = 'DataAnalysisDriver: verbosity level (=0)'
-    parser.add_argument('--DAD_verbose', type=int, choices=[0, 1, 2], help=h)
+    h = 'K-mu Band Power Theory: verbosity level'
+    verbose.add_argument('--KMBPT_verbose', choices=[0, 1, 2], default=0, help=h)
     
-    h = 'TaylorSeriesApproximatedLikelihood: verbosity level (=0)'
-    parser.add_argument('--TSAL_verbose', type=int, choices=[0, 1, 2], help=h)
+    h = 'FourierBandPowerTheory: verbosity level'
+    verbose.add_argument('--FBPT_verbose', dest='verbose', choices=[0, 1, 2], default=0, help=h)         
+    
+    h = 'DatAnDriverWTestGen: verbosity level'
+    verbose.add_argument('--DADWTG_verbose', choices=[0, 1, 2], default=0, help=h)
+    
+    h = 'DataAnalysisDriver: verbosity level'
+    verbose.add_argument('--DAD_verbose', choices=[0, 1, 2], default=0, help=h)
+    
+    h = 'TaylorSeriesApproximatedLikelihood: verbosity level'
+    verbose.add_argument('--TSAL_verbose', choices=[0, 1, 2], default=0, help=h)
     
     #---------------------------------------------------------------------------
     # output file names
     #---------------------------------------------------------------------------
-    h = "file to DiscreteTracerField information to (='DTF_info.txt')"
-    parser.add_argument('--DTF_info_file', type=str,  default='DTF_info.txt', help=h)
+    output = parser.add_argument_group("Output Files")
     
-    h = "file to print DiscreteTracerBandPowerAnalysis results as TSAL (='Pdtbpa.cbpm')"
-    parser.add_argument('--DTBPAresultsfile', type=str,  default='Pdtbpa.cbpm', help=h)
+    h = "File to print DiscreteTracerField information to"
+    output.add_argument('--sample_info', dest='DTFInfoFile', default='DTF_info.txt', help=h)
     
-    h = "file to print ComovingPowerFitAnalysis results as TSAL"
-    parser.add_argument('--CPFAresultsfile', type=str,  default='cPfitAnalysisTSAL.txt', help=h)
+    h = "File to print DiscreteTracerBandPowerAnalysis results as TSAL"
+    output.add_argument('--Pkmu_output', dest='DTBPAResultsFile', default='Pdtbpa.cbpm', help=h)
     
-    h = "file to print ComovingPoleFitAnalysis results as TSAL"
-    parser.add_argument('--CPoleResultsfile', type=str,  default='cPoleitAnalysisTSAL.txt', help=h)
+    h = "File to print ComovingPowerFitAnalysis results as TSAL"
+    output.add_argument('--bias_model_output', dest='CPFAResultsFile', default='cPFitAnalysisTSAL.txt', help=h)
+    
+    h = "File to print ComovingPoleFitAnalysis results as TSAL"
+    output.add_argument('--poles_model_output', dest='CPoleResultsFile', default='cPoleFitAnalysisTSAL.txt', help=h)
     
     #---------------------------------------------------------------------------
     args = parser.parse_args()
