@@ -494,14 +494,18 @@ class PkmuMeasurement(object):
             ax.xlabel.update(r"$\mathrm{k \ (h/Mpc)}$")
             
         if ax.ylabel.text == "":
+            if mu_avg: 
+                Pkmu_label = r"\langle P(k, \mu) \rangle"
+            else:
+                Pkmu_label = r"P(k, \mu)"
             if norm_linear:
                 if subtract_shot_noise:
-                    ax.ylabel.update(r"$\mathrm{(P(k, \mu) - \bar{n}^{-1}) \ / \ P_\mathrm{nw}(k, \mu)}$")
+                    ax.ylabel.update(r"$\mathrm{(%s - \bar{n}^{-1}) \ / \ P_\mathrm{nw}(k, \mu)}$" %(Pkmu_label))
                 else:
-                    ax.ylabel.update(r"$\mathrm{P(k, \mu) \ / \ P_\mathrm{nw}(k, \mu)}$")
+                    ax.ylabel.update(r"$\mathrm{%s \ / \ P_\mathrm{nw}(k, \mu)}$" %(Pkmu_label))
             
             else:    
-                ax.ylabel.update(r"$\mathrm{P(k, \mu) \ (Mpc/h)^3}$")
+                ax.ylabel.update(r"$\mathrm{%s \ (Mpc/h)^3}$" %(Pkmu_label))
 
         return ax.get_figure(), ax
     
