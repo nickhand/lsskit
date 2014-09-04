@@ -109,7 +109,7 @@ def fit_bias(params):
         params.writeToFile(temp_param_file.name)
         
         # now call compute_Pkmu
-        options = "--log --no_package --DTBPT_Ncells 128 --BPT_k_max %f --k_order 0 --kpar_order 0 --TPT_free_noise 0 --LSSNoise %.0f --BPT_dk 0.005" %(kmax, Pshot)
+        options = "--log --no_package --Ncells 128 --kmax %f --k_order 0 --kpar_order 0 --vary_noise 0 --shot_noise %.0f --dk 0.005" %(kmax, Pshot)
         ans = os.system("compute_Pkmu %s %s" %(temp_param_file.name, options))
         if ans:
             raise ValueError("Cannot compute bias; error in `compute_Pkmu`")
