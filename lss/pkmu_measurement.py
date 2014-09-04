@@ -767,9 +767,9 @@ class PkmuMeasurement(object):
                 if label is None: label = r"$P(k, \mu = %.3f)$ "%mu
             else:
                 if data_type == 'monopole':
-                    if label is None: label = r"measured $P_0(k)$"
+                    if label is None: label = r"$P_{\ell=0}(k)$"
                 else:
-                    if label is None: label = r"measured $P_2(k)$"
+                    if label is None: label = r"$P_{\ell=2}(k)$"
             pfy.errorbar(ax, k, (Pk - Pshot_sub), err, label=label, **plot_kwargs)
             ax.x_log_scale()
             ax.y_log_scale()
