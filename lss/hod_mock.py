@@ -21,6 +21,7 @@ from utils import utilities
 from . import angularFOF
 from cosmology.parameters import Cosmology, default_params
 from cosmology import evolution
+from cosmology.utils.units import h_conversion_factor
 
 #-------------------------------------------------------------------------------
 def load(filename):
@@ -57,12 +58,12 @@ class MockHOD(object):
     
     def __init__(self, redshift, box_size, units, cosmo=None):
         
-        if units not in ['Mpc', 'Mpc/h']:
-            raise ValueError("Input units not understood; must be one of ['Mpc', 'Mpc/h']")
+        if units not in ['relative', 'absolute']:
+            raise ValueError("Input units not understood; must be one of ['relative', 'absolute']")
         
         self.box_size = box_size # assuming a cube here
         self.redshift = redshift 
-        self.units    = units # distance units, either Mpc or Mpc/
+        self.units    = units # distance units, either "relative" or 
         
         # keep track of total number of galaxies
         self._total_galaxies = 0
@@ -399,7 +400,7 @@ class MockHOD(object):
         radius : float
             The value specifying the grouping radius to use when running the 
             Friends-of-Friends algorithm
-        units : str, {`Mpc`, `Mpc/h`, `degrees`}
+        units : str, {`absolute`, `relative`, `degrees`}
             The units of the collision radius. Will be converted to match 
             `self.units`. If in `degrees`, the corresponding physical scale
             at `self.redshift` is computed
@@ -411,7 +412,7 @@ class MockHOD(object):
             Default is `1`
         """
         # first, check input value for radius units
-        choices = ['Mpc', 'Mpc/h', 'degrees']
+        choices = ['absolute', 'relative', 'degrees']
         if units not in choices:
             raise ValueError("Invalid argument for `units`; must be one of %s" %choices)
             
@@ -426,14 +427,14 @@ class MockHOD(object):
             
             if units == 'degrees':
                 radius = evolution.physical_size(self.redshift, radius, params=self.cosmo)
-                units = 'Mpc'
-            
-            if self.units == 'Mpc' and units == 'Mpc/h':
-                radius /= self.cosmo.h
-                units = 'Mpc'
-            elif self.units == 'Mpc/h' and units == 'Mpc':
-                radius *= self.cosmo.h    
-                units = 'Mpc/h'
+                units = 'absolute'
+
+            if self.units == 'absolute' and units == 'relative':
+                radius *= h_conversion_factor('distance', units, self.units, self.cosmo['h'])
+                units = 'absolute'
+            elif self.units == 'relative' and units == 'absolute':
+                radius *= h_conversion_factor('distance', units, self.units, self.cosmo['h']) 
+                units = 'relative'
                 
         if self.units != units:
             raise ValueError("Error converting collision radius to same units as coordinates")
@@ -592,7 +593,7 @@ class MockHOD(object):
             The name of the file to save the coordinates to
         fields : list
             A list of the names of the attributes to write to the file
-        units : str, optional
+        units : str, {`absolute`, `relative`}, optional
             The name of the units of the coordinates to output
         header : list, optional
             List of strings that will be written as a header, one per line. Any 
@@ -617,11 +618,7 @@ class MockHOD(object):
         # get the units conversion factor
         conversion_factor = 1.
         if units is not None:
-            if self.units == 'Mpc' and units == 'Mpc/h':
-                conversion_factor = self.cosmo.h
-                units = 'Mpc/h'
-            elif self.units == 'Mpc/h' and units == 'Mpc':
-                conversion_factor = 1./self.cosmo.h
+            conversion_factor = h_conversion_factor('distance', self.units, units, self.cosmo['h'])
             
         # write out the header
         header_copy = copy.deepcopy(header)
