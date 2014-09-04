@@ -26,9 +26,9 @@ def package_results(tag, options_dict, cosmo):
     
     # file names    
     DTPBA_file = options_dict['DTBPAResultsFile']
-    CPFA_file  = options_dict['CPFAResultsFile']
+    CPFA_file  = "cPFitAnalysisTSAL.txt"
     DTF_file   = options_dict['DTFInfoFile']
-    Pole_file  = options_dict['CPoleResultsFile'] 
+    Pole_file  = "cPoleFitAnalysisTSAL.txt"
 
     # check the output files exist; (fuck you Harris, I do exist)
     if not os.path.exists(DTPBA_file):
@@ -73,10 +73,7 @@ def package_results(tag, options_dict, cosmo):
             value = float(fields[1].strip())
         except:
             value = fields[1].strip()
-            
         header[key] = value
-    
-    header['units'] = options_dict['units']
     header['space'] = options_dict['space']
 
     with pytools.ignored(OSError):
@@ -85,7 +82,7 @@ def package_results(tag, options_dict, cosmo):
         os.remove(options_dict['CosmoParamsFile'])
     
     # make the PkmuMeasurement object and save it
-    pkmu = pkmu_measurement.PkmuMeasurement(power_df, cosmo=cosmo, **header)
+    pkmu = pkmu_measurement.PkmuMeasurement(power_df, options_dict['units'], cosmo=cosmo, **header)
     
     # add the multipoles if we measured them
     if options_dict['fit_poles']:
@@ -212,7 +209,7 @@ def compute_Pkmu(args):
             pkmu_driver.compute_PB_Pkmu(object_file, options=options_dict, show_help=False, stdout=stdout)
 
         except:
-            raise ValueError("Cannot compute P(k, mu)")
+            raise 
         finally:
             with pytools.ignored(OSError):
                 os.remove(object_file)
@@ -220,7 +217,7 @@ def compute_Pkmu(args):
     if not no_package:
     
         # add some options for use in the header
-        options_dict['units'] = "(%s)^3" %params['file_units']
+        options_dict['units'] = params['file_units']
         options_dict['space'] = 'redshift' if params['redshift_space'] else 'real'
 
         # now package the results
@@ -261,10 +258,10 @@ if __name__ == '__main__':
     dtbpt = parser.add_argument_group("Discrete Tracer Band Power Theory")
     
     h = 'the number of cells per side of the box for the density field'
-    parser.add_argument('--Ncells', dest='DTBPT_Ncells', type=int, default=128, help=h)
+    dtbpt.add_argument('--Ncells', dest='DTBPT_Ncells', type=int, default=128, help=h)
     
     h = "the density field sampling technique. Either 'NGP' or 'CIC'"
-    parser.add_argument('--sampling', dest='DTBPT_sampling', choices=['NGP', 'CIC'], default='NGP', help=h)
+    dtbpt.add_argument('--sampling', dest='DTBPT_sampling', choices=['NGP', 'CIC'], default='NGP', help=h)
     
     #---------------------------------------------------------------------------
     # Band Power Theory parameters
@@ -332,6 +329,9 @@ if __name__ == '__main__':
     #---------------------------------------------------------------------------
     mock = parser.add_argument_group("Mock Data Set")
     
+    h = 'In DatAnDriverWTestGen, default setting for whether or not to make test data.'
+    mock.add_argument('--make_test_data', type=int, default=0, choices=[0,1], help=h)
+    
     h = 'The size of the box in Mpc'
     mock.add_argument('--box_L', dest='Box_L', type=float, default=2000., help=h)
     
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     verbose.add_argument('--KMBPT_verbose', choices=[0, 1, 2], default=0, type=int, help=h)
     
     h = 'FourierBandPowerTheory: verbosity level'
-    verbose.add_argument('--FBPT_verbose', dest='verbose', choices=[0, 1, 2], type=int, default=0, help=h)         
+    verbose.add_argument('--FBPT_verbose', choices=[0, 1, 2], type=int, default=0, help=h)         
     
     # h = 'DatAnDriverWTestGen: verbosity level'
     # verbose.add_argument('--DADWTG_verbose', choices=[0, 1, 2], type=int, default=0, help=h)
@@ -382,13 +382,7 @@ if __name__ == '__main__':
     
     h = "File to print DiscreteTracerBandPowerAnalysis results as TSAL"
     output.add_argument('--Pkmu_output', dest='DTBPAResultsFile', type=str, default='Pdtbpa.cbpm', help=h)
-    
-    h = "File to print ComovingPowerFitAnalysis results as TSAL"
-    output.add_argument('--bias_model_output', dest='CPFAResultsFile', type=str, default='cPFitAnalysisTSAL.txt', help=h)
-    
-    h = "File to print ComovingPoleFitAnalysis results as TSAL"
-    output.add_argument('--poles_model_output', dest='CPoleResultsFile', type=str, default='cPoleFitAnalysisTSAL.txt', help=h)
-    
+     
     #---------------------------------------------------------------------------
     args = parser.parse_args()
     compute_Pkmu(args)
