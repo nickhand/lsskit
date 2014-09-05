@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 06/24/2014
 """
-from lss import pkmu_driver
+from lss import pkmu_driver, hod_mock
 from flipper import flipperDict
 import argparse
 
@@ -23,7 +23,9 @@ if __name__ == '__main__':
     params = flipperDict.flipperDict()
     params.readFromFile(args.param_file)
 
-    mean_bias, mean_err = pkmu_driver.fit_bias(params)
+    mock = hod_mock.load(params['mock_file'])    
+    mean_bias, mean_err = pkmu_driver.fit_bias(params, mock)
+    
     print "mean bias = %.3f +/- %.3f" %(mean_bias, mean_err)
 
 #-------------------------------------------------------------------------------
