@@ -8,8 +8,73 @@
 """
 import numpy as np
 import itertools
-import tsal
 from . import tsal, cpm_tsal
+
+#-------------------------------------------------------------------------------
+def add_power_labels(ax, output_units, data_type, mu_avg=False, 
+                        norm_linear=True, subtract_shot_noise=True):
+    """
+    This will add the axis labels for power spectra
+    """
+    if output_units == 'relative':
+        k_units = "(h/Mpc)"
+        P_units = "(Mpc/h)^3"
+    else:
+        k_units = "(1/Mpc)"
+        P_units = "(Mpc)^3"
+        
+    # let's set the xlabels and return
+    if ax.xlabel.text == "":
+        ax.xlabel.update(r"$\mathrm{k \ %s}$" %k_units)
+
+    if ax.ylabel.text == "":
+
+        if data_type == "Pkmu":
+            if mu_avg: 
+                P_label = r"\langle P(k, \mu) \rangle_\mu"
+                norm_label = r"\langle P^\mathrm{EH}(k, \mu) \rangle_\mu"
+            else:
+                P_label = r"P(k, \mu)"
+                norm_label = r"P^\mathrm{EH}(k, \mu)"
+        else:
+            norm_label = r"P^\mathrm{EH}_{\ell=0}(k)"
+            if data_type == "monopole":
+                P_label = r"P_{\ell=0}(k)"
+            else:
+                P_label = r"P_{\ell=2}(k)"
+
+        if norm_linear:
+            if subtract_shot_noise:
+                ax.ylabel.update(r"$\mathrm{(%s - \bar{n}^{-1}) \ / \ %s}$" %(P_label, norm_label))
+            else:
+                ax.ylabel.update(r"$\mathrm{%s \ / \ %s}$" %(P_label, norm_label))
+
+        else:    
+            ax.ylabel.update(r"$\mathrm{%s \ %s}$" %(P_label, P_units))
+#end add_power_labels
+
+#-------------------------------------------------------------------------------
+def weighted_average(frames):
+    """
+    Take the weighted average of a list of `pandas.DataFrames` holding power 
+    spectra
+    
+    Parameters
+    ----------
+    frames : list
+        The list of `pandas.DataFrame` objects. Each object must have an `error`
+        column in order to take the weighted average
+    
+    Returns
+    -------
+    weighted_frame : pandas.DataFrame
+        The DataFrame holding the weighted average of the input frames
+    """
+    sum_weights = sum(df.error**(-2) for df in frames)
+    weighted_frame = (sum(df.div(df.error**2, axis=0) for df in frames)).div(sum_weights, axis=0)
+    weighted_frame['error'] = (sum(df.error**(-2) for df in frames))**(-0.5)
+    
+    return weighted_frame
 
 #-------------------------------------------------------------------------------
 def cosmo_from_config(config_file):
@@ -56,48 +121,6 @@ def cosmo_from_config(config_file):
     return Cosmology(outcosmo)
 
 #-------------------------------------------------------------------------------
-def extract_multipoles(tsal_file):
-    """
-    Extract the multipoles (monopole/quadrupole) from a TSAL file
-    
-    Parameters
-    ----------
-    tsal_file : str 
-        The name of the file holding this TaylorSerierApproximatedLikelihood
-        for the multipoles fit
-        
-    Returns
-    -------
-    ks : np.ndarray
-        The array of wavenumbers where the multipoles are defined
-    monopole : np.ndarray
-        The monopole moment values
-    monopole_err : np.narray
-        The errors on the monopole
-    quadrupole : np.ndarray
-        The quadrpole moment values
-    quadrupole_err : np.narray
-        The errors on the quadrupole    
-    """
-    # read in the tsal file
-    tsal_fit = tsal.TSAL(tsal_file)
-    
-    mono, quad = {}, {}
-    for key, val in tsal_fit.pars.iteritems():
-    
-        k = float(key.split('_')[-1])
-        if 'mono' in key:
-            mono[k] = (val.val, val.err)
-        elif 'quad' in key:
-            quad[k] = (val.val, val.err)
-            
-    ks = np.array(sorted(mono.keys()))
-    mono_vals, mono_errs = map(np.array, zip(*[mono[k] for k in ks]))
-    quad_vals, quad_errs = map(np.array, zip(*[quad[k] for k in ks]))
-    return ks, mono_vals, mono_errs, quad_vals, quad_errs
-#end extract_multipoles
-
-#-------------------------------------------------------------------------------
 def extract_bias(tsal_file):
     """
     Extract the measured linear bias from the tsal file
@@ -110,31 +133,5 @@ def extract_bias(tsal_file):
     
     return bias.val, bias.err
 #end extract_bias
-
-#-------------------------------------------------------------------------------
-def extract_Pkmu_data(tsal_file):
-    """
-    Extract the P(k, mu) given the output file TSAL file holding the 
-    power spectrum measurement from the ``measure_and_fit_discrete.out`` code.
-    
-    Return a ``pandas.DataFrame`` holding the power spectrum data
-    """
-    import pandas as pd
-    
-    # read in the measurement
-    data = cpm_tsal.CPM_TSAL(tsal_file)
-    
-    # all combinations of (mu, k)
-    muks = list(itertools.product(sorted(data.mus), sorted(data.ks)))
-    
-    # the column values for each (mu, k)
-    columns = [data.getMeasurement(k, mu) for (mu, k) in muks]
-    
-    # now make the DataFrame
-    index = pd.MultiIndex.from_tuples(muks, names=['mu', 'k'])
-    frame = pd.DataFrame(columns, index=index, columns=['power', 'error', 'noise', 'baseline'])
-    
-    return frame
-#end extract_Pkmu_data
 
 #-------------------------------------------------------------------------------
