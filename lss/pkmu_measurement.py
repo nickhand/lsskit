@@ -7,14 +7,42 @@
  creation date: 07/18/2014
 """
 import numpy as np
-from pandas import HDFStore
+from pandas import HDFStore, DataFrame, Index, MultiIndex
+import itertools
 
+from . import tsal, cpm_tsal, tools
 import plotify as pfy
-from . import tools
-
 from cosmology.growth import Power, growth_rate
 from cosmology.parameters import Cosmology
 from cosmology.utils.units import h_conversion_factor
+
+#-------------------------------------------------------------------------------
+def average_power(files, output_units=None, mu_avg=False, mu=None, data_type="Pkmu"):
+    """
+    Compute the average power from a list of PkmuMeasurement file names
+    """
+    if output_units is not None:
+        if output_units not in ['absolute', 'relative']:
+            raise ValueError("`output_units` keyword must be one of ['absolute', 'relative']")
+    
+    if data_type not in ['Pkmu', 'monopole', 'quadrupole']:
+         raise ValueError("Must specify a `type` positional argument and it must be one of ['Pkmu', 'monopole', 'quadrupole']")
+    
+    frames = []
+    for f in files:
+        data = load(f)
+        if output_units is not None: data.output_units = output_units
+    
+        if data_type == "Pkmu":
+            if mu_avg:
+                frames.append(data.mu_averaged())
+            else:
+                frames.append(data.Pk(mu))
+        else:
+            frames.append(getattr(data, data_type))
+
+    return tools.weighted_average(frames)
+#end average_power
 
 #-------------------------------------------------------------------------------
 def load(filename):
@@ -46,22 +74,28 @@ class PkmuMeasurement(object):
     Class to hold a P(k, mu) measurement, which is essentially a wrapper around
     a ``pandas.DataFrame`` object which holds the P(k, mu) data
     """
-    def __init__(self, data_frame, units, **kwargs):
+    def __init__(self, cpm_tsal, units, poles_tsal=None, **kwargs):
         """
-        Initialize with the ``pandas.DataFrame`` holding the P(k, mu) data
+        Initialize with the ``pandas.DataFrame`` holding the P(k, mu) data.
+        
+        Notes
+        -----
+        `self.data` is a `DataFrame` holding the P(k, mu) measurement,
+        which will have a `MultiIndex` with levels `[`mu`, `k`]`, which defines
+        each measurement. The columns for the `DataFrame` are:
+            `power` : the comoving power measurement with units specified
+                      by `units`
+            `error` : the error on the power measurement
+            `baseline` : the baseline power measurement that the power 
+                         is measured with respect to
+            `noise` : the component of the baseline that is "noise-like"
         
         Parameters
         ----------
-        data_frame : ``pandas.DataFrame``
-            `DataFrame` holding the P(k, mu) measurement. The `DataFrame` 
-            should have a `MultiIndex` with levels `[`mu`, `k`]`, which defines
-            each measurement. The columns for the `DataFrame` are:
-                `power` : the comoving power measurement with units specified
-                          by `units`
-                `error` : the error on the power measurement
-                `baseline` : the baseline power measurement that the power 
-                             is measured with respect to
-                `noise` : the component of the baseline that is "noise-like"
+        cpm_tsal : str
+            The name of the file holding the P(k,mu) measurement in the 
+            form of a TSAL
+
         
         units : str, {`absolute`, `relative`}
             The units of the power spectrum measurement. `Absolute` means
@@ -86,7 +120,11 @@ class PkmuMeasurement(object):
                 Default is `None`
         """
         # the data frame storing the P(k, mu) data
-        self.data = data_frame
+        self._cpm_from_tsal(cpm_tsal)
+        
+        # add multipoles too
+        if poles_tsal is not None:
+            self._poles_from_tsal(poles_tsal)
         
         # dictionary storing the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
@@ -118,6 +156,57 @@ class PkmuMeasurement(object):
         self._output_units = self.measurement_units
         
     #end __init__
+    
+    #---------------------------------------------------------------------------
+    def _cpm_from_tsal(self, tsal_file):
+        """
+        Internal function to make `DataFrame` from TSAL file
+        """
+        # read in the measurement
+        data = cpm_tsal.CPM_TSAL(tsal_file)
+
+        # all combinations of (mu, k)
+        muks = list(itertools.product(sorted(data.mus), sorted(data.ks)))
+
+        # the column values for each (mu, k)
+        columns = [data.getMeasurement(k, mu) for (mu, k) in muks]
+
+        # now make the DataFrame
+        index = MultiIndex.from_tuples(muks, names=['mu', 'k'])
+        frame = DataFrame(columns, index=index, columns=['power', 'error', 'noise', 'baseline'])
+
+        self.data = frame
+    #end _cpm_from_tsal
+    
+    #---------------------------------------------------------------------------
+    def _poles_from_tsal(self, tsal_file):
+        """
+        Internal function to store multipoles from TSAL file
+        """
+        tsal_fit = tsal.TSAL(tsal_file)
+
+        mono, quad = {}, {}
+        for key, val in tsal_fit.pars.iteritems():
+
+            k = float(key.split('_')[-1])
+            if 'mono' in key:
+                mono[k] = (val.val, val.err)
+            elif 'quad' in key:
+                quad[k] = (val.val, val.err)
+
+        ks = np.array(sorted(mono.keys()))
+        mono_vals, mono_errs = map(np.array, zip(*[mono[k] for k in ks]))
+        quad_vals, quad_errs = map(np.array, zip(*[quad[k] for k in ks]))
+        
+        if np.any(self.ks != ks):
+            raise ValueError("Wavenumber mismatch between P(k, mu) and multipole measurements")
+            
+        # make the monopole, quadrupole dataframes
+        index = Index(self.ks, name='k')
+        self._monopole = DataFrame(data={'power':mono_vals, 'error':mono_errs}, index=index)
+        self._quadrupole = DataFrame(data={'power':quad_vals, 'error':quad_errs}, index=index)    
+    #end _poles_from_tsal
+    
     #---------------------------------------------------------------------------
     @property
     def output_units(self):
@@ -249,17 +338,14 @@ class PkmuMeasurement(object):
     @property
     def monopole(self):
         """
-        Return a tuple of monopole values and errors, in units specified by 
+        Return a `DataFrame` with the `power`, `error` columns storing the
+        monopole values and errors, respectively, in units specified by 
         `self.output_units`
         
         Returns
         -------
-        monopole : np.ndarray
-            The measured monopole values in units specified by `self.output_units`,
-            and defined at the `k` values in `self.ks`
-        monopole_error : np.ndarray
-            The measured monopole errors in units specified by `self.output_units`,
-            and defined at the `k` values in `self.ks`
+        df : pandas.DataFrame
+            The monopole data in DataFrame format
         """
         # conversion factor for output units, as specified in `self.output_units`
         output_units_factor = 1.
@@ -267,27 +353,23 @@ class PkmuMeasurement(object):
             output_units_factor = h_conversion_factor('power', self.measurement_units, 
                                                         self.output_units, self.cosmo['h'])
         try:
-            return self._mono*output_units_factor, self._mono_err*output_units_factor
+            return output_units_factor*self._monopole
         except:
             raise AttributeError("No monopole measurement provided yet.")
-    
     #end monopole
     
     #---------------------------------------------------------------------------
     @property
     def quadrupole(self):
         """
-        Return a tuple of quadrupole values and errors, in units specified by 
+        Return a `DataFrame` with the `power`, `error` columns storing the
+        quadrupole values and errors, respectively, in units specified by 
         `self.output_units`
-
+        
         Returns
         -------
-        quadrupole : np.ndarray
-            The measured quadrupole values in units specified by `self.output_units`,
-            and defined at the `k` values in `self.ks`
-        quadrupole_error : np.ndarray
-            The measured quadrupole errors in units specified by `self.output_units`,
-            and defined at the `k` values in `self.ks`
+        df : pandas.DataFrame
+            The quadrupole data in DataFrame format
         """
         # conversion factor for output units, as specified in `self.output_units`
         output_units_factor = 1.
@@ -295,30 +377,13 @@ class PkmuMeasurement(object):
             output_units_factor = h_conversion_factor('power', self.measurement_units, 
                                                         self.output_units, self.cosmo['h'])
         try:
-            return self._quad*output_units_factor, self._quad_err*output_units_factor
+            return output_units_factor*self._quadrupole
         except:
             raise AttributeError("No quadrupole measurement provided yet.")
-
     #end quadrupole
     
     #---------------------------------------------------------------------------
     # the functions
-    #---------------------------------------------------------------------------
-    def add_multipoles(self, tsal_file):
-        """
-        Add a monopole and quadrupole measurement, where the multipoles are
-        determined by fitting the following model to the P(k, mu) measurement
-        
-          :math: P(k, mu) = monopole(k) + 0.5*(3 mu^2 - 1)*quadrupole(k)       
-        """
-        poles = tools.extract_multipoles(tsal_file)
-        ks, self._mono, self._mono_err, self._quad, self._quad_err = poles
-        
-        if np.any(self.ks != ks):
-            raise ValueError("Wavenumber mismatch between P(k, mu) and multipole measurements")
-            
-    #end add_multipoles
-    
     #---------------------------------------------------------------------------
     def save(self, filename):
         """
@@ -372,10 +437,10 @@ class PkmuMeasurement(object):
         
         if weighted:
             power_average = lambda row: np.average(row['power'], weights=row['error']**(-2))
-            err_average = lambda row: np.mean(1./row['error']**(-2.))
+            err_average = lambda row: np.sum(row['error']**(-2.))
         
             avg_data['power'] = grouped.apply(power_average)
-            avg_data['error'] = np.sqrt(grouped.apply(err_average))
+            avg_data['error'] = (grouped.apply(err_average))**(-0.5)
         else:
             avg_data['error'] /= np.sqrt(len(self.mus))
             
@@ -415,7 +480,7 @@ class PkmuMeasurement(object):
         if mu not in self.mus:
             raise ValueError("Power measurement not defined at mu = %s" %mu)
         
-        return self.data.xs(mu, level=self._mu_level)
+        return self.data.xs(mu, level=self._mu_level)*output_units_factor
     #end Pk
     
     #---------------------------------------------------------------------------
@@ -714,15 +779,13 @@ class PkmuMeasurement(object):
                 if isinstance(mu, int):
                     mu = self.mus[mu]
                 data = self.Pk(mu)
-            Pk   = data.power
-            err  = data.error
         else:
             mu = mu_avg = None
-            if data_type == 'monopole':
-                Pk, err = self.monopole
-            else:
-                Pk, err = self.quadrupole
-              
+            data = getattr(self, data_type)
+ 
+        Pk   = data.power
+        err  = data.error 
+             
         # the shot noise
         Pshot_sub = 0.
         if subtract_shot_noise: Pshot_sub = self.Pshot
@@ -789,11 +852,12 @@ class PkmuMeasurement(object):
         if ax.ylabel.text == "":
             
             if data_type == "Pkmu":
-                norm_label = r"P^\mathrm{EH}(k, \mu)"
                 if mu_avg: 
                     P_label = r"\langle P(k, \mu) \rangle_\mu"
+                    norm_label = r"\langle P^\mathrm{EH}(k, \mu) \rangle_\mu"
                 else:
                     P_label = r"P(k, \mu)"
+                    norm_label = r"P^\mathrm{EH}(k, \mu)"
             else:
                 norm_label = r"P^\mathrm{EH}_{\ell=0}(k)"
                 if data_type == "monopole":
