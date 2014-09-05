@@ -41,10 +41,7 @@ def package_results(tag, options_dict, cosmo):
     if options_dict['fit_poles']:
         if not os.path.exists(Pole_file):
             raise ValueError("Cannot find '%s' output file" %Pole_file)
-    
-    # extract the power spectrum measurement as a pandas DataFrame
-    power_df = tools.extract_Pkmu_data(DTPBA_file)
-        
+            
     output_files_dir = "output_files"
     with pytools.ignored(OSError):
         os.makedirs(output_files_dir)
@@ -82,12 +79,11 @@ def package_results(tag, options_dict, cosmo):
         os.remove(options_dict['CosmoParamsFile'])
     
     # make the PkmuMeasurement object and save it
-    pkmu = pkmu_measurement.PkmuMeasurement(power_df, options_dict['units'], cosmo=cosmo, **header)
-    
-    # add the multipoles if we measured them
-    if options_dict['fit_poles']:
-        pkmu.add_multipoles("%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag))
+    poles_tsal = "%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag) if options_dict['fit_poles'] else None
+    cpm_tsal   = "%s/%s_Pdtbpa.dat" %(output_files_dir, tag)
+    pkmu       = pkmu_pandas_wrapper.PkmuMeasurement(cpm_tsal, options_dict['units'], poles_tsal=poles_tsal, cosmo=cosmo, **header)
         
+    # now save it   
     pkmu.save("%s/%s_Pkmu.dat" %(power_data_dir, tag))
 
 #end package_results
