@@ -11,6 +11,7 @@ import subprocess
 import os
 from . import hod_mock, tools
 from utils import pytools
+from cosmology.utils.units import h_conversion_factor
 
 #-------------------------------------------------------------------------------
 def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
@@ -65,12 +66,14 @@ def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
 #end compute_PB_Pkmu
 
 #-------------------------------------------------------------------------------
-def fit_bias(params):
+def fit_bias(params, mock):
     """
     Fit the large-scale bias
     """ 
     import tempfile
     import shutil
+    
+    params = params.copy()
     
     # get the name of the output file
     output_dir = 'power_fits'
@@ -83,10 +86,10 @@ def fit_bias(params):
         
         # the kmax to compute P(k, mu) to 
         kmax = params.pop('kmax')
-    
-        # compute Nbar in Mpc^3 for this sample
-        mock = hod_mock.load(params['mock_file'])
 
+        # first clear any restrictions
+        mock.clear_restrictions()
+        
         # set the restrictions
         if params['galaxy_restrict'] is not None:
             mock.restrict_galaxies(params['galaxy_restrict'])
@@ -95,10 +98,9 @@ def fit_bias(params):
             mock.restrict_halos(params['halo_restrict'])
 
         # compute the shot noise for this sample in (Mpc)^3
+        output_units_factor = h_conversion_factor('volume', mock.units, params['file_units'], mock.cosmo['h'])
         volume = mock.box_size**3
-        if 'h' in mock.units:
-            volume /= mock.cosmo.h**3
-        Pshot = volume / mock.total_galaxies
+        Pshot = volume / mock.total_galaxies * output_units_factor
         
         # set the missing parameters
         params['redshift_space'] = False
@@ -109,7 +111,7 @@ def fit_bias(params):
         params.writeToFile(temp_param_file.name)
         
         # now call compute_Pkmu
-        options = "--log --no_package --Ncells 128 --kmax %f --k_order 0 --kpar_order 0 --vary_noise 0 --shot_noise %.0f --dk 0.005" %(kmax, Pshot)
+        options = "--log --no_package --Ncells 128 --kmax %f --k_order 0 --kpar_order 0 --vary_noise 0 --shot_noise %.0f --dk 0.005 --kmin 0.005 " %(kmax, Pshot)
         ans = os.system("compute_Pkmu %s %s" %(temp_param_file.name, options))
         if ans:
             raise ValueError("Cannot compute bias; error in `compute_Pkmu`")
