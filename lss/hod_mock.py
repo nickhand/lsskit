@@ -15,9 +15,9 @@ import operator
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 import pyparsing as pp
-import pylab
 
 from utils import utilities
+import plotify as pfy
 from . import angularFOF
 from cosmology.parameters import Cosmology, default_params
 from cosmology import evolution
@@ -685,7 +685,7 @@ class MockHOD(object):
         vs halo mass
         """  
         # reindex by haloid
-        frame = self.sample.drop_duplicates(subset=self.halo_id)
+        frame = self.sample.drop_duplicates(cols=self.halo_id)
         frame = frame.set_index(self.halo_id)
           
         mass = getattr(frame, mass_col)
@@ -695,15 +695,16 @@ class MockHOD(object):
         x, y_cen, err_cen, w_cen = utilities.bin(mass, N_cen, nBins=10, log=True)
         x, y_sat, err_sat, w_sat = utilities.bin(mass, N_sat, nBins=10, log=True)
 
-        pylab.errorbar(x, y_cen, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
-        pylab.errorbar(x, y_sat, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='satellite galaxies')
-        pylab.loglog(x, y_cen+y_sat, marker='.', c='k', label='all galaxies')
+        pfy.errorbar(x, y_cen, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
+        pfy.errorbar(x, y_sat, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='satellite galaxies')
+        pfy.loglog(x, y_cen+y_sat, marker='.', c='k', label='all galaxies')
         
-        pylab.subplots_adjust(bottom=0.15)  
-        pylab.xlabel(r'$M_\mathrm{halo} (%s)$' %mass_units, fontsize=16)
-        pylab.ylabel(r'$\langle N(M) \rangle$', fontsize=16)
+        ax = pfy.gca()
+        pfy.plt.subplots_adjust(bottom=0.15)  
+        ax.xlabel.update(r'$M_\mathrm{halo} (%s)$' %mass_units, fontsize=16)
+        ax.ylabel.update(r'$\langle N(M) \rangle$', fontsize=16)
         
-        return pylab.gca()
+        return ax
     #end plot_hod
     
     #---------------------------------------------------------------------------
@@ -716,9 +717,9 @@ class MockHOD(object):
 
         # first plot and then we normalize
         mass_bins = np.logspace(np.log10(M_min), np.log10(M_max), 50)
-        pdf, bins, patches = pylab.hist(masses, bins=mass_bins)
+        pdf, bins, patches = pfy.hist(masses, bins=mass_bins, color='k')
         bincenters = 0.5*(bins[1:] + bins[:-1])
-        pylab.cla()
+        pfy.plt.cla()
 
         # transform N(M) into dN/dlnM
         widths = np.diff(bins)
@@ -745,16 +746,18 @@ class MockHOD(object):
         # satellites
         bins2, pdf2, dM2 = self._compute_mass_pdf(mass_sat)
 
-        pylab.bar(bins1[:-1], pdf1, width=dM1, facecolor='DodgerBlue', bottom=pdf1*0., alpha=0.5, label='all galaxies')
-        pylab.bar(bins2[:-1], pdf2, width=dM2, facecolor='Crimson', bottom=pdf2*0., alpha=0.5, label='satellites')
 
-        pylab.subplots_adjust(bottom=0.15)
-        pylab.gca().set_xscale('log')
-        pylab.ylabel(r"$\mathrm{dp / dlnM}$", fontsize=16)
-        pylab.xlabel(r"$M_\mathrm{halo} \ (%s)$" %mass_units, fontsize=16)
-        pylab.legend(loc=0)
+        ax = pfy.gca()
+        pfy.bar(bins1[:-1], pdf1, width=dM1, bottom=pdf1*0., color=ax.color_list[0], alpha=0.5, grid='y', label='all galaxies')
+        pfy.bar(bins2[:-1], pdf2, width=dM2, bottom=pdf2*0., color=ax.color_list[1], alpha=0.5, grid='y', label='satellites')
 
-        return pylab.gca()
+        pfy.plt.subplots_adjust(bottom=0.15)
+        ax.x_log_scale()
+        ax.ylabel.update("dp / dlnM", fontsize=16)
+        ax.xlabel.update(r"$M_\mathrm{halo} \ (%s)$" %mass_units, fontsize=16)
+        ax.legend(loc=0)
+
+        return ax
     #end plot_mass_distribution
         
     #---------------------------------------------------------------------------
