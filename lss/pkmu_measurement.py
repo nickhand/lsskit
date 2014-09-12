@@ -9,8 +9,9 @@
 import numpy as np
 from pandas import HDFStore, DataFrame, Index, MultiIndex
 import itertools
+import copy
 
-from . import tsal, cpm_tsal, tools
+from . import tsal, tools
 import plotify as pfy
 from cosmology.growth import Power, growth_rate
 from cosmology.parameters import Cosmology
@@ -69,7 +70,7 @@ def load(filename):
 #end load
 
 #-------------------------------------------------------------------------------
-class PkmuMeasurement(object):
+class PkmuMeasurement(tsal.TSAL):
     """
     Class to hold a P(k, mu) measurement, which is essentially a wrapper around
     a ``pandas.DataFrame`` object which holds the P(k, mu) data
@@ -111,81 +112,167 @@ class PkmuMeasurement(object):
                 A dict-like object holding the cosmology parameterws with which the 
                 power measurement was made. For unit conversions, `h` must be 
                 defined. Default is `None`.
-        
-            redshift : float
-                The redshift at which the measurement was made. Default is `None`.
-                
+                        
             space : str, {`real`, `redshift`, `None`}
                 Whether the measurement was made in real or redshift space. 
                 Default is `None`
         """
-        # the data frame storing the P(k, mu) data
-        self._cpm_from_tsal(cpm_tsal)
-        
-        # add multipoles too
-        if poles_tsal is not None:
-            self._poles_from_tsal(poles_tsal)
-        
         # dictionary storing the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, (dict, Cosmology)):
-                raise TypeError("The cosmology object must be one of [dict, Cosmology]")
-            
-        # the redshift of the measurement
-        self.redshift = kwargs.pop('redshift', None)
-        
-        # the space of the measurement
-        self.space = kwargs.pop('space', None)
-        
+            if not isinstance(self.cosmo, dict): 
+                raise TypeError("The cosmology object must be a dict")
+
         # the measurement units
         if units not in ['absolute', 'relative']:
             raise ValueError("`Units` must be one of [`absolute`, `relative`]")
         self.measurement_units = units
         
-        # any other keywords
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
-            
-        # compute the growth rate f for convenience, if we have a redshift
-        # and a cosmology
-        if self.cosmo is not None and self.redshift is not None:
-            self.f = growth_rate(self.redshift, params=self.cosmo)
-            
         # keep track of the units for output
         self._output_units = self.measurement_units
-        
+
+        # the space of the measurement
+        self.space = kwargs.pop('space', None)
+
+        # any other keywords we want to save
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)        
+            
+        # the data frame storing the P(k, mu) data
+        self._cpm_from_tsal(cpm_tsal)
+
+        # add multipoles too
+        if poles_tsal is not None:
+            self._poles_from_tsal(poles_tsal)
     #end __init__
-    
+
     #---------------------------------------------------------------------------
-    def _cpm_from_tsal(self, tsal_file):
+    def __getitem__(self, key):
         """
-        Internal function to make `DataFrame` from TSAL file
+        Access individual band-powers through dict-like interface:
+
+            Pkmu_frame = self[k, mu], 
+
+        where k and mu are either integers between 0 - len(self.ks)/len(self.mus) 
+        or floats specifying the actual value
+
+        Returns
+        -------
+        frame : pandas.DataFrame
+            A DataFrame with a single row holding the data for the band, 
+            which columns specified by `self.columns`
         """
-        # read in the measurement
-        data = cpm_tsal.CPM_TSAL(tsal_file)
+        if not isinstance(key, tuple) or len(key) != 2:
+            raise KeyError("Must specify both a `k` and `mu` value as the key")
+
+        k, mu = key
+        if isinstance(k, int): 
+            if not 0 <= k < len(self.ks): 
+                raise KeyError("Integer that identifies k-band must be between [0, %d)" %len(self.ks))
+            k = self.ks[k]
+
+        if isinstance(mu, int): 
+            if not 0 <= mu < len(self.mus): 
+                raise KeyError("Integer that identifies mu-band must be between [0, %d)" %len(self.mus))
+            mu = self.mus[mu]
+
+        if not (mu, k) in self.data.index:
+            raise KeyError("Sorry, band (k = %s, mu = %s) does not exist" %(k, mu))
+
+        return self.data.loc[mu, k]
+
+    #end __getitem__
+
+    #---------------------------------------------------------------------------
+    # Internal methods
+    #---------------------------------------------------------------------------
+    def _cpm_from_tsal(self, fname):
+        """
+        Internal method to read the CPM TSAL file, optionally reading any 
+        extra components
+        """
+        ff = open(fname)
+        self.readTSAL(ff) # inherited function
+        self._read_extra_cpm(ff)
+        ff.close()
+
+    #end _cpm_from_tsal
+
+    #---------------------------------------------------------------------------
+    def _read_extra_cpm(self, ff):
+        """
+        Internal method to read extra components of the TSAL
+        """
+        self.redshift = float(ff.readline()) # redshift
+
+        # check syntax
+        line = ff.readline()
+        if line != "add_to_baseline\n" :
+            print line
+            raise ValueError("no add_to_baseline - Not sure what to do in _read_extra")
+
+        # read the baseline
+        baseline = {}
+        ks       = set()
+        mus      = set()
+        N        = int(ff.readline())
+        for i in range(N):
+            k, mu, val = map(float, ff.readline().split())
+            ks.add(k)
+            mus.add(mu)
+            baseline[(k,mu)] = val
+
+        # check syntax
+        line = ff.readline()        
+        if line != "approx_noise\n" :
+            print line
+            raise ValueError("no approx_noise - Not sure what to do in _read_extra")
+
+        # check syntax
+        if N != int(ff.readline()) :
+            raise ValueError("number mismatch in _read_extra")
+
+        # read the noise 
+        noise = {}
+        for i in range(N):
+            k, mu, val = map(float, ff.readline().split())
+            if (k, mu) not in baseline:
+                print i, k, mu
+                raise ValueError("k or mu mismatch in _read_extra")
+            noise[(k,mu)] = val
 
         # all combinations of (mu, k)
-        muks = list(itertools.product(sorted(data.mus), sorted(data.ks)))
+        muks = list(itertools.product(sorted(mus), sorted(ks)))
 
         # the column values for each (mu, k)
-        columns = [data.getMeasurement(k, mu) for (mu, k) in muks]
+        columns = []
+        base_name = '_'.join(self.pars.keys()[0].split('_')[:2])
+        for (mu, k) in muks:
+            this_base  = baseline[(k,mu)]
+            this_noise = noise[(k,mu)]
+            name  = "%s_%s_%s" %(base_name, str(k), str(mu))
+            this_val   = this_base + self.pars[name].val
+            this_err   = self.pars[name].err           
+            columns.append( (this_val,this_err,this_noise,this_base) )
 
         # now make the DataFrame
         index = MultiIndex.from_tuples(muks, names=['mu', 'k'])
         frame = DataFrame(columns, index=index, columns=['power', 'error', 'noise', 'baseline'])
 
+        # save as `data` attribute
         self.data = frame
-    #end _cpm_from_tsal
-    
+
+    #end _read_extra_cpm
+
     #---------------------------------------------------------------------------
     def _poles_from_tsal(self, tsal_file):
         """
         Internal function to store multipoles from TSAL file
         """
+        # read the multipoles TSAL
         tsal_fit = tsal.TSAL(tsal_file)
 
-        mono, quad = {}, {}
+        mono, quad, hexadec = {}, {}, {}
         for key, val in tsal_fit.pars.iteritems():
 
             k = float(key.split('_')[-1])
@@ -193,18 +280,26 @@ class PkmuMeasurement(object):
                 mono[k] = (val.val, val.err)
             elif 'quad' in key:
                 quad[k] = (val.val, val.err)
+            elif 'hexadec' in key:
+                hexadec[k] = (val.val, val.err)
+            else:
+                raise ValueError("Multipoles TSAL name %s not recognized" %key)
 
+        # set up the index for multipole data frames 
         ks = np.array(sorted(mono.keys()))
-        mono_vals, mono_errs = map(np.array, zip(*[mono[k] for k in ks]))
-        quad_vals, quad_errs = map(np.array, zip(*[quad[k] for k in ks]))
-        
         if np.any(self.ks != ks):
             raise ValueError("Wavenumber mismatch between P(k, mu) and multipole measurements")
-            
-        # make the monopole, quadrupole dataframes
-        index = Index(self.ks, name='k')
-        self._monopole = DataFrame(data={'power':mono_vals, 'error':mono_errs}, index=index)
-        self._quadrupole = DataFrame(data={'power':quad_vals, 'error':quad_errs}, index=index)    
+        index = Index(self.ks, name='k')    
+
+        # now make the data frames
+        names = ['_monopole', '_quadrupole', '_hexadecapole']
+        for name, pole in zip(names, [mono, quad, hexadec]):
+            if len(pole) != len(self.ks):
+                continue
+            vals, errs = map(np.array, zip(*[pole[k] for k in ks]))
+            frame = DataFrame(data=np.vstack((vals, errs)).T, index=index, columns=['power', 'error'])
+            setattr(self, name, frame)
+
     #end _poles_from_tsal
     
     #---------------------------------------------------------------------------
@@ -381,30 +476,107 @@ class PkmuMeasurement(object):
         except:
             raise AttributeError("No quadrupole measurement provided yet.")
     #end quadrupole
+
+    #---------------------------------------------------------------------------
+    @property
+    def hexadecapole(self):
+        """
+        Return a `DataFrame` with the `power`, `error` columns storing the
+        hexadecapole values and errors, respectively, in units specified by 
+        `self.output_units`
+        
+        Returns
+        -------
+        df : pandas.DataFrame
+            The quadrupole data in DataFrame format
+        """
+        # conversion factor for output units, as specified in `self.output_units`
+        output_units_factor = 1.
+        if self.measurement_units != self.output_units:
+            output_units_factor = h_conversion_factor('power', self.measurement_units, 
+                                                        self.output_units, self.cosmo['h'])
+        try:
+            return output_units_factor*self._hexadecapole
+        except:
+            raise AttributeError("No hexadecapole measurement provided yet.")
+    #end quadrupole
     
     #---------------------------------------------------------------------------
-    # the functions
+    # the functions        
     #---------------------------------------------------------------------------
-    def save(self, filename):
+    def Pk(self, mu):
         """
-        Save the `PkmuMeasurement` instance as a pickle to the filename specified
+        Return the power measured P(k) at a specific value of mu, as a 
+        `pandas.DataFrame`.  The units of the output are specified by 
+        `self.output_units`
         
         Parameters
-        ----------
-        filename : str 
-            the filename to output to
-        """        
-        # first write out the galaxies
-        store = HDFStore(filename, 'w')
+        ---------
+        mu : {int, float}
+            If a `float`, `mu` must be a value in `self.mus`, or if an `int`, 
+            the value of `mu` used will be `self.mus[mu]`
+            
+        Returns
+        -------
+        data : pandas.DataFrame
+            The slice of the full DataFrame holding the columns values for
+            this input `mu` value
+        """
+        # units of self.output_units
+        output_units_factor = 1.
+        if self.measurement_units != self.output_units:
+            output_units_factor = h_conversion_factor('power', self.measurement_units, 
+                                                        self.output_units, self.cosmo['h'])
+                                                        
+        # get the correct value of mu, if an integer was specified
+        if isinstance(mu, int): 
+            if not 0 <= mu < len(self.mus): 
+                raise KeyError("Integer that identifies mu-band must be between [0, %d)" %len(self.mus))
+            mu = self.mus[mu]
+            
+        # make sure the power is defined at this value of mu
+        if mu not in self.mus:
+            raise ValueError("Power measurement not defined at mu = %s" %mu)
         
-        # store the data DataFrame
-        store['data'] = self.data
+        return self.data.xs(mu, level=self._mu_level)*output_units_factor
+    #end Pk
+    
+    #---------------------------------------------------------------------------
+    def Pmu(self, k):
+        """
+        Return the power measured P(mu) at a specific value of k.  The units of 
+        the output are specified by `self.output_units`
         
-        # now also store self
-        self.data = None
-        store.get_storer('data').attrs.Pkmu = self
-        store.close()
-    #end save
+        Parameters
+        ---------
+        k : int, float
+            If a `float`, `k` must be a value in `self.ks`, or if an `int`, the
+            value of `k` used will be `self.ks[k]`
+        
+        Returns
+        -------
+        data : pandas.DataFrame
+            The slice of the full DataFrame holding the columns values for
+            this input `k` value
+        """
+        # units of self.output_units
+        output_units_factor = 1.
+        if self.measurement_units != self.output_units:
+            output_units_factor = h_conversion_factor('power', self.measurement_units, 
+                                                        self.output_units, self.cosmo['h'])
+                                                        
+        # get the correct value of k, if an integer was specified
+        if isinstance(k, int): 
+            if not 0 <= k < len(self.ks): 
+                raise KeyError("Integer that identifies k-band must be between [0, %d)" %len(self.ks))
+            k = self.ks[k]
+            
+        # make sure the power is defined at this value of k
+        if k not in self.ks:
+            raise ValueError("Power measurement not defined at k = %s" %k)
+        
+        return self.data.xs(k, level=self._k_level)
+    #end Pmu
     
     #---------------------------------------------------------------------------
     def mu_averaged(self, weighted=True):
@@ -446,77 +618,6 @@ class PkmuMeasurement(object):
             
         return avg_data*output_units_factor
     #end mu_averaged
-    
-    #---------------------------------------------------------------------------
-    def Pk(self, mu):
-        """
-        Return the power measured P(k) at a specific value of mu, as a 
-        `pandas.DataFrame`.  The units of the output are specified by 
-        `self.output_units`
-        
-        Parameters
-        ---------
-        mu : {int, float}
-            If a `float`, `mu` must be a value in `self.mus`, or if an `int`, 
-            the value of `mu` used will be `self.mus[mu]`
-            
-        Returns
-        -------
-        data : pandas.DataFrame
-            The slice of the full DataFrame holding the columns values for
-            this input `mu` value
-        """
-        # units of self.output_units
-        output_units_factor = 1.
-        if self.measurement_units != self.output_units:
-            output_units_factor = h_conversion_factor('power', self.measurement_units, 
-                                                        self.output_units, self.cosmo['h'])
-                                                        
-        # get the correct value of mu, if we specified an int
-        if isinstance(mu, int):
-            mu = self.mus[mu]
-            
-        # make sure the power is defined at this value of mu
-        if mu not in self.mus:
-            raise ValueError("Power measurement not defined at mu = %s" %mu)
-        
-        return self.data.xs(mu, level=self._mu_level)*output_units_factor
-    #end Pk
-    
-    #---------------------------------------------------------------------------
-    def Pmu(self, k):
-        """
-        Return the power measured P(mu) at a specific value of k.  The units of 
-        the output are specified by `self.output_units`
-        
-        Parameters
-        ---------
-        k : int, float
-            If a `float`, `k` must be a value in `self.ks`, or if an `int`, the
-            value of `k` used will be `self.ks[k]`
-        
-        Returns
-        -------
-        data : pandas.DataFrame
-            The slice of the full DataFrame holding the columns values for
-            this input `k` value
-        """
-        # units of self.output_units
-        output_units_factor = 1.
-        if self.measurement_units != self.output_units:
-            output_units_factor = h_conversion_factor('power', self.measurement_units, 
-                                                        self.output_units, self.cosmo['h'])
-                                                        
-        # get the correct value of k, if we specified an int
-        if isinstance(k, int):
-            k = self.ks[k]
-            
-        # make sure the power is defined at this value of k
-        if k not in self.ks:
-            raise ValueError("Power measurement not defined at k = %s" %k)
-        
-        return self.data.xs(k, level=self._k_level)
-    #end Pmu
     
     #---------------------------------------------------------------------------
     def Pk_kaiser(self, bias, power_kwargs):
@@ -672,7 +773,9 @@ class PkmuMeasurement(object):
     def plot(self, *args, **kwargs):
         """
         Plot either the P(k, mu), monopole, or quadrupole measurement, in
-        the units specified by `self.output_units`
+        the units specified by `self.output_units`.  In addition to the 
+        keywords accepted below, any plotting keywords accepted by 
+        `matplotlib` can be passed.
 
         Parameters
         ----------
@@ -704,15 +807,21 @@ class PkmuMeasurement(object):
             
         power_kwargs : dict, optional
             Any keyword arguments to pass to the linear power spectrum `Power`
-            class. Default is `{}`.
+            class. Default is `{'transfer_fit' : "EH"}`.
             
-        subtract_shot_noise : bool, optional
-            If `True`, subtract the shot noise before plotting. Default 
-            is `False`.
+        subtract_constant_noise : bool, optional
+            If `True`, subtract the 1/nbar shot noise stored in `Pshot` before 
+            plotting. Default is `False`. This assumes you can compute the 
+            shot noise from the `self.Pshot`.
+
+        subtract_noise : bool, optional
+            If `True`, subtract the noise component stored as the `noise`
+            column in `self.data`. Default is `False`. 
+
+        normalize_by_baseline : bool, optional
+            Normalize by the baseline, plotting data/baseline. This is only
+            possible for the `Pkmu` `data_type`. Default is `False`
             
-        plot_kwargs : dict, optional
-            Any additional keywords to use when plotting. Default is `{}`.
-        
         label : str, optional
             The label to attach to these plot lines. Default is `None`
         
@@ -722,6 +831,9 @@ class PkmuMeasurement(object):
         weighted_mean : bool, optional
             When averaging the power spectrum over `mu`, whether or not
             to use a weighted average. Default is `False`
+            
+        add_axis_labels : bool, optional
+            Whether to add axis labels that make sense. Default is `True`
         
         Returns
         -------
@@ -736,15 +848,17 @@ class PkmuMeasurement(object):
         ax, args, kwargs = pfy.parse_arguments(*args, **kwargs)       
         
         # default keyword values
-        bias                = kwargs.get('bias', 1.)
-        norm_linear         = kwargs.get('norm_linear', False)
-        plot_linear         = kwargs.get('plot_linear', False)
-        power_kwargs        = kwargs.get('power_kwargs', {})
-        subtract_shot_noise = kwargs.get('subtract_shot_noise', False)
-        plot_kwargs         = kwargs.get('plot_kwargs', {})
-        label               = kwargs.get('label', None)
-        y_offset            = kwargs.get('offset', 0.)
-        weighted_mean       = kwargs.get('weighted_mean', False)
+        sub_constant_noise = kwargs.pop('subtract_constant_noise', False)
+        sub_noise          = kwargs.pop('subtract_noise', False)
+        bias               = kwargs.pop('bias', 1.)
+        norm_linear        = kwargs.pop('norm_linear', False)
+        plot_linear        = kwargs.pop('plot_linear', False)
+        power_kwargs       = kwargs.pop('power_kwargs', {'transfer_fit' : "EH"})
+        label              = kwargs.pop('label', None)
+        y_offset           = kwargs.pop('offset', 0.)
+        weighted_mean      = kwargs.pop('weighted_mean', False)
+        add_axis_labels    = kwargs.pop('add_axis_labels', True)
+        normalize          = kwargs.pop('normalize_by_baseline', False)
 
         # check if we need to extract a bias value
         if isinstance(bias, basestring):
@@ -761,22 +875,25 @@ class PkmuMeasurement(object):
         
         # check the value of type
         data_type = args[0]
-        if data_type not in ['Pkmu', 'monopole', 'quadrupole']:
-            raise ValueError("Must specify a `type` positional argument and it must be one of ['Pkmu', 'monopole', 'quadrupole']")
-           
+        data_choices = ['Pkmu', 'monopole', 'quadrupole', 'hexadecapole']
+        if data_type not in data_choices:
+            raise ValueError("Positional argument must be one of %s" %data_choices)
+            
         # now get the data
         k = self.ks 
+        norm = 1.
         if data_type == 'Pkmu':
             # mu-averaged or not
-            mu_avg = False
-            if kwargs.get('mu', None) is None:
-                mu_avg = True
+            mu_avg = kwargs.pop('mu', None) is None
+            if mu_avg:
                 mu   = np.mean(self.mus)
                 data = self.mu_averaged(weighted=weighted_mean)
             else:
                 # get the mu value, correctly 
                 mu = kwargs['mu']
-                if isinstance(mu, int):
+                if isinstance(mu, int): 
+                    if not 0 <= mu < len(self.musm): 
+                        raise KeyError("Integer that identifies mu-band must be between [0, %d)" %len(self.mus))
                     mu = self.mus[mu]
                 data = self.Pk(mu)
         else:
@@ -785,16 +902,20 @@ class PkmuMeasurement(object):
  
         Pk   = data.power
         err  = data.error 
-             
+        if normalize: norm = data.baseline
+        
         # the shot noise
-        Pshot_sub = 0.
-        if subtract_shot_noise: Pshot_sub = self.Pshot
+        noise = np.zeros(len(Pk))
+        if sub_noise: 
+            noise = data.noise
+        elif sub_constant_noise: 
+            noise = self.Pshot
           
         # plot the linear theory result
         if plot_linear or norm_linear:
 
             # the normalization
-            if norm_linear and data_type == 'quadrupole':
+            if norm_linear and data_type in ['quadrupole', 'hexadecapole']:
                 norm = self.normalization(bias, power_kwargs, mu=mu, mu_avg=mu_avg, data_type='monopole')
             else:
                 norm = self.normalization(bias, power_kwargs, mu=mu, mu_avg=mu_avg, data_type=data_type)
@@ -807,35 +928,29 @@ class PkmuMeasurement(object):
                     lin_label = r'$P^\mathrm{EH}(k, \mu)$'
                     P_label = r"$P(k, \mu = %.3f)$ "%mu
                 else:
-                    if data_type == 'monopole':
-                        lin_label = r'$P^\mathrm{EH}_{\ell=0}(k)$'
-                        P_label = r"$P_{\ell=0}(k)$"
-                    else:
-                        lin_label = r'$P^\mathrm{EH}_{\ell=2}(k)$'
-                        P_label = r"$P_{\ell=2}(k)$"
+                    lin_label = r'$P^\mathrm{EH}_{\ell=%s}(k)$' %(pole_numbers[data_type])
+                    P_label = r"$P_{\ell=%s}(k)$" %(pole_numbers[data_type])
+  
                 pfy.loglog(ax, k, norm, c='k', label=lin_label)
-                pfy.errorbar(ax, k, Pk-Pshot_sub, err, label=P_label, **plot_kwargs)
+                pfy.errorbar(ax, k, Pk-noise, err, label=P_label, **kwargs)
             
             # normalize by the linear theory
             else:
-                
-                data_to_plot = (k, (Pk-Pshot_sub)/norm, err/norm)
-                pfy.plot_data(ax, data=data_to_plot, labels=label, y_offset=y_offset, plot_kwargs=plot_kwargs)
+                data_to_plot = (k, (Pk-noise)/norm, err/norm)
+                pfy.plot_data(ax, data=data_to_plot, labels=label, y_offset=y_offset, plot_kwargs=kwargs)
         
         # just plot the measurement with no normalization
         else:
             
-            # set up the labels and plot the measurement
-            if data_type == "Pkmu":
-                if label is None: label = r"$P(k, \mu = %.3f)$ "%mu
-            else:
-                if data_type == 'monopole':
-                    if label is None: label = r"$P_{\ell=0}(k)$"
+            if label is None:            
+                if data_type == "Pkmu":
+                    label = r"$P(k, \mu = %.3f)$ "%mu
                 else:
-                    if label is None: label = r"$P_{\ell=2}(k)$"
-            pfy.errorbar(ax, k, (Pk - Pshot_sub), err, label=label, **plot_kwargs)
-            ax.x_log_scale()
-            ax.y_log_scale()
+                    label = r"$P_{\ell=%s}(k)$" %(pole_numbers[data_type])
+            pfy.errorbar(ax, k, (Pk - noise)/norm, err/norm, label=label, **kwargs)
+            if not normalize:
+                ax.x_log_scale()
+                ax.y_log_scale()
 
         # now determine the units
         if self.output_units == 'relative':
@@ -852,33 +967,53 @@ class PkmuMeasurement(object):
         if ax.ylabel.text == "":
             
             if data_type == "Pkmu":
-                if mu_avg: 
-                    P_label = r"\langle P(k, \mu) \rangle_\mu"
-                    norm_label = r"\langle P^\mathrm{EH}(k, \mu) \rangle_\mu"
-                else:
-                    P_label = r"P(k, \mu)"
+                P_label = r"P(k, \mu)"
+                if not normalize:
                     norm_label = r"P^\mathrm{EH}(k, \mu)"
-            else:
-                norm_label = r"P^\mathrm{EH}_{\ell=0}(k)"
-                if data_type == "monopole":
-                    P_label = r"P_{\ell=0}(k)"
                 else:
-                    P_label = r"P_{\ell=2}(k)"
+                    norm_label = r"P_\mathrm{base}(k, \mu)"
+
+                if mu_avg: 
+                    P_label = r"\langle %s \rangle_\mu" %P_label
+                    norm_label = r"\langle %s \rangle_\mu" %norm_label
+            else:
+                norm_label = r"P^\mathrm{EH}_{\ell=%s}(k)" %(pole_numbers[data_type])
+                P_label = r"P_{\ell=%s}(k)" %(pole_numbers[data_type])
             
-            if norm_linear:
-                if subtract_shot_noise:
+            if norm_linear or normalize:
+                if sub_noise or sub_constant_noise:
                     ax.ylabel.update(r"$\mathrm{(%s - \bar{n}^{-1}) \ / \ %s}$" %(P_label, norm_label))
                 else:
                     ax.ylabel.update(r"$\mathrm{%s \ / \ %s}$" %(P_label, norm_label))
             
-            else:    
-                ax.ylabel.update(r"$\mathrm{%s \ %s}$" %(P_label, P_units))
+            else: 
+                if sub_noise or sub_constant_noise:
+                    ax.ylabel.update(r"$\mathrm{%s - \bar{n}^{-1} \ %s}$" %(P_label, P_units))
+                else:       
+                    ax.ylabel.update(r"$\mathrm{%s \ %s}$" %(P_label, P_units))
 
         return ax.get_figure(), ax
     
     #end plot   
     #---------------------------------------------------------------------------
-
+    def save(self, filename):
+        """
+        Save the `PkmuMeasurement` instance as a pickle to the filename specified
+        
+        Parameters
+        ----------
+        filename : str 
+            the filename to output to
+        """        
+        store = HDFStore(filename, 'w')        
+        datacopy = copy.deepcopy(self)
+        store['data'] = datacopy.data
+        datacopy.data = None
+        store.get_storer('data').attrs.Pkmu = datacopy
+        store.close()
+    #end save
+    #---------------------------------------------------------------------------
+    
 #endclass PkmuMeasurement
 #-------------------------------------------------------------------------------
         
