@@ -9,6 +9,15 @@
 import numpy as np
 import itertools
 from . import tsal, cpm_tsal
+from glob import glob
+
+#-------------------------------------------------------------------------------
+def compute_average_biases(pattern):
+    """
+    Compute the average bias for a pattern specifiying a set of files
+    """
+    files = glob(pattern)
+    return np.mean([tools.extract_bias(f)[0] for f in files])
 
 #-------------------------------------------------------------------------------
 def add_power_labels(ax, output_units, data_type, mu_avg=False, 
