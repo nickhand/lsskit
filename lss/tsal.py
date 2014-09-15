@@ -8,7 +8,7 @@
 
 from scipy import *
 
-class parameter:
+class parameter(object):
     def __init__(self, name, value=None, error=None):
         self.name=name
         self.val=value
@@ -17,7 +17,7 @@ class parameter:
     def setParameterLine(self,line):
         self.line=line
   
-class TSAL:
+class TSAL(object):
     def __init__ (self, fname,lastColIsX=False):
         ff=open(fname)
         self.readTSAL (ff,lastColIsX)
