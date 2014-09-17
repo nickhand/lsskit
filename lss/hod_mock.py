@@ -7,13 +7,14 @@
 """
 import numpy as np
 import copy
-import collections
 import tempfile
-import cPickle as pickle
-import re
 import operator
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
+try:
+    from scipy.spatial import cKDTree as KDTree
+except:
+    from scipy.spatial import KDTree
 import pyparsing as pp
 
 from utils import utilities
@@ -481,7 +482,7 @@ class MockHOD(object):
         df : pandas.DataFrame
             a pandas DataFrame where each row is an object in this halo
         """
-        return self._galaxies[getattr(self._galaxies, self.halo_id) == halo_number]
+        return self._galaxies[self._galaxies[self.halo_id] == halo_number]
     #end collision_group
     
     #---------------------------------------------------------------------------     
@@ -497,12 +498,8 @@ class MockHOD(object):
         collided_ids = []
         while len(group_ids) > 1:
            
-            # make the coordinate arrays
-            coord_atts = [getattr(group, coord) for coord in self.coord_keys]
-            coords = np.transpose(np.vstack(coord_atts))
-
             # compute the number of collisions
-            dists = squareform(pdist(coords, metric='euclidean'))
+            dists = squareform(pdist(group[self.coord_keys], metric='euclidean'))
             n_collisions = np.sum((dists > 0.)&(dists <= self.collision_radius), axis=0)
                     
             # find the object that collides with the most
@@ -532,7 +529,7 @@ class MockHOD(object):
         # first clear any old fiber assignments
         self.clear_fiber_assignments()
         
-        # first, make a DataFrame with group_size as a columne
+        # first, make a DataFrame with group_size as a column
         groups = self._galaxies.groupby('group_number')
         sizes = pd.DataFrame(groups.size(), columns=['group_size'])
         frame = self._galaxies.join(sizes, on='group_number', how='left')
@@ -583,7 +580,8 @@ class MockHOD(object):
     #end clear_fiber_assignments
     
     #---------------------------------------------------------------------------
-    def write_coordinates(self, filename, fields, units=None, header=[], temporary=False):
+    def write_coordinates(self, filename, fields, units=None, header=[], 
+                            temporary=False, replace_with_nearest=None):
         """
         Write the coordinates of the specified galaxy sample out to a file
         
@@ -601,6 +599,10 @@ class MockHOD(object):
             replace the string
         temporary : bool, optional
             If `True`, write the results out to a `tempfile.NamedTemporaryFile`
+        replace_with_nearest : str, optional
+            Replace this column with the value of the nearest neighbor on the
+            sky -- basically this is correcting for fiber collisions
+            
         
         Returns
         -------
@@ -639,18 +641,43 @@ class MockHOD(object):
                     
             hdr = "%s\n" %('\n'.join(h['line'] for h in header_copy))
             outfile.write(hdr)
-
-       
-        # make the np array of output fields
-        output_fields = [getattr(self.sample, field)*conversion_factor for field in fields]
-        output = np.transpose(np.vstack(output_fields))
+            
+        # get the output fields, optionally replacing with nearest neighbor values
+        if replace_with_nearest is None:
+            output_fields = self.sample[fields]*conversion_factor
+        else:
+            output_fields = self._replace_with_nearest(replace_with_nearest)[fields]*conversion_factor
         
         # now write out the np array
-        np.savetxt(outfile, output)
+        np.savetxt(outfile, output_fields)
         outfile.close()
         
         return out_name    
     #end write
+    
+    #---------------------------------------------------------------------------
+    def _replace_with_nearest(self, col_name):
+        """
+        Find the nearest neighbor for all collided and unresolved galaxies
+        and replace the column value with that of the nearest neighbor on
+        the sky
+        """        
+        # initialize the kdtree with all galaxies
+        tree = KDTree(self.sample[self.coord_keys])
+        
+        # compute the NN for only the collided galaxies
+        cond = (self.sample.collided == 1)&(self.sample.resolved==0)
+        trimmed_sample = self.sample[cond]
+        dists, inds = tree.query(trimmed_sample[self.coord_keys], k=2)
+        
+        gal_ids = inds[:,0]
+        NN_ids = inds[:,1]
+        
+        # initialize the output
+        output = self.sample.copy()
+        output.loc[gal_ids, col_name] = output.loc[NN_ids, col_name].values
+        return output
+        
     
     #---------------------------------------------------------------------------
     def save(self, filename):
@@ -688,7 +715,7 @@ class MockHOD(object):
         frame = self.sample.drop_duplicates(cols=self.halo_id)
         frame = frame.set_index(self.halo_id)
           
-        mass = getattr(frame, mass_col)
+        mass = frame[mass_col]
         N_cen = frame.N_cen
         N_sat = frame.N_sat
         
@@ -735,10 +762,10 @@ class MockHOD(object):
         Plot the mass distribution
         """
         # halo masses for all halos
-        mass_all = np.asarray(getattr(self.sample, mass_col))
+        mass_all = np.asarray(self.sample[mass_col])
         
         # halo masses for satellites
-        mass_sat = np.asarray(getattr(self.sample[self.sample.type == 'satellite'], mass_col))
+        mass_sat = np.asarray(self.sample[self.sample.type == 'satellite'][mass_col])
         
         # all galaxies
         bins1, pdf1, dM1 = self._compute_mass_pdf(mass_all)
