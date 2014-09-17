@@ -193,7 +193,8 @@ def compute_Pkmu(args):
                 object_file = mock.write_coordinates(None, params['file_fields'], 
                                                      units=params['file_units'], 
                                                      header=params['header'], 
-                                                     temporary=True)
+                                                     temporary=True,
+                                                     replace_with_nearest=params['replace_with_nearest'])
                 
             else:
                 object_file = params['object_file']
@@ -288,6 +289,9 @@ if __name__ == '__main__':
     h = 'use log spaced bands starting at k_min'
     bpt.add_argument('--use_log_spacing', choices=[0, 1], default=0, type=int, help=h)
     
+    h = "use parallel Pkmu mode measurement in FourierBandPowerTheory"
+    bpt.add_argument('--parallel_form', choices=[0, 1], default=0, type=int, help=h)         
+    
     #---------------------------------------------------------------------------
     # parameters for fitting the bias model
     #---------------------------------------------------------------------------
@@ -361,9 +365,6 @@ if __name__ == '__main__':
     
     h = 'FourierBandPowerTheory: verbosity level'
     verbose.add_argument('--FBPT_verbose', choices=[0, 1, 2], type=int, default=0, help=h)         
-    
-    # h = 'DatAnDriverWTestGen: verbosity level'
-    # verbose.add_argument('--DADWTG_verbose', choices=[0, 1, 2], type=int, default=0, help=h)
     
     h = 'TaylorSeriesApproximatedLikelihood: verbosity level'
     verbose.add_argument('--TSAL_verbose', choices=[0, 1, 2], type=int, default=0, help=h)
