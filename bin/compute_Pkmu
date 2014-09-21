@@ -290,7 +290,7 @@ if __name__ == '__main__':
     bpt.add_argument('--use_log_spacing', choices=[0, 1], default=0, type=int, help=h)
     
     h = "use parallel Pkmu mode measurement in FourierBandPowerTheory"
-    bpt.add_argument('--parallel_form', choices=[0, 1], default=0, type=int, help=h)         
+    bpt.add_argument('--parallel_modes_form', dest="FBPT_parallel_form", choices=[0, 1], default=0, type=int, help=h)
     
     #---------------------------------------------------------------------------
     # parameters for fitting the bias model
@@ -316,10 +316,10 @@ if __name__ == '__main__':
     model.add_argument('--shot_noise', dest='LSSNoise', type=float, default=5000., help=h)
     
     h = 'Whether to correct for the mass assignment window function'
-    model.add_argument('--correct_window', dest='TBPT_cellcorrect', choices=[0,1], default=1, type=int, help=h)
+    model.add_argument('--correct_window', dest='FBPT_default_cellcorrect', choices=[0,1], default=1, type=int, help=h)
     
     h = 'Whether to correct for the aliasing of shot noise'
-    model.add_argument('--correct_aliasing', dest='CBPT_default_aliascorrect', choices=[0,1], default=1, type=int, help=h)
+    model.add_argument('--correct_aliasing', dest='FBPT_default_aliascorrect', choices=[0,1], default=1, type=int, help=h)
         
     h = 'After initial band measurement and fit, rerun this many times to re-estimate errors and refit'
     model.add_argument('--reruns', type=int, default=1, help=h)
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     mock = parser.add_argument_group("Mock Data Set")
     
     h = 'In DatAnDriverWTestGen, default setting for whether or not to make test data.'
-    mock.add_argument('--make_test_data', type=int, default=0, choices=[0,1], help=h)
+    mock.add_argument('--make_test_data', type=int, default=1, choices=[0,1], help=h)
     
     h = 'The size of the box in Mpc'
     mock.add_argument('--box_L', dest='Box_L', type=float, default=2000., help=h)
