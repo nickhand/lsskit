@@ -120,8 +120,10 @@ class PkmuMeasurement(tsal.TSAL):
         # dictionary storing the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, dict): 
-                raise TypeError("The cosmology object must be a dict")
+            if not isinstance(self.cosmo, (dict, basestring)): 
+                raise TypeError("The cosmology object must be a dict/string")
+            if isinstance(self.cosmo, basestring):
+                self.cosmo = Cosmology(self.cosmo)
 
         # the measurement units
         if units not in ['absolute', 'relative']:
@@ -144,6 +146,9 @@ class PkmuMeasurement(tsal.TSAL):
         # add multipoles too
         if poles_tsal is not None:
             self._poles_from_tsal(poles_tsal)
+            
+        # add the growth factor for convenience
+        self.f = growth_rate(self.redshift, params=self.cosmo)
     #end __init__
 
     #---------------------------------------------------------------------------
@@ -882,17 +887,18 @@ class PkmuMeasurement(tsal.TSAL):
         # now get the data
         k = self.ks 
         norm = 1.
+        pole_numbers = {'monopole':'0', 'quadrupole':'2', 'hexadecapole':'4'}
         if data_type == 'Pkmu':
             # mu-averaged or not
-            mu_avg = kwargs.pop('mu', None) is None
+            mu = kwargs.pop('mu', None)
+            mu_avg = mu is None
             if mu_avg:
                 mu   = np.mean(self.mus)
                 data = self.mu_averaged(weighted=weighted_mean)
             else:
                 # get the mu value, correctly 
-                mu = kwargs['mu']
                 if isinstance(mu, int): 
-                    if not 0 <= mu < len(self.musm): 
+                    if not 0 <= mu < len(self.mus): 
                         raise KeyError("Integer that identifies mu-band must be between [0, %d)" %len(self.mus))
                     mu = self.mus[mu]
                 data = self.Pk(mu)
