@@ -9,7 +9,7 @@
 import numpy as np
 from pandas import HDFStore, DataFrame, Index, MultiIndex
 import itertools
-import copy
+import pickle 
 
 from . import tsal, tools
 import plotify as pfy
@@ -60,13 +60,15 @@ def load(filename):
     pkmu : PkmuMeasurement object
         The PkmuMeasurement class holding the pandas.DataFrame as `self.data`
     """
-    store = HDFStore(filename, 'r')
-    
-    pkmu = store.get_storer('data').attrs.Pkmu
-    pkmu.data = store['data']
-    store.close()
-    
-    return pkmu
+    try:
+        return pickle.load(open(filename, 'r'))
+    except:
+        store = HDFStore(filename, 'r')
+        pkmu = store.get_storer('data').attrs.Pkmu
+        pkmu.data = store['data']
+        store.close()
+        return pkmu
+        
 #end load
 
 #-------------------------------------------------------------------------------
@@ -120,8 +122,8 @@ class PkmuMeasurement(tsal.TSAL):
         # dictionary storing the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, (dict, basestring)): 
-                raise TypeError("The cosmology object must be a dict/string")
+            if not isinstance(self.cosmo, (dict, basestring, Cosmology)): 
+                raise TypeError("The cosmology object must be a dict/string/Cosmology")
             if isinstance(self.cosmo, basestring):
                 self.cosmo = Cosmology(self.cosmo)
 
@@ -662,7 +664,7 @@ class PkmuMeasurement(tsal.TSAL):
             
             # linear power spectrum is in "relative" units, so convert wavenumber
             # units appropriately
-            ks = self.ks * h_conversion_factor('wavenumber', self.measurement_units, 'relative', self.cosmo['h'])
+            ks = self.ks * h_conversion_factor('wavenumber', self.output_units, 'relative', self.cosmo['h'])
             power = Power(k=ks, z=self.redshift, cosmo=self.cosmo, **self._power_kwargs)
             self._Pk_lin = power.power
             
@@ -1011,12 +1013,7 @@ class PkmuMeasurement(tsal.TSAL):
         filename : str 
             the filename to output to
         """        
-        store = HDFStore(filename, 'w')        
-        datacopy = copy.deepcopy(self)
-        store['data'] = datacopy.data
-        datacopy.data = None
-        store.get_storer('data').attrs.Pkmu = datacopy
-        store.close()
+        pickle.dump(self, open(filename, 'w'))
     #end save
     #---------------------------------------------------------------------------
     
