@@ -28,7 +28,7 @@ def package_results(tag, options_dict, cosmo):
     DTPBA_file = options_dict['DTBPAResultsFile']
     CPFA_file  = "cPFitAnalysisTSAL.txt"
     DTF_file   = options_dict['DTFInfoFile']
-    Pole_file  = "cPoleFitAnalysisTSAL.txt"
+    Pole_file  = options_dict['CPoleResultsFile']
 
     # check the output files exist; (fuck you Harris, I do exist)
     if not os.path.exists(DTPBA_file):
@@ -81,7 +81,7 @@ def package_results(tag, options_dict, cosmo):
     # make the PkmuMeasurement object and save it
     poles_tsal = "%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag) if options_dict['fit_poles'] else None
     cpm_tsal   = "%s/%s_Pdtbpa.dat" %(output_files_dir, tag)
-    pkmu       = pkmu_pandas_wrapper.PkmuMeasurement(cpm_tsal, options_dict['units'], poles_tsal=poles_tsal, cosmo=cosmo, **header)
+    pkmu       = pkmu_measurement.PkmuMeasurement(cpm_tsal, options_dict['units'], poles_tsal=poles_tsal, cosmo=cosmo, **header)
         
     # now save it   
     pkmu.save("%s/%s_Pkmu.dat" %(power_data_dir, tag))
@@ -113,10 +113,12 @@ def compute_Pkmu(args):
     options_dict = {k : v for k, v in vars(args).iteritems() if v is not None}
     
     # pop certain args
-    show_help = options_dict.pop('show_help')
+    show_help  = options_dict.pop('show_help')
     param_file = options_dict.pop('param_file')
-    log = options_dict.pop('log')
+    log        = options_dict.pop('log')
     no_package = options_dict.pop('no_package')
+    fit_poles  = options_dict.pop('fit_poles')
+    poles_tsal = options_dict.pop('CPoleResultsFile')
     
     # only showing the help message
     if show_help:
@@ -211,6 +213,15 @@ def compute_Pkmu(args):
             with pytools.ignored(OSError):
                 os.remove(object_file)
 
+    # fit the multipoles
+    if fit_poles:
+        infile = "cPoleFitAnalysisTSAL.txt"
+        options = {'CPoleResultsFile' : poles_tsal}
+        pkmu_driver.compute_PB_poles(infile, options=options, show_help=False, stdout=stdout)
+        
+        # store the pole tsal file name
+        options_dict['CPoleResultsFile'] = poles_tsal
+    
     if not no_package:
     
         # add some options for use in the header
@@ -244,6 +255,8 @@ if __name__ == '__main__':
     h = "don't package the results nicely"
     parser.add_argument('--no_package', action='store_true', default=False, help=h)
     
+    h = 'whether to also fit the power multipoles'
+    parser.add_argument('--fit_poles', choices=[0, 1], default=0, type=int, help=h)
     
     #---------------------------------------------------------------------------
     # Command-line options for ``measure_and_fit_discrete``
@@ -264,9 +277,6 @@ if __name__ == '__main__':
     # Band Power Theory parameters
     #---------------------------------------------------------------------------
     bpt = parser.add_argument_group("Band Power Theory")
-    
-    h = 'whether to also fit the monopole/quadrupole multipoles'
-    bpt.add_argument('--fit_poles', choices=[0, 1], default=0, type=int, help=h)
     
     h = 'the maximum k value to compute in 1/Mpc'
     bpt.add_argument('--kmax', dest='BPT_kmax', type=float, default=0.2, help=h)
@@ -290,7 +300,7 @@ if __name__ == '__main__':
     bpt.add_argument('--use_log_spacing', choices=[0, 1], default=0, type=int, help=h)
     
     h = "use parallel Pkmu mode measurement in FourierBandPowerTheory"
-    bpt.add_argument('--parallel_modes_form', dest="FBPT_parallel_form", choices=[0, 1], default=0, type=int, help=h)
+    bpt.add_argument('--parallel_modes_calc', dest="FBPT_parallel_form", choices=[0, 1], default=0, type=int, help=h)
     
     #---------------------------------------------------------------------------
     # parameters for fitting the bias model
@@ -330,7 +340,7 @@ if __name__ == '__main__':
     mock = parser.add_argument_group("Mock Data Set")
     
     h = 'In DatAnDriverWTestGen, default setting for whether or not to make test data.'
-    mock.add_argument('--make_test_data', type=int, default=1, choices=[0,1], help=h)
+    mock.add_argument('--make_test_data', type=int, default=0, choices=[0,1], help=h)
     
     h = 'The size of the box in Mpc'
     mock.add_argument('--box_L', dest='Box_L', type=float, default=2000., help=h)
@@ -378,7 +388,10 @@ if __name__ == '__main__':
     output.add_argument('--sample_info', dest='DTFInfoFile', type=str, default='DTF_info.txt', help=h)
     
     h = "File to print DiscreteTracerBandPowerAnalysis results as TSAL"
-    output.add_argument('--Pkmu_output', dest='DTBPAResultsFile', type=str, default='Pdtbpa.cbpm', help=h)
+    output.add_argument('--pkmu_output', dest='DTBPAResultsFile', type=str, default='Pdtbpa.cbpm', help=h)
+
+    h = "File to print ComovingPoleFitAnalysis results as TSAL"
+    output.add_argument('--poles_tsal', dest='CPoleResultsFile', type=str, default='cPoleFitAnalysisTSAL.txt', help=h)
      
     #---------------------------------------------------------------------------
     args = parser.parse_args()
