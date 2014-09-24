@@ -1,7 +1,7 @@
 import pickle
+from . import kdtree
 from utils import utilities, pytools
 from catIO import catalog
-from pySZ.core import kdtree
 import numpy as np
 import os
 import collections
