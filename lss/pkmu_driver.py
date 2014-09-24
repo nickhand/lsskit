@@ -60,10 +60,62 @@ def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
             retcode = subprocess.call(calling_signature, stdout=stdout, stderr=stdout)
         else:
             retcode = subprocess.call(calling_signature)
-        if retcode:
-            raise ValueError("Error calling P(k, mu) code")
+        #if retcode:
+        #    raise ValueError("Error calling P(k, mu) code")
            
 #end compute_PB_Pkmu
+
+#-------------------------------------------------------------------------------
+def compute_PB_poles(infile, options={}, show_help=False, stdout=None):
+    """
+    Call Pat McDonald's BOSS cosmology code ``fit_poles.out`` 
+    to fit multipoles to a given P(k, mu) measurement
+    
+    Notes
+    -----
+    Assumes the code executable lives in ``$COSMOLOGYINC/ComovingPower/Examples/``
+    
+    Parameters
+    ----------
+    infile : str
+        The name of the file holding the coordinates
+    """
+    # get the path of the executable
+    executable = "%s/ComovingPower/Examples/fit_poles.out" %os.environ['COSMOLOGYINC']
+    
+    # make sure it exists
+    if not os.path.exists(executable):
+        raise ValueError("Executable for BOSS cosmology multipoles code not found at %s" %executable)
+        
+    
+    # only show the help
+    if show_help:
+        
+        retcode = subprocess.call([executable, "-h"])
+        if retcode:
+            raise ValueError("Error calling multipoles code")
+            
+    else:
+        
+        # get the absolute path name for the object_filename
+        if infile is not None:
+            infile_abs = os.path.abspath(infile)
+            calling_signature = [executable, "--CPM_default_filename", "%s" %infile_abs]
+        else:
+            calling_signature = [executable]
+            
+        for k, v in options.iteritems():
+            calling_signature += ["--%s" %k, str(v)]
+    
+        # call the code
+        if stdout is not None:
+            retcode = subprocess.call(calling_signature, stdout=stdout, stderr=stdout)
+        else:
+            retcode = subprocess.call(calling_signature)
+        #if retcode:
+        #    raise ValueError("Error calling P(k, mu) code")
+           
+#end compute_PB_poles
 
 #-------------------------------------------------------------------------------
 def fit_bias(params, mock):
