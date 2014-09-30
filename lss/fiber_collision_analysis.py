@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 09/04/2014
 """
-from . import pkmu_measurement
+from . import power_measurement, tools
 import plotify as pfy
 from glob import glob
 import numpy as np
@@ -30,125 +30,47 @@ def plot_collision_comparison(files_with, files_without, output_units,
     for i, files in enumerate([files_with, files_without]):
         
         # load the first one for shot noise, etc
-        Pkmu0 = pkmu_measurement.load(files[0])
+        Pkmu0 = power_measurement.load(files[0])
         Pkmu0.output_units = output_units
     
         Pshot = 0.
         if subtract_shot_noise: Pshot = Pkmu0.Pshot
 
         # first, plot with fiber collisions
-        Pk = pkmu_measurement.average_power(files, output_units=output_units, mu_avg=mu_avg, mu=mu, data_type=data_type)
+        Pk = power_measurement.average_power(files, output_units=output_units, mu_avg=mu_avg, mu=mu, data_type=data_type)
         norm = Pkmu0.normalization(biases[i], power_kwargs, mu_avg=mu_avg, mu=mu, data_type=data_type)
-        pfy.errorbar(Pkmu0.ks, (Pk.power-Pshot)/norm, Pk.error/norm, label=labels[i])
+        pfy.errorbar(Pkmu0.ks, (Pk.power-Pshot)/norm, Pk.variance**0.5/norm, label=labels[i])
 #end plot_collision_comparison
 
 #-------------------------------------------------------------------------------   
-def plot_power_ratio(files_with, files_without, output_units,
-                        data_type="Pkmu",
-                        bias_with=1., 
-                        bias_without=1.,
-                        mu_avg=False, 
-                        power_kwargs={'transfer_fit' : 'EH'},
-                        subtract_shot_noise=True):
+def plot_fractional_power_ratio(files_A, files_B, output_units,
+                                data_type="pkmu",
+                                bias_A=1., 
+                                bias_B=1.,
+                                mu_avg=False, 
+                                power_kwargs={'transfer_fit' : 'EH'},
+                                subtract_shot_noise=True,
+                                normalize=True, 
+                                **kwargs):
     """
-    Plots the ratio Pk_with / Pk_without as a function of k, either for a series
-    of mu values or the mu-averaged result. Pk_with is the **normalized** 
-    power spectrum for the sample with fiber collisions
+    Plots the fractional power ratio `(P_A - P_B) / |P_B|` as a function of k, 
+    either for a series of mu values or the mu-averaged result.
     """
-    
-    # load the first measurement
-    Pkmu0_with = pkmu_measurement.load(files_with[0])
-    Pkmu0_without = pkmu_measurement.load(files_without[0])
-    
-    # set the output units
-    Pkmu0_with.output_units = output_units
-    Pkmu0_without.output_units = output_units
+    # compute the means first
+    power_A = tools.weighted_mean([power_measurement.load(f)[data_type] for f in files_A])
+    power_B = tools.weighted_mean([power_measurement.load(f)[data_type] for f in files_B])
 
-    # shot noises
-    Pshot_with = 0.
-    if subtract_shot_noise: Pshot_with = Pkmu0_with.Pshot
+    # update the values
+    power_A.update(bias=bias, normalize=normalize, output_units=output_units, subtract_shot_noise=subtract_shot_noise)
+    power_B.update(bias=bias, normalize=normalize, output_units=output_units, subtract_shot_noise=subtract_shot_noise)
+
+    # the ratio
+    ratio = (power_A - power_B)/abs(power_B)
     
-    Pshot_without = 0.
-    if subtract_shot_noise: Pshot_without = Pkmu0_without.Pshot
-    
-    # do a mu-average
     if mu_avg:
-        
-        if data_type != "Pkmu":
-            raise ValueError("Confused: cannot do mu-avg when data_type != 'Pkmu'")
-        
-        # get the weighted frames
-        avg_with = pkmu_measurement.average_power(files_with, output_units=output_units, mu_avg=True, data_type="Pkmu")
-        avg_without = pkmu_measurement.average_power(files_without, output_units=output_units, mu_avg=True, data_type="Pkmu")
-                
-        # these are the normalizations
-        norm_with = Pkmu0_with.normalization(bias_with, power_kwargs, mu_avg=True, data_type=data_type)
-        norm_without = Pkmu0_without.normalization(bias_without, power_kwargs, mu_avg=True, data_type=data_type)
-        
-        # now get the normalized results
-        a = (avg_without.power - Pshot_without) / norm_without
-        b = (avg_with.power - Pshot_with) / norm_with
-        
-        a_err = avg_without.error / norm_without
-        b_err = avg_with.error / norm_with
-        delta  = b  - a  
-        delta_err = np.sqrt(a_err**2 + b_err**2)
-        
-        diff = delta / abs(a)
-        diff_err = diff * np.sqrt( (delta_err/delta)**2 + (a_err/a)**2 )
-        pfy.errorbar(Pkmu0_with.ks, diff, diff_err, ls='-',  color='k', linewidth=1.5, zorder=10, label=r"$\mu$-avg")
-
+        x = ratio.mu_averaged()
+        pfy.errorbar(power_A.ks, x.power, x.variance**0.5, label=r'$\mu$-averaged', **kwargs)  
     else:
-
-        if data_type == "Pkmu":
-            
-            # loop over each mu
-            for mu in Pkmu0_with.mus:
-
-                # get the weighted frames
-                Pk_with = pkmu_measurement.average_power(files_with, output_units=output_units, mu=mu, data_type="Pkmu")
-                Pk_without = pkmu_measurement.average_power(files_without, output_units=output_units, mu=mu, data_type="Pkmu")
- 
-                # these are the normalizations
-                norm_with = Pkmu0_with.normalization(bias_with, power_kwargs, mu=mu, mu_avg=False, data_type="Pkmu")
-                norm_without = Pkmu0_without.normalization(bias_without, power_kwargs, mu=mu, mu_avg=False, data_type="Pkmu")
-
-                
-                # now get the normalized results
-                a = (Pk_without.power - Pshot_without) / norm_without
-                b = (Pk_with.power - Pshot_with) / norm_with
-            
-                a_err = Pk_without.error / norm_without
-                b_err = Pk_with.error / norm_with
-                delta  = b - a
-                delta_err = np.sqrt(a_err**2 + b_err**2)
-        
-                diff = delta / abs(a)
-                diff_err = diff * np.sqrt( (delta_err/delta)**2 + (a_err/a)**2 )
-
-                pfy.errorbar(Pkmu0_with.ks, diff, diff_err, ls='-', linewidth=1.0, label=r"$\mu$ = %.1f" %mu)
-        else:
-            # get the weighted frames
-            Pk_with = pkmu_measurement.average_power(files_with, output_units=output_units, data_type=data_type)
-            Pk_without = pkmu_measurement.average_power(files_without, output_units=output_units, data_type=data_type)
-
-            # these are the normalizations
-            norm_with = Pkmu0_with.normalization(bias_with, power_kwargs, data_type=data_type)
-            norm_without = Pkmu0_without.normalization(bias_without, power_kwargs, data_type=data_type)
-
-            # now get the normalized results
-            a = (Pk_without.power - Pshot_without) / norm_without
-            b = (Pk_with.power - Pshot_with) / norm_with
-
-            a_err = Pk_without.error / norm_without
-            b_err = Pk_with.error / norm_with
-            delta  = b - a 
-            delta_err = np.sqrt(a_err**2 + b_err**2)
-
-            diff = delta / abs(a)
-            diff_err = diff * np.sqrt( (delta_err/delta)**2 + (a_err/a)**2 )
-
-            pfy.errorbar(Pkmu0_with.ks, diff, diff_err, ls='-', linewidth=1.0, label=data_type)
         
 
     ax = pfy.gca()

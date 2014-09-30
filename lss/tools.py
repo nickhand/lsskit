@@ -63,27 +63,28 @@ def add_power_labels(ax, output_units, data_type, mu_avg=False,
 #end add_power_labels
 
 #-------------------------------------------------------------------------------
-def weighted_average(frames):
+def weighted_mean(data):
     """
-    Take the weighted average of a list of `pandas.DataFrames` holding power 
-    spectra
+    Take the weighted mean of a list of `PowerMeasurement` objects
     
     Parameters
     ----------
-    frames : list
-        The list of `pandas.DataFrame` objects. Each object must have an `error`
+    data : list
+        The list of `PowerMeasurement` objects. Each object must have an `error`
         column in order to take the weighted average
     
     Returns
     -------
-    weighted_frame : pandas.DataFrame
+    weighted_frame : PowerMeasurement
         The DataFrame holding the weighted average of the input frames
     """
-    sum_weights = sum(df.error**(-2) for df in frames)
-    weighted_frame = (sum(df.div(df.error**2, axis=0) for df in frames)).div(sum_weights, axis=0)
-    weighted_frame['error'] = (sum(df.error**(-2) for df in frames))**(-0.5)
-    
-    return weighted_frame
+    weights = [1./d.data.variance for d in data]
+    norm = np.sum(weights, axis=0)
+    toret =  np.sum([d*w for d, w in zip(data, weights)]) / norm
+    toret._data['variance'] /= (1.*len(data))
+    return toret
+
+#end weighted_mean
 
 #-------------------------------------------------------------------------------
 def cosmo_from_config(config_file):

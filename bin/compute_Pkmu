@@ -13,7 +13,7 @@ import numpy as np
 import sys
 
 from flipper import flipperDict
-from lss import pkmu_driver, pkmu_measurement, hod_mock, tools
+from lss import pkmu_driver, power_measurement, hod_mock, tools
 
 #-------------------------------------------------------------------------------
 def package_results(tag, options_dict, cosmo):
@@ -81,10 +81,10 @@ def package_results(tag, options_dict, cosmo):
     # make the PkmuMeasurement object and save it
     poles_tsal = "%s/%s_poles_fitTSAL.dat" %(output_files_dir, tag) if options_dict['fit_poles'] else None
     cpm_tsal   = "%s/%s_Pdtbpa.dat" %(output_files_dir, tag)
-    pkmu       = pkmu_measurement.PkmuMeasurement(cpm_tsal, options_dict['units'], poles_tsal=poles_tsal, cosmo=cosmo, **header)
+    data       = power_measurement.PowerMeasurements(cpm_tsal, options_dict['units'], poles_tsal=poles_tsal, cosmo=cosmo, **header)
         
     # now save it   
-    pkmu.save("%s/%s_Pkmu.dat" %(power_data_dir, tag))
+    data.save("%s/%s.dat" %(power_data_dir, tag))
 
 #end package_results
 
@@ -215,12 +215,16 @@ def compute_Pkmu(args):
 
     # fit the multipoles
     if fit_poles:
-        infile = "cPoleFitAnalysisTSAL.txt"
-        options = {'CPoleResultsFile' : poles_tsal}
+        infile = options_dict["DTBPAResultsFile"]
+        if not os.path.exists(infile): 
+            raise ValueError("Cannont compute multipoles because P(k,mu) file %s does not exist" %infile)
+            
+        options = {'CPoleResultsFile' : poles_tsal, 'make_test_data' : 0}
         pkmu_driver.compute_PB_poles(infile, options=options, show_help=False, stdout=stdout)
         
-        # store the pole tsal file name
-        options_dict['CPoleResultsFile'] = poles_tsal
+    # store the pole tsal file name
+    options_dict['CPoleResultsFile'] = poles_tsal
+    options_dict['fit_poles'] = fit_poles
     
     if not no_package:
     
@@ -364,11 +368,11 @@ if __name__ == '__main__':
     #---------------------------------------------------------------------------
     verbose = parser.add_argument_group("Verbosity")
     
-    h = 'GSL_PSMinimizer: verbosity level'
-    verbose.add_argument('--GSLPSM_verbose', choices=[0, 1, 2], default=0, type=int, help=h)    
-    
-    h = 'LikelihoodFromDataTheory: verbosity level'
-    verbose.add_argument('--LFDT_verbose', choices=[0, 1, 2], default=0, type=int, help=h)
+    # h = 'GSL_PSMinimizer: verbosity level'
+    # verbose.add_argument('--GSLPSM_verbose', choices=[0, 1, 2], default=0, type=int, help=h)    
+    # 
+    # h = 'LikelihoodFromDataTheory: verbosity level'
+    # verbose.add_argument('--LFDT_verbose', choices=[0, 1, 2], default=0, type=int, help=h)
     
     h = 'K-mu Band Power Theory: verbosity level'
     verbose.add_argument('--KMBPT_verbose', choices=[0, 1, 2], default=0, type=int, help=h)

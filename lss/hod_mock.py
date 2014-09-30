@@ -146,9 +146,56 @@ class MockHOD(object):
         Total number of halos in the mock catalog
         """
         return len(self.sample.groupby(self.halo_id).groups)
-        
+
+    #---------------------------------------------------------------------------
+    @property
+    def nearest_neighbor_ids(self):
+        """
+        Return an Index with the galaxy ids of the nearest neighbors of all
+        collided and unresolved galaxies
+        """
+        try:
+            return self._nearest_neighbor_ids
+        except:
+            self._find_nearest_neighbors()
+            return self._nearest_neighbor_ids
+    
+    #---------------------------------------------------------------------------
+    @property
+    def collided_unresolved_ids(self):
+        """
+        Return an Index with the galaxy ids of all collided and 
+        unresolved galaxies
+        """
+        try:
+            return self._collided_unresolved_ids
+        except:
+            self._find_nearest_neighbors()
+            return self._collided_unresolved_ids    
     #---------------------------------------------------------------------------
     # Function calls    
+    #---------------------------------------------------------------------------
+    def _find_nearest_neighbors(self):
+        """
+        Compute the nearest neighbors of all collided/unresolved galaxies
+        """
+        # we can double count using any uncollided galaxies (for which
+        # we have a redshift)
+        cond = (self._galaxies.collided == 0)|(self._galaxies.resolved==1)
+        uncollided_gals = self._galaxies[cond]
+    
+        # initialize the kdtree for NN calculations
+        tree = KDTree(uncollided_gals[self.coord_keys])
+    
+        # find the NN for only the collided galaxies
+        cond = (self.sample.collided == 1)&(self.sample.resolved==0)
+        collided_gals = self.sample[cond]
+        dists, inds = tree.query(collided_gals[self.coord_keys], k=1)
+    
+        self._collided_unresolved_ids = collided_gals.index
+        self._nearest_neighbor_ids    = uncollided_gals.iloc[inds].index
+    #end _find_nearest_neighbors
+    
     #---------------------------------------------------------------------------
     def info(self):
         """
@@ -599,9 +646,10 @@ class MockHOD(object):
             replace the string
         temporary : bool, optional
             If `True`, write the results out to a `tempfile.NamedTemporaryFile`
-        replace_with_nearest : str, optional
-            Replace this column with the value of the nearest neighbor on the
-            sky -- basically this is correcting for fiber collisions
+        replace_with_nearest : str, bool, optional
+            Replace the values of all collided galaxies with those of the 
+            nearest neighbor on the sky -- this is correcting for 
+            fiber collisions by double counting nearest neighbors
             
         
         Returns
@@ -643,10 +691,10 @@ class MockHOD(object):
             outfile.write(hdr)
             
         # get the output fields, optionally replacing with nearest neighbor values
-        if replace_with_nearest is None:
+        if replace_with_nearest is None or not replace_with_nearest:
             output_fields = self.sample[fields]*conversion_factor
         else:
-            output_fields = self._replace_with_nearest(replace_with_nearest)[fields]*conversion_factor
+            output_fields = self._replace_with_nearest(replace_with_nearest, fields)*conversion_factor
         
         # now write out the np array
         np.savetxt(outfile, output_fields)
@@ -656,29 +704,26 @@ class MockHOD(object):
     #end write
     
     #---------------------------------------------------------------------------
-    def _replace_with_nearest(self, col_name):
+    def _replace_with_nearest(self, cols, fields):
         """
-        Find the nearest neighbor for all collided and unresolved galaxies
-        and replace the column value with that of the nearest neighbor on
-        the sky
+        Find the nearest neighbor for all (collided and unresolved) galaxies
+        and replace the collided object values with those of the 
+        nearest neighbor on the sky, i.e. double-counting
         """        
-        # initialize the kdtree with all galaxies
-        tree = KDTree(self.sample[self.coord_keys])
-        
-        # compute the NN for only the collided galaxies
-        cond = (self.sample.collided == 1)&(self.sample.resolved==0)
-        trimmed_sample = self.sample[cond]
-        dists, inds = tree.query(trimmed_sample[self.coord_keys], k=2)
-        
-        gal_ids = inds[:,0]
-        NN_ids = inds[:,1]
+        # get the galaxy ids of galaxy to replace and the neighbors
+        gal_ids = self.collided_unresolved_ids
+        NN_ids  = self.nearest_neighbor_ids
         
         # initialize the output
         output = self.sample.copy()
-        output.loc[gal_ids, col_name] = output.loc[NN_ids, col_name].values
-        return output
+        if isinstance(cols, bool):
+            output.loc[gal_ids, fields] = self._galaxies.loc[NN_ids, fields].values    
+        else:
+            output.loc[gal_ids, cols] = self._galaxies.loc[NN_ids, cols].values
         
+        return output[fields]
     
+    #end _replace_with_nearest    
     #---------------------------------------------------------------------------
     def save(self, filename):
         """
