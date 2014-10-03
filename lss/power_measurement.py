@@ -65,10 +65,11 @@ class PowerMeasurement(tsal.TSAL):
         # the measurement units
         if units not in ['absolute', 'relative']:
             raise ValueError("`Units` must be one of [`absolute`, `relative`]")
-        self.measurement_units = units
-
-        # keep track of the units for output
-        self._output_units = self.measurement_units
+        self.measurement_units = {'k' : units, 'power' : units}
+        
+        # keep track of the units for output k/power
+        self._output_k_units = units
+        self._output_power_units = units
 
         # the space of the measurement
         self.space = kwargs.pop('space', None)
@@ -83,10 +84,14 @@ class PowerMeasurement(tsal.TSAL):
         # the load the data as a tsal
         self._data_from_tsal(tsal_file)
 
+        # add shot noise column to self.data
+        self._add_shot_noise_column()
+        
         # add the growth factor for convenience
         if self.cosmo is not None and hasattr(self, 'redshift'):
             self.f = growth_rate(self.redshift, params=self.cosmo)
             
+        
         # store power kwargs too
         self.power_kwargs = {'transfer_fit' : "EH"}
         
@@ -96,9 +101,6 @@ class PowerMeasurement(tsal.TSAL):
         
         # subtract shot noise from the return power
         self._subtract_shot_noise = False
-        
-        # units conversion power for data attribute
-        self._data_units_power = 1
         
         # keep track of read-only attributes (normalize, subtract_shot_noise, output_units)
         self._read_only = set()
@@ -126,22 +128,31 @@ class PowerMeasurement(tsal.TSAL):
         if isinstance(other, self.__class__):
             
             # check the units
-            if self.output_units != other.output_units:
-                raise TypeError("Cannot add `PowerMeasurement` objects with different output units")
+            this_units = None if self.normalize else self.output_power_units
+            other_units = None if other.normalize else other.output_power_units
+            if this_units != other_units:
+                raise TypeError("Cannot add `PowerMeasurement` objects with different output power units")
             
-            if self.normalize != other.normalize:
-                if 'normalize' not in self._read_only and 'normalize' not in other._read_only:
-                    raise ValueError("Bad, bad idea to add two measurements while only one is normalized")
+            this_normalized = True if this_units is None else self.normalize
+            other_normalized = True if other_units is None else other.normalize
+            if this_normalized != other_normalized:
+                raise ValueError("Bad, bad idea to add two measurements while only one is normalized")
             
+            # do the actual addition
             toret._data = self.data + other.data
             toret._data['variance'] = self._add_variances(self.data, other.data)
         
+            # power measurement units returned are output units of added
+            toret.measurement_units['power'] = self.output_power_units
+                
             # make sure we can't mess up the output
             if self.normalize: 
-                toret.update(_normalize=False, _subtract_shot_noise=False)                
-                for x in ['normalize', 'subtract_shot_noise', 'output_units']:
-                    toret._read_only.add(x)
-                toret._data_units_power = 0
+                toret.update(_normalize=False)                
+                toret._read_only.add('normalize')
+
+                # if we normalized, units are None and we can't change them
+                toret._read_only.add('output_power_units')
+                toret.measurement_units['power'] = toret._output_power_units = None
         else:
             try:
                 # add the data frames, noting that adding a "well-defined"
@@ -149,9 +160,8 @@ class PowerMeasurement(tsal.TSAL):
                 toret._data = self._data.add(other, axis='index')
                 toret._data['variance'] = self._data['variance']
             except:
-                raise #ValueError("Failure to add object of type %s" %type(other))
+                raise ValueError("Failure to add object of type %s" %type(other))
                            
-        
         return toret
         
     def __radd__(self, other):
@@ -168,22 +178,31 @@ class PowerMeasurement(tsal.TSAL):
         if isinstance(other, self.__class__):
             
             # check the units
-            if self.output_units != other.output_units:
-                raise TypeError("Cannot subtract `PowerMeasurement` objects with different output units")
+            this_units = None if self.normalize else self.output_power_units
+            other_units = None if other.normalize else other.output_power_units
+            if this_units != other_units:
+                raise TypeError("Cannot subtract `PowerMeasurement` objects with different output power units")
             
-            if self.normalize != other.normalize:
-                if 'normalize' not in self._read_only and 'normalize' not in other._read_only:
-                    raise ValueError("Bad, bad idea to subtract two measurements while only one is normalized")
+            this_normalized = True if this_units is None else self.normalize
+            other_normalized = True if other_units is None else other.normalize
+            if this_normalized != other_normalized:
+                raise ValueError("Bad, bad idea to add two measurements while only one is normalized")
             
+            # do the subtraction
             toret._data = self.data - other.data
             toret._data['variance'] = self._add_variances(self.data, other.data)
             
+            # power measurement units returned are output units of added
+            toret.measurement_units['power'] = self.output_power_units
+                                
             # make sure we can't mess up the output
             if self.normalize: 
-                toret.update(_normalize=False, _subtract_shot_noise=False)                
-                for x in ['normalize', 'subtract_shot_noise', 'output_units']:
-                    toret._read_only.add(x)
-                toret._data_units_power = 0
+                toret.update(_normalize=False)                
+                toret._read_only.add('normalize')
+
+                # if we normalized, units are None and we can't change them
+                toret._read_only.add('output_power_units')
+                toret.measurement_units['power'] = toret._output_power_units = None
         else:
             try:
                 # subtract the data frames, noting that subtracting a "well-defined"
@@ -191,7 +210,7 @@ class PowerMeasurement(tsal.TSAL):
                 toret._data = self._data.subtract(other, axis='index')
                 toret._data['variance'] = self._data['variance']
             except:
-                raise #ValueError("Failure to subtract object of type %s" %type(other))
+                raise ValueError("Failure to subtract object of type %s" %type(other))
                            
         return toret
 
@@ -209,22 +228,30 @@ class PowerMeasurement(tsal.TSAL):
         if isinstance(other, self.__class__):
             
             # check the units
-            if self.output_units != other.output_units:
-                raise TypeError("Cannot divide `PowerMeasurement` objects with different output units")
+            this_units = None if self.normalize else self.output_power_units
+            other_units = None if other.normalize else other.output_power_units
+            if this_units != other_units:
+                raise TypeError("Cannot divide `PowerMeasurement` objects with different output power units")
             
-            if self.normalize != other.normalize:
-                if 'normalize' not in self._read_only and 'normalize' not in other._read_only:
-                    raise ValueError("Bad, bad idea to divide two measurements while only one is normalized")
+            this_normalized = True if this_units is None else self.normalize
+            other_normalized = True if other_units is None else other.normalize
+            if this_normalized != other_normalized:
+                raise ValueError("Bad, bad idea to add two measurements while only one is normalized")
                                 
+            # do the actual division
             toret._data = toret.data/other.data
             var_sum = self._add_fractional_variances(self.data, other.data)
             toret._data['variance'] = (self.data.power/other.data.power)**2*var_sum
             
             # make sure we can't mess up the output
             toret.update(_normalize=False, _subtract_shot_noise=False)                
-            for x in ['normalize', 'subtract_shot_noise', 'output_units']:
+            for x in ['normalize', 'subtract_shot_noise', 'output_power_units']:
                 toret._read_only.add(x)
-            toret._data_units_power = 0
+           
+            # set the shot noise to zero
+            toret._data['shot_noise'] *= 0.            
+            # returned power doesn't have units
+            toret.measurement_units['power'] = toret._output_power_units = None
                 
         else:
             try:
@@ -233,7 +260,7 @@ class PowerMeasurement(tsal.TSAL):
                 toret._data = self._data.divide(other, axis='index')
                 toret._data['variance'] = self._data['variance'].divide(other, axis='index')
             except:
-                raise #ValueError("Failure to divide object of type %s" %type(other))
+                raise ValueError("Failure to divide object of type %s" %type(other))
                     
         return toret
         
@@ -246,28 +273,7 @@ class PowerMeasurement(tsal.TSAL):
     
         # if multiplying two PowerMeasurements, keep track of variance correctly
         if isinstance(other, self.__class__):
-            
-            # check the units
-            if self.output_units != other.output_units:
-                raise TypeError("Cannot multiply `PowerMeasurement` objects with different output units")
-            
-            if self.normalize != other.normalize:
-                if 'normalize' not in self._read_only and 'normalize' not in other._read_only:
-                    raise ValueError("Bad, bad idea to multiply two measurements while only one is normalized")
-                                
-            toret._data = self.data*other.data
-            var_sum = self._add_fractional_variances(self.data, other.data)
-            toret._data['variance'] = (self.data.power*other.data.power)**2*var_sum
-            
-            # make sure we can't mess up the output
-            toret.update(_normalize=False, _subtract_shot_noise=False)                
-            for x in ['normalize', 'subtract_shot_noise']:
-                toret._read_only.add(x)            
-            if self.normalize: toret._read_only.add('normalize')    
-
-            toret._data_units_power = 0
-            if not self.normalize: toret._data_units_power += self._data_units_power
-            if not other.normalize: toret._data_units_power += other._data_units_power
+            raise NotImplementedError("Not a good idea to multiply two PowerMeasurements together")
             
         else:
             try:
@@ -276,13 +282,29 @@ class PowerMeasurement(tsal.TSAL):
                 toret._data = self._data.multiply(other, axis='index')
                 toret._data['variance'] = self._data['variance'].multiply(other, axis='index')
             except:
-                raise #ValueError("Failure to multiply object of type %s" %type(other))
+                raise ValueError("Failure to multiply object of type %s" %type(other))
                     
         return toret
         
     def __rmul__(self, other):
         return self*other
         
+    #---------------------------------------------------------------------------
+    def _add_shot_noise_column(self):
+        """
+        Add the shot noise to `self.data` as column named `shot_noise`
+        """
+        Pshot = 0.
+        if hasattr(self, 'volume') and hasattr(self, 'sample_size'):
+            Pshot = (self.volume / self.sample_size)
+        elif hasattr(self, 'Pshot'):
+            Pshot = self.Pshot
+        elif hasattr(self, 'shot_noise'):
+            Pshot = self.shot_noise
+            
+        self._data['shot_noise'] = (self._data['power']*0. + Pshot)
+    #end _add_shot_noise_column
+    
     #---------------------------------------------------------------------------
     def _add_fractional_variances(self, this, that):
         """
@@ -377,16 +399,16 @@ class PowerMeasurement(tsal.TSAL):
     #end _data_from_tsal
 
     #---------------------------------------------------------------------------
-    def _h_conversion_factor(self, data_type, **kwargs):
+    def _h_conversion_factor(self, data_type, from_units, to_units):
         """
-        Internal method to compute units conversions between 
-        `self.measurement_units` and `self.output_units`
+        Internal method to compute units conversions
         """
-        kwargs.setdefault('from_units', self.measurement_units)
-        kwargs.setdefault('to_units', self.output_units)
         factor = 1.
-        if kwargs['from_units'] != self.measurement_units or kwargs['to_units'] != kwargs['from_units']:
-            factor = h_conversion_factor(data_type, kwargs['from_units'], kwargs['to_units'], self.cosmo['h'])
+        if from_units is None or to_units is None:
+            return factor
+        
+        if to_units != from_units:
+            factor = h_conversion_factor(data_type, from_units, to_units, self.cosmo['h'])
             
         return factor
     #end _h_conversion_factor
@@ -424,35 +446,55 @@ class PowerMeasurement(tsal.TSAL):
     def data(self):
         """
         The `pandas.DataFrame` holding the power measurement, in units
-        specified by `self.output_units`
+        specified by `self.output_power_units`
         """
-        factor = self._h_conversion_factor('power', from_units=self.measurement_units, to_units=self.output_units)
-        toret = self._data*factor**self._data_units_power
+        factor = self._h_conversion_factor('power', self.measurement_units['power'], self.output_power_units)
+        toret = self._data*factor
         toret['variance'] *= factor
         return toret
     
     #---------------------------------------------------------------------------
     @property
-    def output_units(self):
+    def output_power_units(self):
         """
-        The type of units to use for output quanities. Either `relative` or 
-        `absolute`. Initialized to `self.measurement_units`
+        The type of units to use for output power quanities. Either `relative` or 
+        `absolute`. Initialized to `self.measurement_units['power']`
         """
-        return self._output_units
+        return self._output_power_units
         
-    @output_units.setter
-    def output_units(self, val):
+    @output_power_units.setter
+    def output_power_units(self, val):
+        
+        if val not in ['absolute', 'relative', None]:
+            raise AttributeError("`output_power_units` must be one of [`absolute`, `relative`]")
+        
+        if val != self.measurement_units['power'] and self.cosmo is None:
+            raise AttributeError("Cannot convert units of output power quantities without a cosmology defined")
+            
+        if 'output_power_units' in self._read_only:
+            raise AttributeError("Cannot set `output_power_units`; must be `%s`" %self._output_power_units)
+            
+        self._output_power_units = val
+    
+    #---------------------------------------------------------------------------
+    @property
+    def output_k_units(self):
+        """
+        The type of units to use for output wavenumber. Either `relative` or 
+        `absolute`. Initialized to `self.measurement_units['k']`
+        """
+        return self._output_k_units
+        
+    @output_k_units.setter
+    def output_k_units(self, val):
         
         if val not in ['absolute', 'relative']:
-            raise AttributeError("`output_units` must be one of [`absolute`, `relative`]")
+            raise AttributeError("`output_k_units` must be one of [`absolute`, `relative`]")
         
-        if val != self.measurement_units and self.cosmo is None:
-            raise AttributeError("Cannot convert units of output quantities without a cosmology defined")
+        if val != self.measurement_units['k'] and self.cosmo is None:
+            raise AttributeError("Cannot convert units of output waveumbers without a cosmology defined")
             
-        if 'output_units' in self._read_only:
-            raise AttributeError("Cannot set `output_units`; must be `%s`" %self._output_units)
-            
-        self._output_units = val
+        self._output_k_units = val
     
     #---------------------------------------------------------------------------
     @property
@@ -468,15 +510,14 @@ class PowerMeasurement(tsal.TSAL):
         
         if 'normalize' in self._read_only:
             raise AttributeError("Cannot set `normalize`; must be `%s`" %self._normalize)
-            
         self._normalize = val
-    
+        
     #---------------------------------------------------------------------------
     @property
     def subtract_shot_noise(self):
         """
-        When `data` attribute is accessed, first subtract `self.Pshot`
-        from the `DataFrame`
+        When `data` attribute is accessed, first subtract the column `shot_noise`
+        from the `self.data`
         """
         return self._subtract_shot_noise
         
@@ -507,37 +548,20 @@ class PowerMeasurement(tsal.TSAL):
     def ks(self):
         """
         The k values where the measurement is defined, in units specified
-        by `self.output_units`
+        by `self.output_k_units`
         
         Returns
         -------
         ks : np.ndarray
             An array holding the k values at which the power is measured
         """
-        factor = self._h_conversion_factor('wavenumber')
+        factor = self._h_conversion_factor('wavenumber', self.measurement_units['k'], self.output_k_units)
         if isinstance(self._data.index, MultiIndex):
             return np.asarray(self._data.index.levels[self._k_level], dtype=float)*factor
         else:
             return np.asarray(self._data.index, dtype=float)*factor
     #end ks
-    
-    #---------------------------------------------------------------------------
-    @property
-    def Pshot(self):
-        """
-        Return the constant shot noise, computed as volume / sample_size, in 
-        units specified by `self.output_units`
-        """
-        # must have both a volume attribute and a sample_size attribute
-        if not hasattr(self, 'volume'):
-            raise AttributeError("Need to specify the `volume` attribute.")
-        if not hasattr(self, 'sample_size'):
-            raise AttributeError("Need to specify the `sample_size` attribute.")
 
-        factor = self._h_conversion_factor('volume')
-        return (self.volume / self.sample_size)*factor
-    #end Pshot
-    
     #---------------------------------------------------------------------------
     def Pk_kaiser(self, bias):
         """
@@ -555,14 +579,14 @@ class PowerMeasurement(tsal.TSAL):
         Returns
         -------
         Pk_kaiser : np.ndarray
-            The real-space Kaiser P(k) in units specified by `self.output_units`,
+            The real-space Kaiser P(k) in units specified by `self.output_power_units`,
             and defined at the `k` values of `self.ks`
         """
         if self.cosmo is None or self.redshift is None:
             raise ValueError("Redshift and cosmology must be defined for `Pk_kaiser`.")
             
         # conversion factor for output units, as specified in `self.output_units`
-        power_units_factor = self._h_conversion_factor('power', from_units='relative', to_units=self.output_units)
+        power_units_factor = self._h_conversion_factor('power', 'relative', self.output_power_units)
         
         # try not to recompute the linear power if nothing changed
         try:
@@ -570,7 +594,7 @@ class PowerMeasurement(tsal.TSAL):
         except AttributeError:            
             # linear power spectrum is in "relative" units, so convert wavenumber
             # units appropriately
-            factor = self._h_conversion_factor('wavenumber', from_units=self.output_units, to_units='relative')
+            factor = self._h_conversion_factor('wavenumber', self.output_k_units, 'relative')
             ks = self.ks * factor
             power = Power(k=ks, z=self.redshift, cosmo=self.cosmo, **self.power_kwargs)
             self._Pk_lin = power.power
@@ -635,14 +659,11 @@ class PkmuMeasurement(PowerMeasurement):
     def data(self):
         """
         The `pandas.DataFrame` holding the power measurement, in units
-        specified by `self.output_units`
+        specified by `self.output_power_units`
         """
-        factor = self._h_conversion_factor('power')**self._data_units_power
+        factor = self._h_conversion_factor('power', self.measurement_units['power'], self.output_power_units)
         
-        # whether to subtract the noise
-        noise = 0.
-        if self.subtract_shot_noise: noise = self.Pshot/factor
-        
+        # normalize possibly        
         if self.normalize:
             if not hasattr(self, 'bias'):
                 raise AttributeError("Must define `bias` attribute if you wish to have normalized power output")
@@ -651,9 +672,11 @@ class PkmuMeasurement(PowerMeasurement):
             norm = Series(norms.flatten(), index=self._data.index)
             factor /= norm
             
-        # subtract the shot noise
+        # subtract the shot noise possibly
         toret = self._data.copy()
-        toret[['power', 'baseline', 'noise']] -= noise
+        if self.subtract_shot_noise:
+            cols = ['power', 'baseline', 'noise', 'shot_noise']
+            toret[cols] = toret[cols].subtract(toret['shot_noise'], axis='index')
         
         # multiply the factor and return
         toret = toret.multiply(factor, axis='index')
@@ -717,7 +740,7 @@ class PkmuMeasurement(PowerMeasurement):
         """
         Return the power measured P(k) at a specific value of mu, as a 
         `pandas.DataFrame`.  The units of the output are specified by 
-        `self.output_units`
+        `self.output_power_units`
         
         Parameters
         ---------
@@ -748,7 +771,7 @@ class PkmuMeasurement(PowerMeasurement):
     def Pmu(self, k):
         """
         Return the power measured P(mu) at a specific value of k.  The units of 
-        the output are specified by `self.output_units`
+        the output are specified by `self.output_power_units`
         
         Parameters
         ---------
@@ -781,7 +804,7 @@ class PkmuMeasurement(PowerMeasurement):
         Return the mu averaged power measurement, as a ``pandas.DataFrame``
         object, optionally computing the weighted average of the power for a 
         given ``mu`` value. The units of the output are specified by 
-        `self.output_units`
+        `self.output_power_units`
         
         Parameters
         ----------
@@ -833,7 +856,7 @@ class PkmuMeasurement(PowerMeasurement):
         -------
         Pkmu_kaiser : np.ndarray
             The redshift-space Kaiser P(k, mu) in units specified by 
-            `self.output_units` and defined at the `k` values of `self.ks`
+            `self.output_power_units` and defined at the `k` values of `self.ks`
         """
         beta = self.f / bias
         return (1. + beta*mu**2)**2 * self.Pk_kaiser(bias)
@@ -857,7 +880,7 @@ class PkmuMeasurement(PowerMeasurement):
         -------
         Pk : np.ndarray
             The mu-averaged, Kaiser redshift space spectrum in units specified 
-            by `self.output_units`, and defined at the `k` values of `self.ks`
+            by `self.output_powe_units`, and defined at the `k` values of `self.ks`
         """
         return np.mean([self.Pkmu_kaiser(mu, bias) for mu in self.mus], axis=0)
 
@@ -898,7 +921,7 @@ class PkmuMeasurement(PowerMeasurement):
     def plot(self, *args, **kwargs):
         """
         Plot either the P(k, mu) measurement in the units specified by 
-        `self.output_units`.  In addition to the keywords accepted below, 
+        `self.output_power_units`.  In addition to the keywords accepted below, 
         any plotting keywords accepted by `matplotlib` can be passed.
 
         Parameters
@@ -928,9 +951,8 @@ class PkmuMeasurement(PowerMeasurement):
             is `False`.
             
         subtract_constant_noise : bool, optional
-            If `True`, subtract the 1/nbar shot noise stored in `Pshot` before 
-            plotting. Default is `False`. This assumes you can compute the 
-            shot noise from the `self.Pshot`.
+            If `True`, subtract the 1/nbar shot noise stored in `shot_noise`
+            column of `self.data` before plotting. Default is `False`. 
 
         subtract_noise : bool, optional
             If `True`, subtract the noise component stored as the `noise`
@@ -1012,7 +1034,7 @@ class PkmuMeasurement(PowerMeasurement):
         # the shot noise
         noise = np.zeros(len(Pk))
         if sub_noise: noise = data.noise
-        elif sub_constant_noise: noise = self.Pshot
+        elif sub_constant_noise: noise = data.shot_noise
           
         # plot the linear theory result
         if plot_linear or norm_linear:
@@ -1045,13 +1067,15 @@ class PkmuMeasurement(PowerMeasurement):
             pfy.plot(ax, k, (data.baseline-noise)/norm, c='k')
         
         # now determine the units
-        if self.output_units == 'relative':
-            k_units = "(h/Mpc)"
+        if self.output_power_units == 'relative':
             P_units = "(Mpc/h)^3"
         else:
-            k_units = "(1/Mpc)"
             P_units = "(Mpc)^3"
-        
+            
+        if self.output_k_units == 'relative':
+            k_units = "(h/Mpc)"
+        else:
+            k_units = "(1/Mpc)"
       
         if add_axis_labels:
             # let's set the xlabels and return
@@ -1170,14 +1194,11 @@ class PoleMeasurement(PowerMeasurement):
     def data(self):
         """
         The `pandas.DataFrame` holding the power measurement, in units
-        specified by `self.output_units`
+        specified by `self.output_power_units`
         """
-        factor = self._h_conversion_factor('power')**self._data_units_power
+        factor = self._h_conversion_factor('power', self.measurement_units['power'], self.output_power_units)
         
-        # whether to subtract the noise
-        noise = 0.
-        if self.subtract_shot_noise: noise = self.Pshot/factor
-        
+        # normalize possibly        
         if self.normalize:
             if not hasattr(self, 'bias'):
                 raise AttributeError("Must define `bias` attribute if you wish to have normalized power output")
@@ -1185,9 +1206,11 @@ class PoleMeasurement(PowerMeasurement):
             norm = Series(self.normalization(self.bias), index=self._data.index)
             factor /= norm
             
-        # subtract the shot noise
+        # subtract the shot noise possibly
         toret = self._data.copy()
-        toret['power'] -= noise
+        if self.subtract_shot_noise: 
+            cols = ['power', 'shot_noise']
+            toret[cols] = toret[cols].subtract(toret['shot_noise'], axis='index')
         
         # multiply the factor and return
         toret = toret.multiply(factor, axis='index')
@@ -1224,7 +1247,7 @@ class PoleMeasurement(PowerMeasurement):
     def plot(self, *args, **kwargs):
         """
         Plot the multipole measurement, in the units specified by 
-        `self.output_units`.  In addition to the keywords accepted below, any 
+        `self.output_power_units`.  In addition to the keywords accepted below, any 
         plotting keywords accepted by `matplotlib` can be passed.
 
         Parameters
@@ -1247,9 +1270,8 @@ class PoleMeasurement(PowerMeasurement):
             is `False`.
             
         subtract_constant_noise : bool, optional
-            If `True`, subtract the 1/nbar shot noise stored in `Pshot` before 
-            plotting. Default is `False`. This assumes you can compute the 
-            shot noise from the `self.Pshot`.
+            If `True`, subtract the 1/nbar shot noise stored in `shot_noise`
+            column of `self.data before plotting. Default is `False`. 
             
         label : str, optional
             The label to attach to these plot lines. Default is `None`
@@ -1297,7 +1319,7 @@ class PoleMeasurement(PowerMeasurement):
 
         # the shot noise
         noise = np.zeros(len(Pk))
-        if sub_constant_noise: noise = self.Pshot
+        if sub_constant_noise: noise = self.data.shot_noise
           
         # plot the linear theory result
         if plot_linear or norm_linear:
@@ -1326,12 +1348,15 @@ class PoleMeasurement(PowerMeasurement):
             pfy.errorbar(ax, k, (Pk - noise), err, label=label, **kwargs)
             
         # now determine the units
-        if self.output_units == 'relative':
-            k_units = "(h/Mpc)"
+        if self.output_power_units == 'relative':
             P_units = "(Mpc/h)^3"
         else:
-            k_units = "(1/Mpc)"
             P_units = "(Mpc)^3"
+            
+        if self.output_k_units == 'relative':
+            k_units = "(h/Mpc)"
+        else:
+            k_units = "(1/Mpc)"
         
       
         if add_axis_labels:
