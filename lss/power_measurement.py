@@ -604,6 +604,17 @@ class PowerMeasurement(tsal.TSAL):
     #end Pk_kaiser
     
     #---------------------------------------------------------------------------
+    def save(self, filename):
+        """
+        Save the `PkmuMeasurements` instance as a pickle to the filename specified
+        
+        Parameters
+        ----------
+        filename : str 
+            the filename to output to
+        """        
+        pickle.dump(self, open(filename, 'w'))
+    #end save
 
 #endclass PowerMeasurement
 #-------------------------------------------------------------------------------
