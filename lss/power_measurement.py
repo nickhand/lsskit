@@ -390,10 +390,11 @@ class PowerMeasurement(tsal.TSAL):
 
         # now make the DataFrame
         index = MultiIndex.from_tuples(muks, names=['mu', 'k'])
-        frame = DataFrame(columns, index=index, columns=['power', 'variance', 'noise', 'baseline'])
+        self._data = DataFrame(columns, index=index, columns=['power', 'variance', 'noise', 'baseline'])
 
-        # save as `data` attribute
-        self._data = frame
+        # now remove any unmeasured modes (will have baseline==power)
+        to_replace = self._data.power == self._data.baseline
+        self._data.loc[to_replace, ['power', 'variance']] = np.NaN
         ff.close()
 
     #end _data_from_tsal
@@ -835,13 +836,15 @@ class PkmuMeasurement(PowerMeasurement):
         avg_data = grouped.mean()
         
         if weighted:
-            power_average = lambda row: np.average(row['power'], weights=1./row['variance'])
-            err_average = lambda row: np.sum(1./row['variance'])
+            power_average = lambda row: (row['power']/row['variance']).sum() / (1./row['variance']).sum()
+            err_average = lambda row: (1./row['variance']).sum()
             avg_data['power'] = grouped.apply(power_average)
             avg_data['variance'] = grouped.apply(err_average)**(-1)
             
         else:
-            avg_data['variance'] /= (1.*len(self.mus))
+            # the number of not empty mu bins
+            Nmu = (~self.Pmu(0).power.isnull()).sum() 
+            avg_data['variance'] /= (1.*Nmu)
             
         avg_data.ks = self.ks
         return avg_data
@@ -1162,7 +1165,11 @@ class PoleMeasurement(PowerMeasurement):
 
             # now make the data frame
             vals, errs = map(np.array, zip(*[pole[k] for k in ks]))
-            self._data =  DataFrame(data=np.vstack((vals, errs**2)).T, index=index, columns=['power', 'variance'])
+            self._data = DataFrame(data=np.vstack((vals, errs**2)).T, index=index, columns=['power', 'variance'])
+            
+            # now remove any unmeasured modes (will have baseline==power)
+            to_replace = self._data.power == self._data.baseline
+            self._data.loc[to_replace, ['power', 'variance']] = np.NaN
         else:
             self._data = None
 
