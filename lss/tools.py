@@ -145,3 +145,22 @@ def extract_bias(tsal_file):
 #end extract_bias
 
 #-------------------------------------------------------------------------------
+def groupby_average(frame, weighted):
+    """
+    Compute the weighted/unweighted average of the DataFrame columns. This
+    is designed to be used with the `groupby` and `apply` functions, where the
+    frame is the `DataFrame of a given group. 
+    """
+    if weighted:
+        weights = 1./frame.variance
+    else:
+        weights = (~frame.power.isnull()).astype(float)
+    weights /= np.sum(weights)
+    weighted = frame.multiply(weights, axis='index')
+    
+    toret = np.sum(weighted, axis=0)
+    toret['variance'] /= np.sum(~frame.power.isnull())
+    return toret
+#end groupby_average
+
+#-------------------------------------------------------------------------------

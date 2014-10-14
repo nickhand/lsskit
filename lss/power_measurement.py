@@ -562,7 +562,62 @@ class PowerMeasurement(tsal.TSAL):
         else:
             return np.asarray(self._data.index, dtype=float)*factor
     #end ks
+    
+    #---------------------------------------------------------------------------
+    def rebin_k(self, N, weighted=True):
+        """
+        Return a copy of `self` with the `data` DataFrame rebinnned, with
+        a total of `N` `k` bins
+        
+        Parameters
+        ----------
+        N : int
+            The number of k bins to rebin to. Must be less than `len(self.ks)`
+        weighted : bool, optional
+            Whether to do a weighted or unweighted average over bins. Default
+            is `True`.
+            
+        Return
+        ------
+        pkmu : PkmuMeasurement
+            A copy of `self` with the rebinned `data` attribute
+        """        
+        if N >= len(self.ks):
+            raise ValueError("Can only re-bin into fewer than %d k bins" %len(self.ks))
+           
+        # return a copy   
+        toret = self.copy() 
+        
+        # compute the integer numbers for the new mu bins
+        bins = np.linspace(0., 1., N+1)
+        values = np.array([index[self._mu_level] for index in self._data.index.get_values()])
+        bin_numbers = np.digitize(values, bins) - 1
+        
+        # make it a series and add it to the data frame
+        bin_numbers = Series(bin_numbers, name='bin_number', index=self._data.index)
+        toret._data['bin_number'] = bin_numbers
+        
+        # group by bin number and compute mean mu values in each bin
+        bin_groups = toret._data.reset_index(level=self._mu_level).groupby(['bin_number'])
+           
+        # replace "bin_number", conditioned on bin_number == new_mubins
+        new_mubins = bin_groups.mu.mean() 
+        toret._data['mu'] = new_mubins.loc[toret._data.bin_number].values
+        del toret._data['bin_number']
+        
+        # group by the new mu bins
+        groups = toret._data.reset_index(level=self._k_level).groupby(['mu', 'k'])
 
+        # apply the average function, either do weighted or unweighted
+        new_frame = groups.apply(tools.groupby_average, weighted)
+        
+        # delete unneeded columns
+        del new_frame['k'], new_frame['mu']
+        
+        toret._data = new_frame
+        return toret
+    #end rebin_k
+    
     #---------------------------------------------------------------------------
     def Pk_kaiser(self, bias):
         """
@@ -748,6 +803,53 @@ class PkmuMeasurement(PowerMeasurement):
     #---------------------------------------------------------------------------
     # the functions        
     #---------------------------------------------------------------------------
+    def rebin_mu(self, N, weighted=True):
+        """
+        Return a copy of `self` with the `data` DataFrame rebinnned, with
+        a total of `N` `mu` bins
+        
+        Parameters
+        ----------
+        N : int
+            The number of mu bins to rebin to. Must be less than `len(self.mus)`
+        weighted : bool, optional
+            Whether to do a weighted or unweighted average over bins. Default
+            is `True`.
+            
+        Return
+        ------
+        pkmu : PkmuMeasurement
+            A copy of `self` with the rebinned `data` attribute
+        """        
+        if N >= len(self.mus):
+            raise ValueError("Can only re-bin into fewer than %d mu bins" %len(self.mus))
+           
+        # return a copy   
+        toret = self.copy() 
+        
+        # first compute the new mu bins
+        dmu = 1./N
+        new_bins = np.array([index[self._mu_level] for index in self._data.index.get_values()]) // dmu
+        new_bins = 0.5*dmu + new_bins*dmu
+        
+        # make it a series and add it to the data frame
+        new_bins = Series(new_bins, name='mu', index=self._data.index)
+        toret._data['mu'] = new_bins
+        
+        # make groups
+        groups = toret._data.reset_index(level=self._k_level).groupby(['mu', 'k'])
+
+        # apply the average function, either do weighted or unweighted
+        new_frame = groups.apply(tools.groupby_average, weighted)
+        
+        # delete unneeded columns
+        del new_frame['k'], new_frame['mu']
+        
+        toret._data = new_frame
+        return toret
+    #end rebin_mu    
+            
+    #---------------------------------------------------------------------------
     def Pk(self, mu):
         """
         Return the power measured P(k) at a specific value of mu, as a 
@@ -833,20 +935,9 @@ class PkmuMeasurement(PowerMeasurement):
         """        
         # group by k
         grouped = self.data.groupby(level=['k'])
-        avg_data = grouped.mean()
-        
-        if weighted:
-            power_average = lambda row: (row['power']/row['variance']).sum() / (1./row['variance']).sum()
-            err_average = lambda row: (1./row['variance']).sum()
-            avg_data['power'] = grouped.apply(power_average)
-            avg_data['variance'] = grouped.apply(err_average)**(-1)
-            
-        else:
-            # the number of not empty mu bins
-            Nmu = (~self.Pmu(0).power.isnull()).sum() 
-            avg_data['variance'] /= (1.*Nmu)
-            
+        avg_data = grouped.apply(tools.groupby_average, weighted)            
         avg_data.ks = self.ks
+        
         return avg_data
     #end mu_averaged
     
