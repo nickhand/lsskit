@@ -866,14 +866,13 @@ class SampleFlags(object):
         identifier = pp.Word(pp.alphanums, pp.alphanums + "_")
 
         # look for things like key (operator) value
-        comparison_term = (identifier | number)
-        condition = pp.Group(comparison_term + operator + comparison_term)
+        condition = pp.Group(identifier + operator + (number|identifier) )
         expr = pp.operatorPrecedence(condition, [ ("not", 1, pp.opAssoc.RIGHT, ), 
                                                   ("and", 2, pp.opAssoc.LEFT, ), 
                                                   ("or", 2, pp.opAssoc.LEFT, ) ])
 
         self.condition = expr.parseString(str_condition)[0]
-                
+              
     def __str__(self):
         return self.string_condition
 
@@ -961,7 +960,7 @@ class Sample(object):
                 key = self._valid(frame, flags[0])
                 value = self._valid(frame, flags[-1])
                 operator = SampleFlags.comparison_operators[flags[1]]
-                
+
                 # now get the frame attributes
                 if isinstance(key, str): 
                     key = getattr(frame, key)
