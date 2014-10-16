@@ -8,7 +8,7 @@
 """
 import numpy as np
 import itertools
-from . import tsal, cpm_tsal
+from . import tsal
 from glob import glob
 
 #-------------------------------------------------------------------------------
