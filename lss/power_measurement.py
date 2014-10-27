@@ -1258,9 +1258,6 @@ class PoleMeasurement(PowerMeasurement):
             vals, errs = map(np.array, zip(*[pole[k] for k in ks]))
             self._data = DataFrame(data=np.vstack((vals, errs**2)).T, index=index, columns=['power', 'variance'])
             
-            # now remove any unmeasured modes (will have baseline==power)
-            to_replace = self._data.power == self._data.baseline
-            self._data.loc[to_replace, ['power', 'variance']] = np.NaN
         else:
             self._data = None
 
