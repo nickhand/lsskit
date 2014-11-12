@@ -1159,6 +1159,7 @@ class PkmuMeasurement(PowerMeasurement):
             
             # normalize by the linear theory
             else:
+                if label is None: label = r"$P(k, \mu = %.3f)$ "%mu
                 data_to_plot = (k, (Pk-noise)/norm, err/norm)
                 pfy.plot_data(ax, data=data_to_plot, labels=label, y_offset=y_offset, plot_kwargs=kwargs)
         
