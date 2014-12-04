@@ -24,7 +24,9 @@ class TSAL(object):
         ff.close()
 
     def readTSAL (self, ff,lastColIsX=False):
-        version, N = ff.readline().split()
+        d = ff.readline().split()
+        version = d[0]
+        N = d[1]
         if (version!="v0"):
             print "Ehm, version not v0, we bravely go ahead."
         N=int(N)
