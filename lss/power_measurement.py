@@ -10,6 +10,8 @@ from pandas import HDFStore, DataFrame, Index, MultiIndex, Series
 import itertools
 import pickle 
 import copy
+from scipy.special import legendre
+from scipy.integrate import quad
 
 from . import tsal, tools
 import plotify as pfy
@@ -36,10 +38,10 @@ def load(filename):
         return pickle.load(open(filename, 'r'))
     except:
         store = HDFStore(filename, 'r')
-        pkmu = store.get_storer('data').attrs.Pkmu
-        pkmu.data = store['data']
+        power = store.get_storer('data').attrs.power
+        power._data = store['data']
         store.close()
-        return pkmu
+        return power
         
 #end load
 
@@ -82,7 +84,7 @@ class PowerMeasurement(tsal.TSAL):
                 print k, v
         
         # the load the data as a tsal
-        self._data_from_tsal(tsal_file)
+        if tsal_file is not None: self._data_from_tsal(tsal_file)
 
         # add shot noise column to self.data
         self._add_shot_noise_column()
@@ -91,7 +93,6 @@ class PowerMeasurement(tsal.TSAL):
         if self.cosmo is not None and hasattr(self, 'redshift'):
             self.f = growth_rate(self.redshift, params=self.cosmo)
             
-        
         # store power kwargs too
         self.power_kwargs = {'transfer_fit' : "EH"}
         
@@ -104,6 +105,10 @@ class PowerMeasurement(tsal.TSAL):
         
         # keep track of read-only attributes (normalize, subtract_shot_noise, output_units)
         self._read_only = set()
+        
+        # delete unneccesary (and potentially large TSAL base parameters)
+        for att in ['pars', 'sd', 'fd', 'mat']:
+            if hasattr(self, att): delattr(self, att)
     #end __init__
     
     #----------------------------------------------------------------------------
@@ -660,7 +665,7 @@ class PowerMeasurement(tsal.TSAL):
     #end Pk_kaiser
     
     #---------------------------------------------------------------------------
-    def save(self, filename):
+    def save(self, filename, use_pickle=True):
         """
         Save the `PkmuMeasurements` instance as a pickle to the filename specified
         
@@ -668,8 +673,15 @@ class PowerMeasurement(tsal.TSAL):
         ----------
         filename : str 
             the filename to output to
-        """        
-        pickle.dump(self, open(filename, 'w'))
+        """   
+        if use_pickle:     
+            pickle.dump(self, open(filename, 'w'))
+        else:
+            store = HDFStore(filename, 'w')
+            store['data'] = self._data
+            self._data = None
+            store.get_storer('data').attrs.power = self
+            store.close()
     #end save
 
 #endclass PowerMeasurement
@@ -1227,11 +1239,44 @@ class PoleMeasurement(PowerMeasurement):
         """
         Initialize and keep track of what order the multipole is
         """
+        assert len(args) == 2, "Must specify two arguments to `PoleMeasurement`"
+
         self._order = kwargs.pop('order', 0)
-        super(PoleMeasurement, self).__init__(*args, **kwargs)
+        assert self._order in [0, 2, 4], "Can only compute multipoles l = 0, 2, 4"
         
+        if isinstance(args[0], basestring):
+            super(PoleMeasurement, self).__init__(*args, **kwargs)
+        elif isinstance(args[0], PkmuMeasurement):
+            self._data_from_pkmu(args[0])
+            super(PoleMeasurement, self).__init__(None, args[1], **kwargs)
+    
     #end __init__
+    #---------------------------------------------------------------------------
+    def _data_from_pkmu(self, pkmu):
+        """
+        Internal function to compute the multipole from a PkmuMeasurement object
+        """
+        # initialize blank arrays
+        power = pkmu.ks*0.
+        variance = pkmu.ks*0.
+        
+        dmu = np.diff(pkmu.mus)[0]
+        for i, mu in enumerate(pkmu.mus):   
+            mu_integral = quad(lambda x: legendre(self._order)(x), mu-0.5*dmu, mu+0.5*dmu)[0]
             
+            Pk_thismu = pkmu.Pk(i)
+            power += mu_integral* np.nan_to_num(Pk_thismu.power)
+            variance += mu_integral**2 * np.nan_to_num(Pk_thismu.variance)
+        
+        power *= (2*self._order + 1)
+        variance *= (2*self._order + 1)**2
+        
+        # now make the dataframe
+        index = Index(pkmu.ks, name='k')
+        self._data = DataFrame(data=np.vstack((power, variance)).T, index=index, columns=['power', 'variance'])
+        
+    #end _data_from_pkmu
+        
     #---------------------------------------------------------------------------
     def _data_from_tsal(self, tsal_file):
         """
@@ -1491,7 +1536,30 @@ class PoleMeasurement(PowerMeasurement):
     
     #end plot   
     #---------------------------------------------------------------------------
-
+    def write(self, filename):
+        """
+        Save the power multipole measurement to a data file in ASCII format
+        """
+        if (self._order == 0):
+            name = "Monopole"
+        elif (self._order == 2):
+            name = "Quadrupole"
+        else:
+            name = "Hexadecapole"
+            
+        k_units = "h/Mpc" if self.output_k_units == 'relative' else "1/Mpc"
+        power_units = "(Mpc/h)^3" if self.output_power_units == 'relative' else "(Mpc)^3"
+        
+        header = "%s P_{\ell}(k) in %s space at redshift z = %s\n" %(name, self.space, self.redshift) + \
+                 "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
+                 "number of wavenumbers equal to %d\n" %(len(self.ks)) + \
+                 "%s1:k (%s)%s2:P %s%s3:error %s" %(" "*5, k_units, " "*10, power_units, " "*8, power_units)
+        
+        toret = np.vstack((self.ks, self.data.power, self.data.variance**0.5)).T
+        np.savetxt(filename, toret, header=header, fmt="%20.5e")
+    #end write
+    #---------------------------------------------------------------------------
+    
 #endclass PoleMeasurement
 #-------------------------------------------------------------------------------
 
