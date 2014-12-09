@@ -49,11 +49,10 @@ def write_multipoles(filename, mono, quad):
              "for k = %.5f to %.5f %s,\n" %(np.amin(mono.ks), np.amax(mono.ks), k_units) + \
              "number of wavenumbers equal to %d\n" %(len(mono.ks)) + \
              shot_noise_hdr + \
-             "%s1:k (%s)%s2:mono %s%s3:mono error %s%s4:quad %s%s5:quad error %s" \
+             "%s1:k (%s)%s2:mono %s%s3:error %s%s4:quad %s%s5:error %s" \
                 %(" "*5, k_units, " "*10, power_units, " "*8, power_units, " "*8, power_units, " "*8, power_units)
     
-    
-    print "saving to ", filename
+
     data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
     toret = np.vstack(data).T
     np.savetxt(filename, toret, header=header, fmt="%20.5e")
