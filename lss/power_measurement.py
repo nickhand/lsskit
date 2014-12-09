@@ -53,6 +53,7 @@ def write_multipoles(filename, mono, quad):
                 %(" "*5, k_units, " "*10, power_units, " "*8, power_units, " "*8, power_units, " "*8, power_units)
     
     
+    print "saving to ", filename
     data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
     toret = np.vstack(data).T
     np.savetxt(filename, toret, header=header, fmt="%20.5e")
