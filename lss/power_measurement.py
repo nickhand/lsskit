@@ -50,7 +50,7 @@ def write_multipoles(filename, mono, quad):
              "number of wavenumbers equal to %d\n" %(len(mono.ks)) + \
              shot_noise_hdr + \
              "%s1:k (%s)%s2:mono %s%s3:error %s%s4:quad %s%s5:error %s" \
-                %(" "*5, k_units, " "*10, power_units, " "*5, power_units, " "*4, power_units, " "*5, power_units)
+                %(" "*5, k_units, " "*5, power_units, " "*5, power_units, " "*5, power_units, " "*5, power_units)
     
     data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
     toret = np.vstack(data).T
