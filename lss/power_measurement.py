@@ -20,6 +20,45 @@ from cosmology.parameters import Cosmology
 from cosmology.utils.units import h_conversion_factor
 
 #-------------------------------------------------------------------------------
+def write_multipoles(self, filename, mono, quad):
+    """
+    Save the power multipole measurements to a data file in ASCII format
+    
+    Parameters
+    ----------
+    filename : str
+        The name of the file to write to
+    mono : MonopoleMeasurement 
+        The monopole measurement object
+    quad : QuadrupoleMeasurement
+        The quadrupole measurement object
+    """ 
+    # check the output units
+    msg = "monopole and quadrupole must have same output k units"
+    assert mono.output_k_units == quad.output_k_units, msg
+    msg = "monopole and quadrupole must have same output power units"
+    assert mono.output_power_units == quad.output_power_units, msg
+    
+    k_units = "h/Mpc" if mono.output_k_units == 'relative' else "1/Mpc"
+    power_units = "(Mpc/h)^3" if mono.output_power_units == 'relative' else "(Mpc)^3"
+    
+    shot_noise_hdr = ""
+    if mono.subtract_shot_noise:
+        shot_noise_hdr = "shot noise subtracted from monopole: P_shot = %.5e %s\n" %(mono.shot_noise, power_units)
+    header = "Monopole/quadrupole in %s space at redshift z = %s\n" %(mono.space, mono.redshift) + \
+             "for k = %.5f to %.5f %s,\n" %(np.amin(mono.ks), np.amax(mono.ks), k_units) + \
+             "number of wavenumbers equal to %d\n" %(len(mono.ks)) + \
+             shot_noise_hdr + \
+             "%s1:k (%s)%s2:mono %s%s3:mono error %s%s4:quad %s%s5:quad error %s" \
+                %(" "*5, k_units, " "*10, power_units, " "*8, power_units, " "*8, power_units, " "*8, power_units)
+    
+    
+    data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
+    toret = np.vstack(data).T
+    np.savetxt(filename, toret, header=header, fmt="%20.5e")
+#end write_multipoles
+
+#-------------------------------------------------------------------------------
 def load(filename):
     """
     Load a ``PkmuMeasurements`` object from a pickle file
@@ -447,6 +486,15 @@ class PowerMeasurement(tsal.TSAL):
     
     #---------------------------------------------------------------------------
     # Properties
+    #---------------------------------------------------------------------------
+    @property
+    def shot_noise(self):
+        """
+        The shot noise in units specified by `self.output_power_units`
+        """
+        factor = self._h_conversion_factor('power', self.measurement_units['power'], self.output_power_units)
+        return self._data.shot_noise.iloc[0]*factor
+        
     #---------------------------------------------------------------------------
     @property
     def data(self):
@@ -1249,7 +1297,11 @@ class PoleMeasurement(PowerMeasurement):
         elif isinstance(args[0], PkmuMeasurement):
             self._data_from_pkmu(args[0])
             super(PoleMeasurement, self).__init__(None, args[1], **kwargs)
-    
+            
+        # set shot noise to zero for quadrupole
+        if (self._order > 0):
+            self._data.shot_noise = 0.
+        
     #end __init__
     #---------------------------------------------------------------------------
     def _data_from_pkmu(self, pkmu):
@@ -1576,6 +1628,7 @@ class MonopoleMeasurement(PoleMeasurement):
         super(PoleMeasurement, self).__init__(*args, **kwargs)
         
     #end __init__
+    
 #-------------------------------------------------------------------------------
 
 class QuadrupoleMeasurement(PoleMeasurement):
