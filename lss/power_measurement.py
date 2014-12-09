@@ -20,7 +20,7 @@ from cosmology.parameters import Cosmology
 from cosmology.utils.units import h_conversion_factor
 
 #-------------------------------------------------------------------------------
-def write_multipoles(self, filename, mono, quad):
+def write_multipoles(filename, mono, quad):
     """
     Save the power multipole measurements to a data file in ASCII format
     
