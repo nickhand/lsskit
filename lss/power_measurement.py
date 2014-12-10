@@ -1274,6 +1274,41 @@ class PkmuMeasurement(PowerMeasurement):
     
     #end plot   
     #---------------------------------------------------------------------------
+    def write(self, filename):
+        """
+        Save the power measurement to a data file in ASCII format
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to write to
+        """ 
+        k_units = "h/Mpc" if self.output_k_units == 'relative' else "1/Mpc"
+        power_units = "(Mpc/h)^3" if self.output_power_units == 'relative' else "(Mpc)^3"
+
+        shot_noise_hdr = ""
+        if self.subtract_shot_noise:
+            shot_noise_hdr = "shot noise subtracted: P_shot = %.5e %s\n" %(self.shot_noise, power_units)
+        header = "P(k, mu) in %s space at redshift z = %s\n" %(self.space, self.redshift) + \
+                 "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
+                 "number of wavenumbers equal to %d\n" %(len(self.ks)) + \
+                 shot_noise_hdr + \
+                 "%s1:k (%s)%s2:mu %s3:power %s%s4:error %s" \
+                    %(" "*5, k_units, " "*5, " "*5, power_units, " "*5, power_units)
+
+        muks = [index for index in self._data.index]
+        ks, mus, power, error = [], [], [], []
+        for (mu, k) in self._data.index:
+            frame = self.data.loc[(mu, k)]
+            ks.append(k)
+            mus.append(mu)
+            power.append(frame.power)
+            error.append(frame.variance**0.5)
+            
+        data = (ks, mus, power, error)
+        toret = np.vstack(data).T
+        np.savetxt(filename, toret, header=header, fmt="%20.5e")
+    #end write_multipoles
 
 #endclass PkmuMeasurement
 #-------------------------------------------------------------------------------
