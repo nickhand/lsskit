@@ -46,10 +46,10 @@ def write_multipoles(filename, mono, quad):
     if mono.subtract_shot_noise:
         shot_noise_hdr = "shot noise subtracted from monopole: P_shot = %.5e %s\n" %(mono.shot_noise, power_units)
     header = "Monopole/quadrupole in %s space at redshift z = %s\n" %(mono.space, mono.redshift) + \
-             "for k = %.5f to %.5f %s,\n" %(np.amin(mono.ks), np.amax(mono.ks), k_units) + \
+             "for k_cen = %.5f to %.5f %s,\n" %(np.amin(mono.ks), np.amax(mono.ks), k_units) + \
              "number of wavenumbers equal to %d\n" %(len(mono.ks)) + \
              shot_noise_hdr + \
-             "%s1:k (%s)%s2:mono %s%s3:error %s%s4:quad %s%s5:error %s" \
+             "%s1:k_cen (%s)%s2:mono %s%s3:error %s%s4:quad %s%s5:error %s" \
                 %(" "*5, k_units, " "*5, power_units, " "*5, power_units, " "*5, power_units, " "*5, power_units)
     
     data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
@@ -1291,21 +1291,22 @@ class PkmuMeasurement(PowerMeasurement):
             shot_noise_hdr = "shot noise subtracted: P_shot = %.5e %s\n" %(self.shot_noise, power_units)
         header = "P(k, mu) in %s space at redshift z = %s\n" %(self.space, self.redshift) + \
                  "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
-                 "number of wavenumbers equal to %d\n" %(len(self.ks)) + \
+                 "number of wavenumbers equal to %d,\n" %(len(self.ks)) + \
+                 "number of mu bins equal to %d\n" %(len(self.mus)) + \
                  shot_noise_hdr + \
-                 "%s1:k (%s)%s2:mu %s3:power %s%s4:error %s" \
-                    %(" "*5, k_units, " "*5, " "*5, power_units, " "*5, power_units)
-
-        muks = [index for index in self._data.index]
+                 "%s1:mu %s2:k_cen (%s)%s3:power %s%s4:error %s" \
+                    %(" "*5, " "*5, k_units, " "*5, power_units, " "*5, power_units)
+                    
         ks, mus, power, error = [], [], [], []
-        for (mu, k) in self._data.index:
-            frame = self.data.loc[(mu, k)]
-            ks.append(k)
-            mus.append(mu)
-            power.append(frame.power)
-            error.append(frame.variance**0.5)
-            
-        data = (ks, mus, power, error)
+        N_ks = len(self.ks)
+        for mu in self.mus:
+            mus += [mu]*N_ks
+            Pk = self.Pk(mu)
+            ks += list(self.ks)
+            power += list(Pk.power)
+            error += list(Pk.variance**0.5)
+                    
+        data = (mus, ks, power, error)
         toret = np.vstack(data).T
         np.savetxt(filename, toret, header=header, fmt="%20.5e")
     #end write_multipoles
@@ -1637,7 +1638,7 @@ class PoleMeasurement(PowerMeasurement):
         power_units = "(Mpc/h)^3" if self.output_power_units == 'relative' else "(Mpc)^3"
         
         header = "%s P_{\ell}(k) in %s space at redshift z = %s\n" %(name, self.space, self.redshift) + \
-                 "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
+                 "for k_cen = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
                  "number of wavenumbers equal to %d\n" %(len(self.ks)) + \
                  "%s1:k (%s)%s2:P %s%s3:error %s" %(" "*5, k_units, " "*10, power_units, " "*8, power_units)
         
