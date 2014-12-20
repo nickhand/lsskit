@@ -46,13 +46,13 @@ def main(args):
             mock.restrict_galaxies(satellites)
 
         # halo restrictions
-        if args.sample == 'cenA'
+        if args.sample == 'cenA':
             mock.restrict_halos(cen_halo_restricts['A'])
-        elif args.sample == 'cenB'
+        elif args.sample == 'cenB':
             mock.restrict_halos(cen_halo_restricts['B'])
-        elif args.sample == 'satA'
+        elif args.sample == 'satA':
             mock.restrict_halos(sat_halo_restricts['A'])
-        elif args.sample == 'satB'
+        elif args.sample == 'satB':
             mock.restrict_halos(sat_halo_restricts['B'])
 
         # write out the mock coordinates
