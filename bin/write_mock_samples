@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+"""
+ write_mock_samples
+ 
+ author: Nick Hand
+ contact: nhand@berkeley.edu
+ creation date: 12/20/2014
+"""
+from lss import hod_mock
+
+import argparse
+import os
+from glob import glob
+
+def main(args):
+    """
+    Write out a formatted coordinates of the mock
+    """
+    # the restrictions
+    centrals = "(galaxy_type == central)"
+    satellites = "(galaxy_type == satellite)"
+    cen_halo_restricts = {'A' : "(N_sat == 0)", 'B' : "(N_sat > 0)"}
+    sat_halo_restricts = {'A' : "(N_sat == 1)", 'B' : "(N_sat > 1)"}
+    
+    # output columns
+    fields = ['x', 'y', 'z_real', 'z_redshift']
+    
+    files = glob(args.pattern)
+    for f in files:
+        
+        # load
+        mock = hod_mock.load(f)
+        
+        # file manipulation
+        abspath = os.path.abspath(f)
+        directory, filename = os.path.split(abspath)
+        basename, ext = filename.split('.', 1)
+     
+        # clear any restrictions
+        mock.clear_restrictions()
+    
+        # galaxy restrictions
+        if 'cen' in args.sample:
+            mock.restrict_galaxies(centrals)
+        elif 'sat' in args.sample:
+            mock.restrict_galaxies(satellites)
+
+        # halo restrictions
+        if args.sample == 'cenA'
+            mock.restrict_halos(cen_halo_restricts['A'])
+        elif args.sample == 'cenB'
+            mock.restrict_halos(cen_halo_restricts['B'])
+        elif args.sample == 'satA'
+            mock.restrict_halos(sat_halo_restricts['A'])
+        elif args.sample == 'satB'
+            mock.restrict_halos(sat_halo_restricts['B'])
+
+        # write out the mock coordinates
+        output_file = "%s/%s_%s.dat" %(args.output_dir, basename, args.sample)
+        mock.write_coordinates(output_file, fields, units='relative', header=None, temporary=False)
+    
+#end main
+    
+#-------------------------------------------------------------------------------
+if __name__ == '__main__':
+    
+    # parse the input arguments
+    desc = "write out the specific mock samples"
+    parser = argparse.ArgumentParser(description=desc, 
+                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    h = "the pattern to match mock files on"
+    parser.add_argument('pattern', type=str, help=h) 
+
+    h = 'the galaxy sample'
+    choices = ['all', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
+    parser.add_argument('sample', default='all', choices=choices, help=h)
+    
+    h = 'output directory to write results to'
+    parser.add_argument('--output_dir', type=str, default='.', help=h)
+    
+    args = parser.parse_args()
+    main(args)
+    
+#-------------------------------------------------------------------------------
