@@ -1274,7 +1274,7 @@ class PkmuMeasurement(PowerMeasurement):
     
     #end plot   
     #---------------------------------------------------------------------------
-    def write(self, filename):
+    def write(self, filename, columns=True):
         """
         Save the power measurement to a data file in ASCII format
 
@@ -1293,23 +1293,38 @@ class PkmuMeasurement(PowerMeasurement):
                  "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
                  "number of wavenumbers equal to %d,\n" %(len(self.ks)) + \
                  "number of mu bins equal to %d\n" %(len(self.mus)) + \
-                 shot_noise_hdr + \
-                 "%s1:mu %s2:k_cen (%s)%s3:power %s%s4:error %s" \
-                    %(" "*5, " "*5, k_units, " "*5, power_units, " "*5, power_units)
+                 shot_noise_hdr
+                 
+                 
+        if not columns: 
+            header += "%s1:mu %s2:k_cen (%s)%s3:power %s%s4:error %s" \
+                        %(" "*5, " "*5, k_units, " "*5, power_units, " "*5, power_units)
+        else:
+            tmp = "%s1:k_cen (%s)%s" %(" "*5, k_units, " "*5)
+            tmp += (" "*5).join(["%d:P(k, mu=%s) %s%s%d:error %s" %(2*(i+1), mu, power_units, " "*5, 2*i+3, power_units) for i, mu in enumerate(self.mus)])
+            header += tmp        
+            
+        if not columns:
+            ks, mus, power, error = [], [], [], []
+            N_ks = len(self.ks)
+            for mu in self.mus:
+                mus += [mu]*N_ks
+                Pk = self.Pk(mu)
+                ks += list(self.ks)
+                power += list(Pk.power)
+                error += list(Pk.variance**0.5)
                     
-        ks, mus, power, error = [], [], [], []
-        N_ks = len(self.ks)
-        for mu in self.mus:
-            mus += [mu]*N_ks
-            Pk = self.Pk(mu)
-            ks += list(self.ks)
-            power += list(Pk.power)
-            error += list(Pk.variance**0.5)
-                    
-        data = (mus, ks, power, error)
+            data = (mus, ks, power, error)
+        else:
+            data = [self.ks]
+            for mu in self.mus:
+                Pk = self.Pk(mu)
+                data.append(Pk.power)
+                data.append(Pk.variance**0.5)
+                
         toret = np.vstack(data).T
         np.savetxt(filename, toret, header=header, fmt="%20.5e")
-    #end write_multipoles
+    #end write
 
 #endclass PkmuMeasurement
 #-------------------------------------------------------------------------------
