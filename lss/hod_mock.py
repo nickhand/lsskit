@@ -656,7 +656,8 @@ class MockHOD(object):
         -------
         filename : str
             The name of the file the coordinates were written to
-        """       
+        """    
+        if header is None: header = []   
         # create the output file
         if temporary:
             outfile = tempfile.NamedTemporaryFile(delete=False) 

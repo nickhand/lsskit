@@ -27,6 +27,7 @@ def main(args):
     
     files = glob(args.pattern)
     for f in files:
+        print "processing %s..." %f
         
         # load
         mock = hod_mock.load(f)
@@ -52,7 +53,7 @@ def main(args):
             mock.restrict_halos(cen_halo_restricts['B'])
         elif args.sample == 'satA':
             mock.restrict_halos(sat_halo_restricts['A'])
-        elif args.sample == 'satB':
+        elif args.sample == 'satB': 
             mock.restrict_halos(sat_halo_restricts['B'])
 
         # write out the mock coordinates
