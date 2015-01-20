@@ -8,9 +8,10 @@
 """
 import numpy as np
 import itertools
-from . import tsal
 from glob import glob
+from . import tsal
 
+    
 #-------------------------------------------------------------------------------
 def compute_average_biases(pattern):
     """

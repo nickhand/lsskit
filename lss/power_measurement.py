@@ -19,6 +19,96 @@ from cosmology.growth import Power, growth_rate
 from cosmology.parameters import Cosmology
 from cosmology.utils.units import h_conversion_factor
 
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+def read_power_measurements(pattern, subtract_shot_noise=True, output_units='relative'):
+    """
+    Read the power files specified by `pattern`
+    
+    Parameters
+    ----------
+    pattern : str 
+        The pattern specifying files holding a `PowerMeasurements` object
+    subtract_shot_noise : bool, optional
+        Whether to subtract the shot noise from the power measurement. Default
+        is `True`
+    output_units : {'relative', 'absolute'}, optional
+        The output units to use. Default is `relative`
+        
+    Returns
+    -------
+    data : power_measurement.PkmuMeasurement
+        a `PkmuMeasurement` object holding the weighted mean of the input files
+    """
+    files = tools.glob(pattern)
+    if len(files) == 0:
+        raise ValueError("No files match the pattern specified")
+    
+    # load the data 
+    data = []
+    for f in files:
+        d = load(f)
+        if not isinstance(d, PowerMeasurements):
+            raise TypeError("Files must hold a `PowerMeasurements` object")
+        d  = d['pkmu']
+        
+        # now format
+        d.subtract_shot_noise = subtract_shot_noise
+        d.output_power_units = output_units
+        d.output_k_units = output_units
+        data.append(d)
+            
+    return tools.weighted_mean(data)
+
+#-------------------------------------------------------------------------------
+def read_pole_measurements(pattern, subtract_shot_noise=True, output_units='relative'):
+    """
+    Read the power files specified by `pattern`
+    
+    Parameters
+    ----------
+    pattern : str 
+        The pattern specifying files holding a `PowerMeasurements` object
+    subtract_shot_noise : bool, optional
+        Whether to subtract the shot noise from the monopole measurement. Default
+        is `True`
+    output_units : {'relative', 'absolute'}, optional
+        The output units to use. Default is `relative`
+        
+    Returns
+    -------
+    mono : power_measurement.MonopoleMeasurement
+        a `MonopoleMeasurement` object holding the weighted mean of the input
+    quad : power_measurement.QuadrupoleMeasurement
+        a `QuadrupoleMeasurement` object holding the weighted mean of the input
+    """
+    files = tools.glob(pattern)
+    if len(files) == 0:
+        raise ValueError("No files match the pattern specified")
+
+    # load the data 
+    monos = []
+    quads = []
+    for f in files:        
+        d = load(f)
+        if not isinstance(d, PowerMeasurements):
+            raise TypeError("Files must hold a `PowerMeasurements` object")
+        
+        mono = d['monopole']
+        d.subtract_shot_noise = subtract_shot_noise
+        d.output_power_units = output_units
+        d.output_k_units = output_units
+        monos.append(d)
+
+        quad = d['quadrupole']
+        d.output_power_units = output_units
+        d.output_k_units = output_units
+        quads.append(d)
+
+
+    return tools.weighted_mean(monos), tools.weighted_mean(quads)
+    
 #-------------------------------------------------------------------------------
 def write_multipoles(filename, mono, quad):
     """
