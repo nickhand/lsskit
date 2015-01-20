@@ -96,15 +96,15 @@ def read_pole_measurements(pattern, subtract_shot_noise=True, output_units='rela
             raise TypeError("Files must hold a `PowerMeasurements` object")
         
         mono = d['monopole']
-        d.subtract_shot_noise = subtract_shot_noise
-        d.output_power_units = output_units
-        d.output_k_units = output_units
-        monos.append(d)
+        mono.subtract_shot_noise = subtract_shot_noise
+        mono.output_power_units = output_units
+        mono.output_k_units = output_units
+        monos.append(mono)
 
         quad = d['quadrupole']
-        d.output_power_units = output_units
-        d.output_k_units = output_units
-        quads.append(d)
+        quad.output_power_units = output_units
+        quad.output_k_units = output_units
+        quads.append(quad)
 
 
     return tools.weighted_mean(monos), tools.weighted_mean(quads)
