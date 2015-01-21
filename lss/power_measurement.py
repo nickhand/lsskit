@@ -15,12 +15,9 @@ from scipy.integrate import quad
 
 from . import tsal, tools
 import plotify as pfy
-from cosmology.growth import Power, growth_rate
-from cosmology.parameters import Cosmology
 from cosmology.utils.units import h_conversion_factor
+from pyRSD import pygcl
 
-
-#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 def read_power_measurements(pattern, subtract_shot_noise=True, output_units='relative'):
     """
@@ -187,10 +184,10 @@ class PowerMeasurement(tsal.TSAL):
         # the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, (dict, basestring, Cosmology)): 
-                raise TypeError("`Cosmo` must be one of [dict, str, Cosmology]")
+            if not isinstance(self.cosmo, (basestring, pygcl.Cosmology)): 
+                raise TypeError("`Cosmo` must be one of [dict, str, pygcl.Cosmology]")
             if isinstance(self.cosmo, basestring): 
-                self.cosmo = Cosmology(self.cosmo)
+                self.cosmo = pygcl.Cosmology(self.cosmo)
 
         # the measurement units
         if units not in ['absolute', 'relative']:
@@ -219,11 +216,11 @@ class PowerMeasurement(tsal.TSAL):
         
         # add the growth factor for convenience
         if self.cosmo is not None and hasattr(self, 'redshift'):
-            self.f = growth_rate(self.redshift, params=self.cosmo)
-            
-        # store power kwargs too
-        self.power_kwargs = {'transfer_fit' : "EH"}
-        
+            try:
+                self.f = self.cosmo.f_z(self.redshift)
+            except:
+                self.f = None
+                    
         # normalize attribute determines whether or not to return 
         # the normalized power 
         self._normalize = False
@@ -794,8 +791,8 @@ class PowerMeasurement(tsal.TSAL):
             # units appropriately
             factor = self._h_conversion_factor('wavenumber', self.output_k_units, 'relative')
             ks = self.ks * factor
-            power = Power(k=ks, z=self.redshift, cosmo=self.cosmo, **self.power_kwargs)
-            self._Pk_lin = power.power
+            power = pygcl.LinearPS(self.cosmo, self.redshift)
+            self._Pk_lin = power(ks)
             
             # return the biased power with correct units
             return (bias**2 * self._Pk_lin) * power_units_factor 
@@ -1480,7 +1477,7 @@ class PoleMeasurement(PowerMeasurement):
         ff.close()
         
         pole = {}
-        tags = {0 : 'mono', 2 : 'quad', 4 : 'hexadec'}
+        tags = {0 : 'mono', 2 : 'quad', 4 : 'hexadec', 6 : 'tetrahexadec'}
         for key, val in self.pars.iteritems():
 
             k = float(key.split('_')[-1])
@@ -1770,7 +1767,6 @@ class MonopoleMeasurement(PoleMeasurement):
     #end __init__
     
 #-------------------------------------------------------------------------------
-
 class QuadrupoleMeasurement(PoleMeasurement):
     """
     A subclass of `PoleMeasurement` designed to hold a quadrupole measurement
@@ -1784,19 +1780,36 @@ class QuadrupoleMeasurement(PoleMeasurement):
         
     #end __init__
     
+#-------------------------------------------------------------------------------
 class HexadecapoleMeasurement(PoleMeasurement):
     """
-    A subclass of `PoleMeasurement` designed to hold a quadrupole measurement
+    A subclass of `PoleMeasurement` designed to hold a hexadecapole measurement
     """
     def __init__(self, *args, **kwargs):
         """
-        Initialize and set the `order` to `2`
+        Initialize and set the `order` to `4`
         """
         kwargs['_order'] = 4
         super(PoleMeasurement, self).__init__(*args, **kwargs)
 
     #end __init__
 
+#-------------------------------------------------------------------------------
+class TetrahexadecapoleMeasurement(PoleMeasurement):
+    """
+    A subclass of `PoleMeasurement` designed to hold a tetrahexadecapole 
+    measurement
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize and set the `order` to `6`
+        """
+        kwargs['_order'] = 6
+        super(PoleMeasurement, self).__init__(*args, **kwargs)
+
+    #end __init__
+
+    
 #-------------------------------------------------------------------------------
 class PowerMeasurements(dict):
     """
@@ -1812,6 +1825,12 @@ class PowerMeasurements(dict):
             self['monopole']     = MonopoleMeasurement(poles_tsal, units, **kwargs)
             self['quadrupole']   = QuadrupoleMeasurement(poles_tsal, units, **kwargs)
             
+            # try to read the hexadecapole
+            try:
+                self['hexadecapole']   = HexadecapoleMeasurement(poles_tsal, units, **kwargs)
+            except:
+                self['hexadecapole'] = None
+                            
     #end __init__
     
     #---------------------------------------------------------------------------
@@ -1826,7 +1845,11 @@ class PowerMeasurements(dict):
     @property
     def quadrupole(self):
         return self['quadrupole']
-                
+    
+    @property
+    def hexadecapole(self):
+        return self['hexadecapole']
+        
     #---------------------------------------------------------------------------
     def save(self, filename):
         """
