@@ -766,6 +766,8 @@ class PowerMeasurement(tsal.TSAL):
         
         :math: P_{kaiser}(k) = bias^2 * P_{linear}(k)
         
+        Note: this returns the Eisenstein-Hu no-wiggle power spectrum
+        
         Parameters
         ----------
         bias : float
@@ -791,6 +793,9 @@ class PowerMeasurement(tsal.TSAL):
             # units appropriately
             factor = self._h_conversion_factor('wavenumber', self.output_k_units, 'relative')
             ks = self.ks * factor
+            
+            # set the transfer function to EH no-wiggle
+            self.cosmo.SetTransferFunction(pygcl.Cosmology.EH_NoWiggle)
             power = pygcl.LinearPS(self.cosmo, self.redshift)
             self._Pk_lin = power(ks)
             
