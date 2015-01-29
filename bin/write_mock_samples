@@ -58,7 +58,8 @@ def main(args):
 
         # write out the mock coordinates
         output_file = "%s/%s_%s.dat" %(args.output_dir, basename, args.sample)
-        mock.write_coordinates(output_file, fields, units='relative', header=None, temporary=False)
+        mock.write_coordinates(output_file, fields, units=args.output_units, 
+                                header=None, temporary=False, replace_with_nearest=False)
     
 #end main
     
@@ -79,6 +80,9 @@ if __name__ == '__main__':
     
     h = 'output directory to write results to'
     parser.add_argument('--output_dir', type=str, default='.', help=h)
+    
+    h = 'output units'
+    parser.add_argument('--output_units', type=str, choices=['relative', 'absolute'], default='relative', help=h)
     
     args = parser.parse_args()
     main(args)
