@@ -920,13 +920,13 @@ class PkmuMeasurement(PowerMeasurement):
             
         # subtract the shot noise possibly
         toret = self._data.copy()
+        cols = ['power', 'baseline', 'noise', 'shot_noise']
         if self.subtract_shot_noise:
-            cols = ['power', 'baseline', 'noise', 'shot_noise']
             toret[cols] = toret[cols].subtract(toret['shot_noise'], axis='index')
         
         # multiply the factor and return
-        toret = toret.multiply(factor, axis='index')
-        toret['variance'] = toret['variance'].multiply(factor, axis='index')
+        toret[cols] *= factor
+        toret['variance'] *= factor
         
         return toret
     #end data
