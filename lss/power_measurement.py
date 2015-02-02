@@ -467,6 +467,9 @@ class PowerMeasurement(tsal.TSAL):
         self.readTSAL(ff)
         self.redshift = float(ff.readline()) # redshift
 
+        #-----------------------------------------------------------------------
+        # Read baseline
+        #-----------------------------------------------------------------------
         # check syntax
         line = ff.readline()
         if line != "add_to_baseline\n" :
@@ -483,14 +486,15 @@ class PowerMeasurement(tsal.TSAL):
             mus.add(mu)
             baseline[(k,mu)] = val
 
+        #-----------------------------------------------------------------------
+        # Read noise
+        #-----------------------------------------------------------------------
         # check syntax
         line = ff.readline()        
         if line != "approx_noise\n" :
             print line
             raise ValueError("no approx_noise - Not sure what to do in _data_from_tsal")
-
-        # check syntax
-        if N != int(ff.readline()): raise ValueError("number mismatch in _data_from_tsal")
+        if N != int(ff.readline()): raise ValueError("number mismatch when reading noise in _data_from_tsal")
 
         # read the noise 
         noise = {}
@@ -498,8 +502,29 @@ class PowerMeasurement(tsal.TSAL):
             k, mu, val = map(float, ff.readline().split())
             if (k, mu) not in baseline:
                 print i, k, mu
-                raise ValueError("k or mu mismatch in _data_from_tsal")
+                raise ValueError("k or mu mismatch when reading noise in _data_from_tsal")
             noise[(k,mu)] = val
+            
+        #-----------------------------------------------------------------------
+        # Read modes, if given
+        #-----------------------------------------------------------------------
+        # check syntax
+        line = ff.readline() 
+        have_modes = False       
+        if line == "mode_counts\n" :
+            
+            if N != int(ff.readline()): 
+                raise ValueError("number mismatch when reading mode counts in _data_from_tsal")
+
+            # read the modes 
+            modes = {}
+            for i in range(N):
+                k, mu, val = map(float, ff.readline().split())
+                if (k, mu) not in baseline:
+                    print i, k, mu
+                    raise ValueError("k or mu mismatch when reading mode counts in _data_from_tsal")
+                modes[(k,mu)] = val
+            have_modes = True
 
         # all combinations of (mu, k)
         muks = list(itertools.product(sorted(mus), sorted(ks)))
@@ -510,17 +535,18 @@ class PowerMeasurement(tsal.TSAL):
         for (mu, k) in muks:
             this_base  = baseline[(k,mu)]
             this_noise = noise[(k,mu)]
+            this_Nmodes = modes[(k,mu)] if have_modes else 0.
             
             if (k % 1) == 0: k = int(k)
             if (mu % 1) == 0: mu = int(mu)
             name  = "%s_%s_%s" %(base_name, str(k), str(mu))
             this_val   = this_base + self.pars[name].val
             this_err   = self.pars[name].err           
-            columns.append( (this_val,this_err**2,this_noise,this_base) )
+            columns.append( (this_val, this_err**2, this_noise, this_base, this_Nmodes) )
 
         # now make the DataFrame
         index = MultiIndex.from_tuples(muks, names=['mu', 'k'])
-        self._data = DataFrame(columns, index=index, columns=['power', 'variance', 'noise', 'baseline'])
+        self._data = DataFrame(columns, index=index, columns=['power', 'variance', 'noise', 'baseline', 'modes'])
 
         # now remove any unmeasured modes (will have baseline==power)
         to_replace = self._data.power == self._data.baseline
@@ -720,32 +746,34 @@ class PowerMeasurement(tsal.TSAL):
         ------
         pkmu : PkmuMeasurement
             A copy of `self` with the rebinned `data` attribute
-        """        
-        if N >= len(self.ks):
-            raise ValueError("Can only re-bin into fewer than %d k bins" %len(self.ks))
+        """  
+        ks = np.asarray(self._data.index.levels[self._k_level], dtype=float)      
+        if N >= len(ks):
+            raise ValueError("Can only re-bin into fewer than %d k bins" %len(ks))
            
         # return a copy   
         toret = self.copy() 
         
-        # compute the integer numbers for the new mu bins
-        bins = np.linspace(0., 1., N+1)
-        values = np.array([index[self._mu_level] for index in self._data.index.get_values()])
+        # compute the integer numbers for the new k bins
+        dk = np.diff(ks)
+        bins = np.linspace(np.amin(ks)-0.5*dk[0], np.amax(ks)+0.5*dk[-1], N+1)
+        values = np.array([index[self._k_level] for index in self._data.index.get_values()])
         bin_numbers = np.digitize(values, bins) - 1
         
         # make it a series and add it to the data frame
         bin_numbers = Series(bin_numbers, name='bin_number', index=self._data.index)
         toret._data['bin_number'] = bin_numbers
         
-        # group by bin number and compute mean mu values in each bin
-        bin_groups = toret._data.reset_index(level=self._mu_level).groupby(['bin_number'])
+        # group by bin number and compute mean k values in each bin
+        bin_groups = toret._data.reset_index(level=self._k_level).groupby(['bin_number'])
            
-        # replace "bin_number", conditioned on bin_number == new_mubins
-        new_mubins = bin_groups.mu.mean() 
-        toret._data['mu'] = new_mubins.loc[toret._data.bin_number].values
+        # replace "bin_number", conditioned on bin_number == new_kbins
+        new_kbins = bin_groups.k.mean() 
+        toret._data['k'] = new_kbins.loc[toret._data.bin_number].values
         del toret._data['bin_number']
         
-        # group by the new mu bins
-        groups = toret._data.reset_index(level=self._k_level).groupby(['mu', 'k'])
+        # group by the new k bins
+        groups = toret._data.reset_index(level=self._mu_level).groupby(['mu', 'k'])
 
         # apply the average function, either do weighted or unweighted
         new_frame = groups.apply(tools.groupby_average, weighted)
@@ -1255,7 +1283,7 @@ class PkmuMeasurement(PowerMeasurement):
         plot_linear        = kwargs.pop('plot_linear', False)
         label              = kwargs.pop('label', None)
         y_offset           = kwargs.pop('offset', 0.)
-        weighted_mean      = kwargs.pop('weighted_mean', False)
+        weighted_mean      = kwargs.pop('weighted_mean', True)
         add_axis_labels    = kwargs.pop('add_axis_labels', True)
         normalize          = kwargs.pop('normalize_by_baseline', False)
         show_baseline      = kwargs.pop('show_baseline', False)
@@ -1419,8 +1447,8 @@ class PkmuMeasurement(PowerMeasurement):
     #end write
 
 #endclass PkmuMeasurement
-#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
 class PoleMeasurement(PowerMeasurement):
     """
     A subclass of `PowerMeasurement` designed to hold a multipole measurement
@@ -1429,46 +1457,65 @@ class PoleMeasurement(PowerMeasurement):
         """
         Initialize and keep track of what order the multipole is
         """
-        assert len(args) == 2, "Must specify two arguments to `PoleMeasurement`"
-
         self._order = kwargs.pop('order', 0)
         assert self._order in [0, 2, 4], "Can only compute multipoles l = 0, 2, 4"
         
         if isinstance(args[0], basestring):
+            assert len(args) == 2, "Must specify two arguments to `PoleMeasurement`"
             super(PoleMeasurement, self).__init__(*args, **kwargs)
         elif isinstance(args[0], PkmuMeasurement):
-            self._data_from_pkmu(args[0])
-            super(PoleMeasurement, self).__init__(None, args[1], **kwargs)
+            units, kwargs = self._data_from_pkmu(args[0])
+            if len(args) == 2 and units != args[1]:
+                raise ValueError("Units mismatch in measuring multipoles from pkmu")
+            super(PoleMeasurement, self).__init__(None, units, **kwargs)
             
         # set shot noise to zero for quadrupole
         if (self._order > 0):
             self._data.shot_noise = 0.
         
     #end __init__
+    
     #---------------------------------------------------------------------------
     def _data_from_pkmu(self, pkmu):
         """
         Internal function to compute the multipole from a PkmuMeasurement object
         """
         # initialize blank arrays
-        power = pkmu.ks*0.
-        variance = pkmu.ks*0.
+        power, variance, norm = pkmu.ks*0., pkmu.ks*0., pkmu.ks*0.
+        Nmu = len(pkmu.mus)
         
+        # loop over all mus
         dmu = np.diff(pkmu.mus)[0]
         for i, mu in enumerate(pkmu.mus):   
+            
+            # the integral over the legendre polynomial at this mu
             mu_integral = quad(lambda x: legendre(self._order)(x), mu-0.5*dmu, mu+0.5*dmu)[0]
             
+            # P(k) at this mu
             Pk_thismu = pkmu.Pk(i)
-            power += mu_integral* np.nan_to_num(Pk_thismu.power)
-            variance += mu_integral**2 * np.nan_to_num(Pk_thismu.variance)
+            
+            # do a weighted sum, accounting for differences in mus
+            w = Pk_thismu.modes if hasattr(Pk_thismu, 'modes') else np.ones(len(Pk_thismu))
+            power += w*mu_integral* np.nan_to_num(Pk_thismu.power)
+            variance += w*mu_integral**2 * np.nan_to_num(Pk_thismu.variance)
+            norm += w
         
-        power *= (2*self._order + 1)
-        variance *= (2*self._order + 1)**2
+        # normalize properly
+        power *= (2*self._order + 1) / norm * Nmu
+        variance *= (2*self._order + 1)**2 / norm * Nmu
         
         # now make the dataframe
         index = Index(pkmu.ks, name='k')
-        self._data = DataFrame(data=np.vstack((power, variance)).T, index=index, columns=['power', 'variance'])
+        self._data = DataFrame(data=np.vstack((power, variance)).T, index=index, columns=['power', 'variance'])   
+    
+        # get the kwargs
+        keys = ['cosmo', 'space', 'redshift']
+        kwargs = {}
+        for k in keys:
+            if hasattr(pkmu, k): kwargs[k] = getattr(pkmu, k)
+        kwargs['Pshot'] = pkmu.shot_noise if not pkmu.subtract_shot_noise else 0.
         
+        return pkmu.measurement_units['k'], kwargs
     #end _data_from_pkmu
         
     #---------------------------------------------------------------------------
@@ -1752,12 +1799,11 @@ class PoleMeasurement(PowerMeasurement):
         toret = np.vstack((self.ks, self.data.power, self.data.variance**0.5)).T
         np.savetxt(filename, toret, header=header, fmt="%20.5e")
     #end write
-    #---------------------------------------------------------------------------
     
+    #---------------------------------------------------------------------------
 #endclass PoleMeasurement
+
 #-------------------------------------------------------------------------------
-
-
 class MonopoleMeasurement(PoleMeasurement):
     """
     A subclass of `PoleMeasurement` designed to hold a monopole measurement
@@ -1767,7 +1813,7 @@ class MonopoleMeasurement(PoleMeasurement):
         Initialize and set the `order` to `0`
         """
         kwargs['_order'] = 0
-        super(PoleMeasurement, self).__init__(*args, **kwargs)
+        PoleMeasurement.__init__(self, *args, **kwargs)
         
     #end __init__
     
@@ -1781,8 +1827,7 @@ class QuadrupoleMeasurement(PoleMeasurement):
         Initialize and set the `order` to `2`
         """
         kwargs['_order'] = 2
-        super(PoleMeasurement, self).__init__(*args, **kwargs)
-        
+        PoleMeasurement.__init__(self, *args, **kwargs)
     #end __init__
     
 #-------------------------------------------------------------------------------
@@ -1795,25 +1840,8 @@ class HexadecapoleMeasurement(PoleMeasurement):
         Initialize and set the `order` to `4`
         """
         kwargs['_order'] = 4
-        super(PoleMeasurement, self).__init__(*args, **kwargs)
-
+        PoleMeasurement.__init__(self, *args, **kwargs)
     #end __init__
-
-#-------------------------------------------------------------------------------
-class TetrahexadecapoleMeasurement(PoleMeasurement):
-    """
-    A subclass of `PoleMeasurement` designed to hold a tetrahexadecapole 
-    measurement
-    """
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize and set the `order` to `6`
-        """
-        kwargs['_order'] = 6
-        super(PoleMeasurement, self).__init__(*args, **kwargs)
-
-    #end __init__
-
     
 #-------------------------------------------------------------------------------
 class PowerMeasurements(dict):
@@ -1832,10 +1860,9 @@ class PowerMeasurements(dict):
             
             # try to read the hexadecapole
             try:
-                self['hexadecapole']   = HexadecapoleMeasurement(poles_tsal, units, **kwargs)
+                self['hexadecapole'] = HexadecapoleMeasurement(poles_tsal, units, **kwargs)
             except:
-                self['hexadecapole'] = None
-                            
+                self['hexadecapole'] = None                        
     #end __init__
     
     #---------------------------------------------------------------------------
@@ -1869,6 +1896,8 @@ class PowerMeasurements(dict):
     #end save
     
     #---------------------------------------------------------------------------
-        
+#endclass PowerMeasurements
+
+#-------------------------------------------------------------------------------    
         
     

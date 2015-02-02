@@ -152,8 +152,13 @@ def groupby_average(frame, weighted):
     is designed to be used with the `groupby` and `apply` functions, where the
     frame is the `DataFrame of a given group. 
     """
+    has_modes = False
+    if hasattr(frame, 'modes'):
+        has_modes = True
+        total_modes = frame.modes.sum()
+        
     if weighted:
-        weights = 1./frame.variance
+        weights = frame.modes if has_modes else 1./frame.variance
     else:
         weights = (~frame.power.isnull()).astype(float)
     weights /= np.sum(weights)
@@ -161,6 +166,8 @@ def groupby_average(frame, weighted):
     
     toret = np.sum(weighted, axis=0)
     toret['variance'] /= np.sum(~frame.power.isnull())
+    if has_modes: toret['modes'] = total_modes
+    
     return toret
 #end groupby_average
 
