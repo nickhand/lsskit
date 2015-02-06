@@ -17,8 +17,8 @@ def main(args):
     Write out a formatted coordinates of the mock
     """
     # the restrictions
-    centrals = "(galaxy_type == central)"
-    satellites = "(galaxy_type == satellite)"
+    centrals = "(type == central)"
+    satellites = "(type == satellite)"
     cen_halo_restricts = {'A' : "(N_sat == 0)", 'B' : "(N_sat > 0)"}
     sat_halo_restricts = {'A' : "(N_sat == 1)", 'B' : "(N_sat > 1)"}
     
