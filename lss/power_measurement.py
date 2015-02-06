@@ -926,7 +926,7 @@ class PkmuMeasurement(PowerMeasurement):
         
         # multiply the factor and return
         toret[cols] *= factor
-        toret['variance'] *= factor
+        toret['variance'] *= factor**2
         
         return toret
     #end data
