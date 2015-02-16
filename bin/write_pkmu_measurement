@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+"""
+ write_power_measurement
+ write a `PowerMeasurement` as an ASCII file
+ 
+ author: Nick Hand
+ contact: nhand@berkeley.edu
+ creation date: 02/09/2015
+"""
+from lss import power_measurement
+import os
+from glob import glob
+import argparse
+
+#-------------------------------------------------------------------------------
+def main(args):
+    """
+    The main function
+    """
+    # read the files and loop over each one
+    files = glob(args.pattern)
+    for f in files:
+        
+        # do some filename manipulation
+        abspath = os.path.abspath(f)
+        directory, filename = os.path.split(abspath)
+        basename, ext = os.path.splitext(filename)
+        
+        # load the pkmu measurement
+        pkmu = power_measurement.load(f)        
+        if isinstance(pkmu, power_measurement.PowerMeasurements):
+            pkmu = pkmu.pkmu
+            
+        # shot noise and output units
+        pkmu.subtract_shot_noise = args.subtract_shot_noise
+        pkmu.output_k_units = pkmu.output_power_units = args.output_units
+            
+        filename = "%s/%s.dat" %(args.output_dir, basename)
+        pkmu.write(filename)
+        
+        del pkmu
+
+#-------------------------------------------------------------------------------    
+if __name__ == '__main__':
+
+    # parse the input arguments
+    desc = "write a `PowerMeasurement` as an ASCII file"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    h = "the pattern to match input files on"
+    parser.add_argument('pattern', type=str, help=h)
+    
+    h = 'output directory to use'
+    parser.add_argument('--output_dir', type=str, default='.', help=h)
+    
+    h = 'the output units, either `relative` or `absolute`'
+    parser.add_argument('--output_units', choices=['absolute', 'relative'], default='relative', help=h)
+    
+    h = 'whether to subtract the shot noise'
+    parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
+    
+    
+    args = parser.parse_args()
+    main(args)
+
+#-------------------------------------------------------------------------------
