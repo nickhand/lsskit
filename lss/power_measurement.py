@@ -10,8 +10,6 @@ from pandas import HDFStore, DataFrame, Index, MultiIndex, Series
 import itertools
 import pickle 
 import copy
-from scipy.special import legendre
-from scipy.integrate import quad
 
 from . import tsal, tools
 import plotify as pfy
@@ -1409,23 +1407,35 @@ class PkmuMeasurement(PowerMeasurement):
         shot_noise_hdr = ""
         if self.subtract_shot_noise:
             shot_noise_hdr = "shot noise subtracted: P_shot = %.5e %s\n" %(self.shot_noise, power_units)
-        header = "P(k, mu) in %s space at redshift z = %s\n" %(self.space, self.redshift) + \
+        header = "P(k, mu) in %s space at redshift z = %s in units of %s\n" %(self.space, self.redshift, power_units) + \
                  "for k = %.5f to %.5f %s,\n" %(np.amin(self.ks), np.amax(self.ks), k_units) + \
                  "number of wavenumbers equal to %d,\n" %(len(self.ks)) + \
                  "number of mu bins equal to %d\n" %(len(self.mus)) + \
                  shot_noise_hdr
-                 
+           
+        # determine if we have modes
+        has_modes = hasattr(self.data, 'modes')      
                  
         if not columns: 
-            header += "%s1:mu %s2:k_cen (%s)%s3:power %s%s4:error %s" \
-                        %(" "*5, " "*5, k_units, " "*5, power_units, " "*5, power_units)
+            header += "{x}1:mu {x}2:k_cen {x}3:power {x}4:error".format(x=" "*5)
+                        
+            if has_modes: 
+                header += (" "*5 + "modes")
+            if self.subtract_shot_noise:
+                header += (" "*5 + "shot_noise")
         else:
-            tmp = "%s1:k_cen (%s)%s" %(" "*5, k_units, " "*5)
-            tmp += (" "*5).join(["%d:P(k, mu=%s) %s%s%d:error %s" %(2*(i+1), mu, power_units, " "*5, 2*i+3, power_units) for i, mu in enumerate(self.mus)])
-            header += tmp        
+            tmp = "%s1:k_cen (%s) " %(" "*5, k_units)
+            tmp += (" ").join(["%d:P_mu=%s %d:err_mu=%s" %(2*(i+1), mu, 2*i+3, mu) for i, mu in enumerate(self.mus)])
+            
+            if has_modes: 
+                tmp += " modes"
+            if self.subtract_shot_noise:
+                tmp += " shot_noise"
+            header += tmp 
+                   
             
         if not columns:
-            ks, mus, power, error = [], [], [], []
+            ks, mus, power, error, modes, shot_noise = [], [], [], [], [], []
             N_ks = len(self.ks)
             for mu in self.mus:
                 mus += [mu]*N_ks
@@ -1433,14 +1443,27 @@ class PkmuMeasurement(PowerMeasurement):
                 ks += list(self.ks)
                 power += list(Pk.power)
                 error += list(Pk.variance**0.5)
+                if has_modes:
+                    modes += list(Pk.modes)
+                if self.subtract_shot_noise:
+                    shot_noise += [self.shot_noise]*N_ks
                     
             data = (mus, ks, power, error)
+            if has_modes:
+                data += (modes,)
+            if self.subtract_shot_noise:
+                data += (shot_noise,)
+            
         else:
             data = [self.ks]
             for mu in self.mus:
                 Pk = self.Pk(mu)
                 data.append(Pk.power)
                 data.append(Pk.variance**0.5)
+                if has_modes:
+                    data.append(Pk.modes)
+                if self.subtract_shot_noise:
+                    data.append(np.ones(len(self.ks))*self.shot_noise)
                 
         toret = np.vstack(data).T
         np.savetxt(filename, toret, header=header, fmt="%20.5e")
@@ -1476,33 +1499,64 @@ class PoleMeasurement(PowerMeasurement):
     #end __init__
     
     #---------------------------------------------------------------------------
+    def _fill_missing_data(self, pkmu):
+        """
+        Fill missing data by interpolating a spline
+        """
+        from scipy.interpolate import UnivariateSpline as spline
+        
+        # get the return frame
+        toret = pkmu.data
+        
+        # loop over each k bin
+        ks = toret.index.get_level_values('k').unique()
+        for i, k in enumerate(ks):
+            
+            x = toret.xs(k, level='k', drop_level=False)
+            inds = x.power.isnull()
+            y = x.dropna()
+            
+            # now fill with spline values
+            if inds.sum() > 0:
+                s = spline(y.index.get_level_values('mu'), y.power, w=1./y.variance**0.5)
+                mus = x.index.get_level_values('mu')[inds]
+                toret.loc[x.index[inds], 'power'] = s(mus)
+            
+        return toret
+            
+    #---------------------------------------------------------------------------
     def _data_from_pkmu(self, pkmu):
         """
         Internal function to compute the multipole from a PkmuMeasurement object
         """
+        from scipy.special import legendre
+        from scipy.integrate import quad
+        
+        # fill the missing data
+        data = self._fill_missing_data(pkmu)
+        
         # initialize blank arrays
-        power, variance, norm = pkmu.ks*0., pkmu.ks*0., pkmu.ks*0.
-        Nmu = len(pkmu.mus)
+        power, variance = pkmu.ks*0., pkmu.ks*0.
         
         # loop over all mus
-        dmu = np.diff(pkmu.mus)[0]
-        for i, mu in enumerate(pkmu.mus):   
+        mus = data.index.get_level_values('mu').unique()
+        Nmu = len(mus)
+        dmu = np.diff(mus)[0]
+        for i, mu in enumerate(mus):   
             
             # the integral over the legendre polynomial at this mu
             mu_integral = quad(lambda x: legendre(self._order)(x), mu-0.5*dmu, mu+0.5*dmu)[0]
             
             # P(k) at this mu
-            Pk_thismu = pkmu.Pk(i)
+            Pk_thismu = data.xs(mu, level='mu')
             
             # do a weighted sum, accounting for differences in mus
-            w = Pk_thismu.modes if hasattr(Pk_thismu, 'modes') else np.ones(len(Pk_thismu))
-            power += w*mu_integral* np.nan_to_num(Pk_thismu.power)
-            variance += w*mu_integral**2 * np.nan_to_num(Pk_thismu.variance)
-            norm += w
+            power += mu_integral* np.nan_to_num(Pk_thismu.power)
+            variance += mu_integral**2 * np.nan_to_num(Pk_thismu.variance)
         
         # normalize properly
-        power *= (2*self._order + 1) / norm * Nmu
-        variance *= (2*self._order + 1)**2 / norm * Nmu
+        power *= (2*self._order + 1)
+        variance *= (2*self._order + 1)**2
         
         # now make the dataframe
         index = Index(pkmu.ks, name='k')
@@ -1776,6 +1830,7 @@ class PoleMeasurement(PowerMeasurement):
         return ax.get_figure(), ax
     
     #end plot   
+    
     #---------------------------------------------------------------------------
     def write(self, filename):
         """
@@ -1812,7 +1867,7 @@ class MonopoleMeasurement(PoleMeasurement):
         """
         Initialize and set the `order` to `0`
         """
-        kwargs['_order'] = 0
+        kwargs['order'] = 0
         PoleMeasurement.__init__(self, *args, **kwargs)
         
     #end __init__
@@ -1826,7 +1881,7 @@ class QuadrupoleMeasurement(PoleMeasurement):
         """
         Initialize and set the `order` to `2`
         """
-        kwargs['_order'] = 2
+        kwargs['order'] = 2
         PoleMeasurement.__init__(self, *args, **kwargs)
     #end __init__
     
@@ -1839,7 +1894,7 @@ class HexadecapoleMeasurement(PoleMeasurement):
         """
         Initialize and set the `order` to `4`
         """
-        kwargs['_order'] = 4
+        kwargs['order'] = 4
         PoleMeasurement.__init__(self, *args, **kwargs)
     #end __init__
     
