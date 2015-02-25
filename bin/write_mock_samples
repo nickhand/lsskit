@@ -41,7 +41,20 @@ def main(args):
         mock.clear_restrictions()
     
         # galaxy restrictions
-        if 'cen' in args.sample:
+        if args.sample == 'halo':            
+            conds = []
+            if args.min_logmass is not None:
+                conds.append("(mass >= %s)" %(10**args.min_logmass))
+            if args.max_logmass is not None:
+                conds.append("(mass <= %s)" %(10**args.max_logmass))
+            
+            if len(conds) == 2:
+                mock.restrict_halos(" and ".join(conds))
+            else:
+                mock.restrict_halos(conds[0])
+                
+            mock.restrict_galaxies(centrals)
+        elif 'cen' in args.sample:
             mock.restrict_galaxies(centrals)
         elif 'sat' in args.sample:
             mock.restrict_galaxies(satellites)
@@ -57,7 +70,17 @@ def main(args):
             mock.restrict_halos(sat_halo_restricts['B'])
 
         # write out the mock coordinates
-        output_file = "%s/%s_%s.dat" %(args.output_dir, basename, args.sample)
+        tag = args.sample
+        if tag == 'halo':
+            if len(conds) == 2:
+                tag += "_%.2f_to_%.2f" %(args.min_logmass, args.max_logmass)
+            else:
+                if args.min_logmass is not None:
+                    tag += "_gt_%.2f" %(args.min_logmass)
+                else:
+                    tag += "_lt_%.2f" %(args.max_logmass)
+                    
+        output_file = "%s/%s_%s.dat" %(args.output_dir, basename, tag)
         mock.write_coordinates(output_file, fields, units=args.output_units, 
                                 header=None, temporary=False, replace_with_nearest=False)
     
@@ -75,7 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('pattern', type=str, help=h) 
 
     h = 'the galaxy sample'
-    choices = ['all', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
+    choices = ['all', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB', 'halo']
     parser.add_argument('sample', default='all', choices=choices, help=h)
     
     h = 'output directory to write results to'
@@ -83,6 +106,12 @@ if __name__ == '__main__':
     
     h = 'output units'
     parser.add_argument('--output_units', type=str, choices=['relative', 'absolute'], default='relative', help=h)
+    
+    h = 'log10 of the lower halo mass (inclusive) limit in M_sun/h'
+    parser.add_argument('--min_logmass', type=float, help=h)
+    
+    h = 'log10 of the upper halo mass (inclusive) limit in M_sun/h'
+    parser.add_argument('--max_logmass', type=float, help=h)
     
     args = parser.parse_args()
     main(args)
