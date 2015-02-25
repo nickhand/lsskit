@@ -149,6 +149,59 @@ class MockHOD(object):
 
     #---------------------------------------------------------------------------
     @property
+    def cen_sat_pairs(self):
+        """
+        The number of cen-sat pairs for use in computing the amplitude of the
+        central - satellite one-halo term, which is related by
+        
+        :math: P1halo = cen_sat_pairs / V / nbar**2
+        
+        The expression used here is:
+        
+        :math: 2 * \sum N_{sat, i}
+        
+        where the sum is over all halos with a central galaxy and at least one
+        satellite galaxy
+        """
+        halos = self.sample.groupby(self.halo_id)
+        if not hasattr(halos, 'N_cen') or not hasattr(halos, 'N_sat'):
+            return 0.
+        N_cen = halos.N_cen.first()
+        N_sat = halos.N_sat.first()
+        
+        return 2*N_sat[(N_cen > 0)&(N_sat > 0)].sum()
+        
+    #---------------------------------------------------------------------------
+    @property
+    def sat_sat_pairs(self):
+        """
+        The number of sat-sat pairs for use in computing the amplitude of the
+        satellite - satellite one-halo term, which is related by
+        
+        :math: P1halo = sat_sat_pairs / V / nbar**2
+        
+        The expression used here is:
+        
+        :math: 2 * \sum N_{sat, i} * (N_{sat, i} - 1)
+        
+        where the sum is over all halos with a central galaxy and more than one
+        satellite galaxy
+        
+        """
+        halos = self.sample.groupby(self.halo_id)
+        if not hasattr(halos, 'N_sat'):
+            return 0.
+        N_sat = halos.N_sat.first()
+        
+        if not hasattr(halos, 'N_cen'):
+            inds = N_sat > 1
+        else:
+            N_cen = halos.N_cen.first()
+            inds = (N_sat > 1)&(N_cen > 0)
+        return (N_sat[inds]*(N_sat[inds]-1)).sum()
+        
+    #---------------------------------------------------------------------------
+    @property
     def nearest_neighbor_ids(self):
         """
         Return an Index with the galaxy ids of the nearest neighbors of all
