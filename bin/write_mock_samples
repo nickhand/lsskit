@@ -6,12 +6,12 @@
  contact: nhand@berkeley.edu
  creation date: 12/20/2014
 """
-from lss import hod_mock
-
+from lss import load_catalog
 import argparse
 import os
 from glob import glob
 
+#-------------------------------------------------------------------------------
 def main(args):
     """
     Write out a formatted coordinates of the mock
@@ -30,7 +30,7 @@ def main(args):
         print "processing %s..." %f
         
         # load
-        mock = hod_mock.load(f)
+        mock = load_catalog(f)
         
         # file manipulation
         abspath = os.path.abspath(f)
@@ -52,8 +52,8 @@ def main(args):
                 mock.restrict_halos(" and ".join(conds))
             else:
                 mock.restrict_halos(conds[0])
-                
-            mock.restrict_galaxies(centrals)
+            if hasattr(mock.sample, 'type'):
+                mock.restrict_galaxies(centrals)
         elif 'cen' in args.sample:
             mock.restrict_galaxies(centrals)
         elif 'sat' in args.sample:
