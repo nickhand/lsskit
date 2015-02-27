@@ -9,46 +9,28 @@
 """
 import argparse
 from flipper import flipperDict
-
-#-------------------------------------------------------------------------------
-def load_galaxy_mock(args):
-    """
-    Load and save the `HODMock` instance
-    """
-    from lss import hod_mock
-    
-    # read in the parameter file
-    params = flipperDict.flipperDict()
-    params.readFromFile(args.param_file)
-    
-    # initialize the empty mock catalog
-    mock = hod_mock.HODMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
-    
-    # load the objects from file
-    p = params['input']
-    mock.load(p['file'], p['fields'], params['halo_id'], params['type_params'], skip_lines=p['skip_lines'])
-                
-    # now save the file
-    mock.save(params['outfile'])
     
 #-------------------------------------------------------------------------------
-def load_halo_mock(args):
+def load_mock(args):
     """
     Load and save the `HaloMock` instance
     """
-    from lss import halo_mock
+    from lss import halo_mock, hod_moc
     
     # read in the parameter file
     params = flipperDict.flipperDict()
     params.readFromFile(args.param_file)
 
     # initialize the empty mock catalog
-    mock = halo_mock.HaloMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
-
-    # load the objects from file
-    p = params['input']
-    mock.load(p['file'], p['fields'], params['halo_id'], skip_lines=p['skip_lines'])
-
+    if args.type == 'halo':
+        mock = halo_mock.HaloMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
+        p = params['input']
+        mock.load(p['file'], p['fields'], params['halo_id'], skip_lines=p['skip_lines'])
+    else:
+        mock = hod_mock.HODMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
+        p = params['input']
+        mock.load(p['file'], p['fields'], params['halo_id'], params['type_params'], skip_lines=p['skip_lines'])
+        
     # now save the file
     mock.save(params['outfile'])
     
@@ -59,21 +41,14 @@ if __name__ == '__main__':
     desc = "load an ASCII mock catalog into an `MockCatalog` class"
     parser = argparse.ArgumentParser(description=desc)
     
-    # and the subparsers
-    subparsers = parser.add_subparsers()
-    galaxy_parser = subparsers.add_parser('galaxy')
-    halo_parser = subparsers.add_parser('halo')
-
-    # one parameter
-    galaxy_parser.add_argument('param_file', type=str, help="the parameter file") 
-    halo_parser.add_argument('param_file', type=str, help="the parameter file") 
+    h = "the name of the file holding the parameters"
+    parser.add_argument('param_file', type=str, help=h)
     
-    # set the default functions
-    galaxy_parser.set_defaults(func=load_galaxy_mock)
-    halo_parser.set_defaults(func=load_halo_mock)
+    h = 'either load and save a `HaloMock` or `HODMock` class' 
+    parser.add_argument('--type', type=str, choices=['halo', 'galaxy'], required=True, help=h) 
     
     # parse args and call
     args = parser.parse_args()
-    args.func(args)
+    load_mock(args)
     
 #-------------------------------------------------------------------------------
