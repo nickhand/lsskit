@@ -220,7 +220,7 @@ class MockCatalog(object):
         
         # use pandas to efficiently read the data into a data frame
         kwargs = {}
-        kwargs['engine']           = c
+        kwargs['engine']           = 'c'
         kwargs['skiprows']         = skip_lines
         kwargs['header']           = None
         kwargs['delim_whitespace'] = True
