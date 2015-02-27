@@ -476,7 +476,7 @@ class Sample(object):
         condition = np.ones(len(frame), dtype='bool')
         
         # get the condition for each flag in self.flags
-        for flag in flags.values():
+        for flag in self.flags.values():
             condition = np.logical_and(condition, self._valid(frame, flag.condition))
         
         return frame[condition]
