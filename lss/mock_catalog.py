@@ -367,7 +367,8 @@ class MockCatalog(object):
         pdf, bins, patches = plt.hist(x, bins=x_bins)
         bincenters = 0.5*(bins[1:] + bins[:-1])
         plt.cla()
-
+        plt.close()
+        
         # transform N(M) into dN/dlnM
         widths = np.diff(bins)
         pdf = 1.*pdf/sum(pdf)
