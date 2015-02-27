@@ -224,8 +224,8 @@ class MockCatalog(object):
         kwargs['skiprows']         = skip_lines
         kwargs['header']           = None
         kwargs['delim_whitespace'] = True
-        kwargs['usecols']          = fields.values()
-        kwargs['names']            = fields.keys()
+        kwargs['usecols']          = info_dict.values()
+        kwargs['names']            = info_dict.keys()
         
         print "reading mock catalog..."
         self._data = pd.read_csv(filename, **kwargs)
