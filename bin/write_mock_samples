@@ -35,7 +35,7 @@ def main(args):
         # file manipulation
         abspath = os.path.abspath(f)
         directory, filename = os.path.split(abspath)
-        basename, ext = filename.split('.', 1)
+        basename, ext = os.path.splitext(filename)
      
         # clear any restrictions
         mock.clear_restrictions()
