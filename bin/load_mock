@@ -37,6 +37,10 @@ def load_halo_mock(args):
     Load and save the `HaloMock` instance
     """
     from lss import halo_mock
+    
+    # read in the parameter file
+    params = flipperDict.flipperDict()
+    params.readFromFile(args.param_file)
 
     # initialize the empty mock catalog
     mock = halo_mock.HaloMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
