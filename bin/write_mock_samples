@@ -46,7 +46,7 @@ def main(args):
             if args.min_logmass is not None:
                 conds.append("(mass >= %s)" %(10**args.min_logmass))
             if args.max_logmass is not None:
-                conds.append("(mass <= %s)" %(10**args.max_logmass))
+                conds.append("(mass < %s)" %(10**args.max_logmass))
             
             if len(conds) == 2:
                 mock.restrict_halos(" and ".join(conds))
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     h = 'log10 of the lower halo mass (inclusive) limit in M_sun/h'
     parser.add_argument('--min_logmass', type=float, help=h)
     
-    h = 'log10 of the upper halo mass (inclusive) limit in M_sun/h'
+    h = 'log10 of the upper halo mass (exclusive) limit in M_sun/h'
     parser.add_argument('--max_logmass', type=float, help=h)
     
     args = parser.parse_args()
