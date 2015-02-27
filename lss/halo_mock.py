@@ -7,7 +7,6 @@
  creation date: 02/26/2015
 """
 from . import mock_catalog as mc
-from .mock_catalog import load
 
 #-------------------------------------------------------------------------------
 class HaloMock(mc.MockCatalog):

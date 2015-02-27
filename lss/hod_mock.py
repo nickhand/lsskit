@@ -7,7 +7,6 @@
  creation date: 06/13/2014
 """
 from . import mock_catalog as mc, angularFOF
-from .mock_catalog import load
 
 from scipy.spatial.distance import pdist, squareform
 try:

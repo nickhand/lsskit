@@ -60,7 +60,7 @@ def h_conversion_factor(variable_type, input_units, output_units, h):
         return 1./(variables[variable_type]['operator'](1., h)**(exponent))
 
 #-------------------------------------------------------------------------------
-def load(filename):
+def load_catalog(filename):
     """
     Load a ``MockCatalog`` object from a HDF5 file using the pandas module
     
@@ -207,9 +207,7 @@ class MockCatalog(object):
                 skip_lines : int
                     The number of lines to skip when reading the input file; 
                     default is 0
-        """
-        from utils.utilities import initializeProgressBar
-        
+        """        
         # get the default keywords
         extra_info   = kwargs.get('extra_info', None)
         object_types = kwargs.get('object_types', None)
@@ -220,48 +218,34 @@ class MockCatalog(object):
             for k, v in extra_info.iteritems():
                 setattr(self, k, v)
         
-        # read the data
-        catalog_lines = open(filename, 'r').readlines()[skip_lines:]
+        # use pandas to efficiently read the data into a data frame
+        kwargs = {}
+        kwargs['engine']           = c
+        kwargs['skiprows']         = skip_lines
+        kwargs['header']           = None
+        kwargs['delim_whitespace'] = True
+        kwargs['usecols']          = fields.values()
+        kwargs['names']            = fields.keys()
         
         print "reading mock catalog..."
-        bar = initializeProgressBar(len(catalog_lines))
-        
-        # now loop over each line, adding each galaxy to its halo
-        data = []
-        for i, line in enumerate(catalog_lines):
-
-            bar.update(i+1)
-            
-            # the dictionary of object info
-            fields = line.split()
-            row = {col_name : float(fields[index]) for col_name, index in info_dict.iteritems()}
-            
-            # store the object type info, if provided
-            if object_types is not None:                
-                type_col = object_types.get('column', None)
-                if type_col is not None:
+        self._data = pd.read_csv(filename, **kwargs)
+        self._data.index.name = 'objid'
+        print "...done"
                     
-                    # the type for this object
-                    object_type = row.pop(type_col)
-                    
-                    # store the object type
-                    match_found = False
-                    for key, val in object_types['types'].iteritems():                        
-                        if object_type == val:
-                            row['type'] = key
-                            match_found = True
-                            break
-                    if not match_found:
-                        raise ValueError("Object of type %s not recognized" %str(object_type))
-        
-            # create Series with the name equal to the row number
-            series = pd.Series(row)
-            data.append(series)
-            
-        # append to the DataFrame    
-        index = pd.Index(range(len(data)), name='objid')
-        self._data = pd.DataFrame(data, index=index)
-        
+        # store the object type info, if provided
+        if object_types is not None:                
+            type_col = object_types.get('column', None)
+            if type_col is not None:
+                
+                # replace with the appropriate types
+                type_values = self._data[type_col]
+                types = object_types['types']
+                new_types = self._data.replace(to_replace=types.values(), value=types.keys())
+                
+                # delete the old column and add the new one
+                del self._data[type_col]
+                self._data['type'] = new_types
+                        
     #---------------------------------------------------------------------------
     def write_coordinates(self, filename, fields, units=None, header=[], 
                             temporary=False, replace_with_nearest=False):
