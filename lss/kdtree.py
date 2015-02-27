@@ -1,3 +1,11 @@
+"""
+ kdtree.py
+ lss : code to implement a kd-tree, in parallel too!
+ 
+ author: Nick Hand
+ contact: nhand@berkeley.edu
+ creation date: 02/26/2015
+"""
 
 import ctypes
 import multiprocessing as mp
