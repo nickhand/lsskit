@@ -15,7 +15,7 @@ def load_mock(args):
     """
     Load and save the `HaloMock` instance
     """
-    from lss import halo_mock, hod_moc
+    from lss import halo_mock, hod_mock
     
     # read in the parameter file
     params = flipperDict.flipperDict()
