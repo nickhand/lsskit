@@ -62,7 +62,7 @@ class HaloMock(mc.MockCatalog):
         mc.MockCatalog.load(self, filename, info_dict, **kwargs)
             
     #---------------------------------------------------------------------------
-    def plot_mass_distribution(self, mass_col):
+    def plot_mass_distribution(self, mass_col, N_bins=50):
         """
         Plot the mass distribution of all galaxies, and satellites only
         """
@@ -70,7 +70,7 @@ class HaloMock(mc.MockCatalog):
         
         # halo masses for all halos
         masses = mc.np.asarray(self.sample[mass_col])
-        bins, pdf, dM = self._compute_pdf(masses, log=True)
+        bins, pdf, dM = self._compute_pdf(masses, log=True, N_bins=N_bins)
 
         # plot
         ax = pfy.gca()

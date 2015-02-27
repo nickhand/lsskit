@@ -345,7 +345,7 @@ class MockCatalog(object):
         store.close()
     
     #---------------------------------------------------------------------------
-    def _compute_pdf(self, x, log=False):
+    def _compute_pdf(self, x, log=False, N_bins=50):
         """
         Internal function to compute the probability distribution function,
         `dn / dx` (or `dn/dlog10x`) of the input array
@@ -359,11 +359,11 @@ class MockCatalog(object):
         """
         from matplotlib import pyplot as plt
         
-        min_x = np.amin(values)
-        max_x = np.amax(mas)
+        min_x = np.amin(x)
+        max_x = np.amax(x)
 
         # first plot and then we normalize
-        x_bins = np.logspace(np.log10(min_x), np.log10(max_x), 50)
+        x_bins = np.logspace(np.log10(min_x), np.log10(max_x), N_bins)
         pdf, bins, patches = plt.hist(x, bins=x_bins)
         bincenters = 0.5*(bins[1:] + bins[:-1])
         plt.cla()
