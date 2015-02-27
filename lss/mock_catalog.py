@@ -218,14 +218,20 @@ class MockCatalog(object):
             for k, v in extra_info.iteritems():
                 setattr(self, k, v)
         
+        # sort the fields we are reading by the column numbers (the values of info_dict)
+        sorted_info = sorted(info_dict.items(), key=operator.itemgetter(1))
+        col_names, col_nums = map(list, zip(*sorted_info))
+        
+        print col_names, col_nums
+        
         # use pandas to efficiently read the data into a data frame
         kwargs = {}
         kwargs['engine']           = 'c'
         kwargs['skiprows']         = skip_lines
         kwargs['header']           = None
         kwargs['delim_whitespace'] = True
-        kwargs['usecols']          = info_dict.values()
-        kwargs['names']            = info_dict.keys()
+        kwargs['usecols']          = col_nums
+        kwargs['names']            = col_names 
         
         print "reading mock catalog..."
         self._data = pd.read_csv(filename, **kwargs)
