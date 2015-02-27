@@ -15,7 +15,7 @@ def load_mock(args):
     """
     Load and save the `HaloMock` instance
     """
-    from lss import halo_mock, hod_mock
+    from lss import HODMock, HaloMock
     
     # read in the parameter file
     params = flipperDict.flipperDict()
@@ -23,11 +23,11 @@ def load_mock(args):
 
     # initialize the empty mock catalog
     if args.type == 'halo':
-        mock = halo_mock.HaloMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
+        mock = HaloMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
         p = params['input']
         mock.load(p['file'], p['fields'], params['halo_id'], skip_lines=p['skip_lines'])
     else:
-        mock = hod_mock.HODMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
+        mock = HODMock(params['redshift'], params['box_size'], params['units'], cosmo=params['cosmology'])
         p = params['input']
         mock.load(p['file'], p['fields'], params['halo_id'], params['type_params'], skip_lines=p['skip_lines'])
         
