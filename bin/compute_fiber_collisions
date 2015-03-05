@@ -8,7 +8,7 @@
 """
 import argparse
 from flipper import flipperDict
-from lss import hod_mock
+from lss import load_catalog
 
 def main(args):
     """
@@ -16,14 +16,13 @@ def main(args):
     """
     params = flipperDict.flipperDict()
     params.readFromFile(args.param_file)
-               
     
     # compute the collision groups
     if args.compute_groups:
     
         # load the mock
         print "loading mock file..."
-        mock = hod_mock.load(params['mock_file'])
+        mock = load_catalog(params['mock_file'])
         
         print "computing collision groups..."
         mock.compute_collision_groups(params['radius'], 
@@ -39,7 +38,7 @@ def main(args):
         
         # load the mock
         print "loading mock file..."
-        mock = hod_mock.load(params['mock_file'])
+        mock = load_catalog(params['mock_file'])
         
         print "assigning fibers..."
         mock.assign_fibers(params['resolution_fraction'])
