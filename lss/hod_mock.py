@@ -401,8 +401,8 @@ class HODMock(mc.MockCatalog):
         
         # make a DataFrame of the group numbers
         group_numbers = {g.objid : gr_num for gr_num in groups for g in groups[gr_num].members}
-        index = pd.Index(group_numbers.keys(), name='objid')
-        group_df = pd.DataFrame(group_numbers.values(), index=index, columns=['group_number'])
+        index = mc.pd.Index(group_numbers.keys(), name='objid')
+        group_df = mc.pd.DataFrame(group_numbers.values(), index=index, columns=['group_number'])
         
         # now join to the main table
         self._data = self._data.join(group_df)
@@ -480,7 +480,7 @@ class HODMock(mc.MockCatalog):
         
         # first, make a DataFrame with group_size as a column
         groups = self._data.groupby('group_number')
-        sizes = pd.DataFrame(groups.size(), columns=['group_size'])
+        sizes = mc.pd.DataFrame(groups.size(), columns=['group_size'])
         frame = self._data.join(sizes, on='group_number', how='left')
         
         # handle group size = 2, setting collided = 1 for random element
