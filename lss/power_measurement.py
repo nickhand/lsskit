@@ -422,6 +422,9 @@ class PowerMeasurement(tsal.TSAL):
         """
         Add the shot noise to `self.data` as column named `shot_noise`
         """
+        if hasattr(self._data, 'shot_noise'):
+            return
+            
         Pshot = 0.
         if hasattr(self, 'volume') and hasattr(self, 'sample_size'):
             Pshot = (self.volume / self.sample_size)
@@ -463,66 +466,35 @@ class PowerMeasurement(tsal.TSAL):
         """
         ff = open(fname)
         self.readTSAL(ff)
-        self.redshift = float(ff.readline()) # redshift
+        lines = ff.readlines()
+        self.redshift = float(lines[0]) # redshift
 
         #-----------------------------------------------------------------------
-        # Read baseline
+        # Read the extra quantities
         #-----------------------------------------------------------------------
-        # check syntax
-        line = ff.readline()
-        if line != "add_to_baseline\n" :
-            print line
-            raise ValueError("no add_to_baseline - Not sure what to do in _data_from_tsal")
-
-        # read the baseline
-        baseline = {}
-        ks, mus  = set(), set()
-        N        = int(ff.readline())
-        for i in range(N):
-            k, mu, val = map(float, ff.readline().split())
-            ks.add(k)
-            mus.add(mu)
-            baseline[(k,mu)] = val
-
-        #-----------------------------------------------------------------------
-        # Read noise
-        #-----------------------------------------------------------------------
-        # check syntax
-        line = ff.readline()        
-        if line != "approx_noise\n" :
-            print line
-            raise ValueError("no approx_noise - Not sure what to do in _data_from_tsal")
-        if N != int(ff.readline()): raise ValueError("number mismatch when reading noise in _data_from_tsal")
-
-        # read the noise 
-        noise = {}
-        for i in range(N):
-            k, mu, val = map(float, ff.readline().split())
-            if (k, mu) not in baseline:
-                print i, k, mu
-                raise ValueError("k or mu mismatch when reading noise in _data_from_tsal")
-            noise[(k,mu)] = val
+        ks, mus = set(), set()
+        extras = {'baseline' : {}, 'noise' : {}, 'modes' : {}}
+        names = {'baseline' : 'add_to_baseline\n', 'noise' : 'approx_noise\n',
+                 'modes' : 'mode_counts\n'}
+        for extra in extras:
+            if not names[extra] in lines:
+                if extra in ['baseline', 'noise']:
+                    raise ValueError("no %s to read -- not sure what to do in `_data_from_tsal`")
+                continue
             
-        #-----------------------------------------------------------------------
-        # Read modes, if given
-        #-----------------------------------------------------------------------
-        # check syntax
-        line = ff.readline() 
-        have_modes = False       
-        if line == "mode_counts\n" :
-            
-            if N != int(ff.readline()): 
-                raise ValueError("number mismatch when reading mode counts in _data_from_tsal")
+            index = lines.index(names[extra])
+            for i in range(int(lines[index+1])):
+                k, mu, val = map(float, lines[index+2+i].split())
+                if extra == 'baseline':
+                    ks.add(k)
+                    mus.add(mu)
+                extras[extra][(k,mu)] = val
 
-            # read the modes 
-            modes = {}
-            for i in range(N):
-                k, mu, val = map(float, ff.readline().split())
-                if (k, mu) not in baseline:
-                    print i, k, mu
-                    raise ValueError("k or mu mismatch when reading mode counts in _data_from_tsal")
-                modes[(k,mu)] = val
-            have_modes = True
+        # read the poisson shot noise
+        Pshot = 0
+        if 'poisson_shot_noise\n' in lines:
+            index = lines.index('poisson_shot_noise\n')
+            Pshot = float(lines[index+1])
 
         # all combinations of (mu, k)
         muks = list(itertools.product(sorted(mus), sorted(ks)))
@@ -531,9 +503,9 @@ class PowerMeasurement(tsal.TSAL):
         columns = []
         base_name = '_'.join(self.pars.keys()[0].split('_')[:2])
         for (mu, k) in muks:
-            this_base  = baseline[(k,mu)]
-            this_noise = noise[(k,mu)]
-            this_Nmodes = modes[(k,mu)] if have_modes else 0.
+            this_base  = extras['baseline'][(k,mu)]
+            this_noise = extras['noise'][(k,mu)]
+            this_Nmodes = extras['modes'][(k,mu)] if len(extras['modes']) > 0 else 0.
             
             if (k % 1) == 0: k = int(k)
             if (mu % 1) == 0: mu = int(mu)
@@ -550,6 +522,10 @@ class PowerMeasurement(tsal.TSAL):
         to_replace = self._data.power == self._data.baseline
         self._data.loc[to_replace, ['power', 'variance']] = np.NaN
         ff.close()
+        
+        # add the shot noise column if we read it
+        if Pshot > 0:
+            self._data['shot_noise'] = (self._data['power']*0. + Pshot)
 
     #end _data_from_tsal
 
