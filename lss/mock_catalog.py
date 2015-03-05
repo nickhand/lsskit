@@ -181,7 +181,17 @@ class MockCatalog(object):
         """
         self.restrictions.clear_flags()
         self._sample = None
-                
+    
+    #---------------------------------------------------------------------------
+    def restrict_by_index(self, index):
+        """
+        Restrict the sample size by the `objid` index
+        """
+        if not isinstance(index, pd.Index):
+            raise TypeError("To restrict by index, please provide a pandas Index")
+            
+        self._sample = self._data.loc[index]
+                    
     #---------------------------------------------------------------------------
     def load(self, filename, info_dict, **kwargs):
         """
@@ -244,7 +254,7 @@ class MockCatalog(object):
                 # replace with the appropriate types
                 type_values = self._data[type_col]
                 types = object_types['types']
-                new_types = self._data.replace(to_replace=types.values(), value=types.keys())
+                new_types = self._data[type_col].replace(to_replace=types.values(), value=types.keys())
                 
                 # delete the old column and add the new one
                 del self._data[type_col]
