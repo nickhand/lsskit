@@ -246,8 +246,6 @@ class MockCatalog(object):
         # restrict the sample
         self._sample = self._data.loc[index]
         self._mass_restricted = True
-        
-        print "sample size = ", self._sample_total
                     
     #---------------------------------------------------------------------------
     def load(self, filename, info_dict, **kwargs):
