@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+"""
+ write_halo_samples
+ write out halo samples as an ASCII file
+ 
+ author: Nick Hand
+ contact: nhand@berkeley.edu
+ creation date: 03/05/2015
+"""
+from lss import load_catalog
+import argparse
+import os
+from glob import glob
+
+#-------------------------------------------------------------------------------
+def write_fine_bins(mock, fields, units, output_name):
+    """
+    Write out the fine bins
+    """
+    min_masses = [13., 13.2, 13.4, 13.6, 13.8, 14.]
+    max_masses = [13.4, 13.6, 13.8, 14., 14.2, 14.4]
+    
+    # loop over each bin
+    for i, (min_mass, max_mass) in enumerate(zip(min_masses, max_masses)):
+
+        # clear restrictions
+        mock.clear_restrictions()
+        
+        # restrict by mass
+        limits = (10**min_mass, 10**max_mass)
+        mock.restrict_halos("(mass >= {}) and (mass < {})".format(*limits))
+
+        # write out the mock coordinates
+        tag = "fine_halo_bin_%d" %i
+                    
+        output_file = output_name %tag
+        mock.write_coordinates(output_file, fields, units=units, header=None, 
+                                temporary=False, replace_with_nearest=False)
+
+#-------------------------------------------------------------------------------
+def write_wide_bins(mock, mass_pdf_file, fields, units, output_name):
+    """
+    Write out the wide bins, chosen from a distribution of halo masses
+    """
+    # do cenA, cenB, and sats
+    gal_restrict = ["(type == central)", "(type == central)", "(type == satellite)"]
+    halo_restrict = ["(N_sat == 0)",  "(N_sat > 0)", None]
+    tags = ['cenA', 'cenB', 'sat']
+    
+    # load the mock for the mass pdf
+    mass_pdf_mock = load_catalog(mass_pdf_file)
+    
+    # loop over each bin
+    for i, (gr, hr) in enumerate(zip(gal_restrict, halo_restrict)):
+
+        # clear restrictions
+        mass_pdf_mock.clear_restrictions()
+        mock.clear_restrictions()
+        
+        # get the masses
+        if gr is not None:
+            mass_pdf_mock.restrict_galaxies(gr)
+        if hr is not None:
+            mass_pdf_mock.restrict_halos(hr)
+        masses = mass_pdf_mock.mass
+        
+        # now restrict by the mass pdf
+        mock.restrict_by_mass_pdf(masses)
+        
+        # write out the mock coordinates
+        tag = "wide_halo_bin_%s" %tags[i]
+                    
+        output_file = output_name %tag
+        mock.write_coordinates(output_file, fields, units=units, header=None, 
+                                temporary=False, replace_with_nearest=False)
+
+#-------------------------------------------------------------------------------
+def main(args):
+    """
+    Write out a formatted coordinates of the mock
+    """
+    
+    # output columns
+    fields = ['x', 'y', 'z_real', 'z_redshift']
+    
+    files = glob(args.pattern)
+    for f in files:
+        print "processing %s..." %f
+        
+        # load
+        mock = load_catalog(f)
+        
+        # file manipulation
+        abspath = os.path.abspath(f)
+        directory, filename = os.path.split(abspath)
+        basename, ext = os.path.splitext(filename)
+     
+        # clear any restrictions
+        mock.clear_restrictions()
+    
+        # the output file name
+        output_file = "%s/%s_%s.dat" %(args.output_dir, basename, "%s")
+    
+        # do the fine halo mass bins
+        if args.fine:
+            write_fine_bins(mock, fields, args.output_units, output_file)
+
+        # do the wide mass bins
+        if args.wide:
+            write_wide_bins(mock, args.mass_pdf_file, fields, args.output_units, output_file)
+            
+#end main
+    
+#-------------------------------------------------------------------------------
+if __name__ == '__main__':
+    
+    # parse the input arguments
+    desc = "write out halo samples as an ASCII file"
+    parser = argparse.ArgumentParser(description=desc, 
+                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    h = "the pattern to match mock files on"
+    parser.add_argument('pattern', type=str, help=h) 
+
+    h = 'write out the fine halo mass bins'
+    parser.add_argument('--fine', action='store_true', help=h)
+    
+    h = 'write out the wide halo mass bins'
+    parser.add_argument('--wide', action='store_true', help=h)
+    
+    h = 'the mock file for computing the wide mass bins'
+    parser.add_argument('--mass_pdf_file', default=None, type=str, help=h)
+    
+    h = 'output directory to write results to'
+    parser.add_argument('--output_dir', type=str, default='.', help=h)
+    
+    h = 'output units'
+    parser.add_argument('--output_units', type=str, choices=['relative', 'absolute'], default='relative', help=h)
+    
+    args = parser.parse_args()
+    main(args)
+    
+#-------------------------------------------------------------------------------
