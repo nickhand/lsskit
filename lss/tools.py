@@ -70,6 +70,7 @@ def sample_by_mass_pdf(masses, masses0, bins=None, N=None):
 
     index = []
     for bin_num, count in enumerate(new_counts):
+        print bin_num, count
         if count == 0:
             continue
         possible = bin_numbers[bin_numbers == bin_num]
@@ -81,6 +82,7 @@ def sample_by_mass_pdf(masses, masses0, bins=None, N=None):
         else:
             index += list(np.random.choice(possible.index, size=count))
         
+    print "index length = ", len(index)
     return index
 
 
