@@ -211,6 +211,8 @@ class MockCatalog(object):
             
         # restrict the sample
         self._sample = self._data.loc[index]
+        
+        print "size of sample = ", self._sample_total
                     
     #---------------------------------------------------------------------------
     def load(self, filename, info_dict, **kwargs):
@@ -345,15 +347,17 @@ class MockCatalog(object):
             hdr = "%s\n" %('\n'.join(h['line'] for h in header_copy))
             outfile.write(hdr)
             
+        # close the file  
+        outfile.close()
+          
         # get the output fields, optionally replacing with nearest neighbor values
         if replace_with_nearest is None or not replace_with_nearest:
             output_fields = self.sample[fields]*conversion_factor
         else:
             output_fields = self._replace_with_nearest(replace_with_nearest, fields)*conversion_factor
         
-        # now write out the np array
-        np.savetxt(outfile, output_fields)
-        outfile.close()        
+        # now write out
+        output_fields.to_csv(out_name, sep=" ", header=False, index=False, mode='a')
         return out_name    
   
     #---------------------------------------------------------------------------

@@ -72,7 +72,6 @@ def sample_by_mass_pdf(masses, masses0, bins=None, N=None):
     for bin_num, count in enumerate(new_counts):
         if count == 0:
             continue
-        print bin_num
         possible = bin_numbers[bin_numbers == bin_num]
         if len(possible) == 0:
             continue
