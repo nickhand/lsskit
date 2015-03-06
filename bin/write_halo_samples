@@ -13,7 +13,7 @@ import os
 from glob import glob
 
 #-------------------------------------------------------------------------------
-def write_fine_bins(mock, fields, units, output_name):
+def write_fine_bins(mock, fields, units, output_name, which=None):
     """
     Write out the fine bins
     """
@@ -22,6 +22,10 @@ def write_fine_bins(mock, fields, units, output_name):
     
     # loop over each bin
     for i, (min_mass, max_mass) in enumerate(zip(min_masses, max_masses)):
+        
+        if which is not None:
+            if i != which:
+                continue
 
         # clear restrictions
         mock.clear_restrictions()
@@ -39,20 +43,24 @@ def write_fine_bins(mock, fields, units, output_name):
                                 temporary=False, replace_with_nearest=False)
 
 #-------------------------------------------------------------------------------
-def write_wide_bins(mock, mass_pdf_file, fields, units, output_name):
+def write_wide_bins(mock, mass_pdf_file, fields, units, output_name, which=None):
     """
     Write out the wide bins, chosen from a distribution of halo masses
     """
     # do cenA, cenB, and sats
     gal_restrict = ["(type == central)", "(type == central)", "(type == satellite)"]
-    halo_restrict = ["(N_sat == 0)",  "(N_sat > 0)", None]
-    tags = ['cenA', 'cenB', 'sat']
+    halo_restrict = ["(N_sat == 0)",  "(N_sat > 0)", "(N_sat == 1)"]
+    tags = ['cenA', 'cenB', 'satA']
     
     # load the mock for the mass pdf
     mass_pdf_mock = load_catalog(mass_pdf_file)
     
     # loop over each bin
     for i, (gr, hr) in enumerate(zip(gal_restrict, halo_restrict)):
+        
+        if which is not None:
+            if tags[i] != which:
+                continue
 
         # clear restrictions
         mass_pdf_mock.clear_restrictions()
@@ -105,11 +113,13 @@ def main(args):
     
         # do the fine halo mass bins
         if args.fine:
-            write_fine_bins(mock, fields, args.output_units, output_file)
+            write_fine_bins(mock, fields, args.output_units, output_file, 
+                            which=args.which_fine_bin)
 
         # do the wide mass bins
         if args.wide:
-            write_wide_bins(mock, args.mass_pdf_file, fields, args.output_units, output_file)
+            write_wide_bins(mock, args.mass_pdf_file, fields, args.output_units, 
+                            output_file, which=args.which_wide_bin)
             
 #end main
     
@@ -127,8 +137,16 @@ if __name__ == '__main__':
     h = 'write out the fine halo mass bins'
     parser.add_argument('--fine', action='store_true', help=h)
     
+    h = 'which fine halo mass bin to do'
+    choices = [0, 1, 2, 3, 4, 5]
+    parser.add_argument('--which_wide_bin', type=int, choices=choices, help=h)
+    
     h = 'write out the wide halo mass bins'
     parser.add_argument('--wide', action='store_true', help=h)
+    
+    h = 'which wide halo mass bin to do'
+    choices = ['cenA', 'cenB', 'satA']
+    parser.add_argument('--which_wide_bin', type=str, choices=choices, help=h)
     
     h = 'the mock file for computing the wide mass bins'
     parser.add_argument('--mass_pdf_file', default=None, type=str, help=h)
