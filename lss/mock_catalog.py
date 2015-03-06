@@ -133,11 +133,33 @@ class MockCatalog(object):
 
     #---------------------------------------------------------------------------
     @property
+    def mass_restricted(self):
+        """
+        Return `True` if the sample has been restricted via `restrict_by_mass_pdf`
+        """
+        try:
+            return self._mass_restricted
+        except AttributeError:
+            return False
+            
+    #---------------------------------------------------------------------------
+    @property
+    def index_restricted(self):
+        """
+        Return `True` if the sample has been restricted via `restrict_by_index`
+        """
+        try:
+            return self._index_restricted
+        except AttributeError:
+            return False
+            
+    #---------------------------------------------------------------------------
+    @property
     def restricted(self):
         """
         Return `True` if the sample is restricted
         """
-        return not self.restrictions.is_clear() or self._mass_restriced or self._index_restricted
+        return not self.restrictions.is_clear() or self.mass_restriced or self.index_restricted
         
     #---------------------------------------------------------------------------
     @property
@@ -208,6 +230,8 @@ class MockCatalog(object):
         """
         Restrict the sample size by the `objid` index
         """
+        self._mass_restricted = False
+        
         # first, get the masses
         masses = self.sample[mass_col]
         
