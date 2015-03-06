@@ -133,11 +133,19 @@ class MockCatalog(object):
 
     #---------------------------------------------------------------------------
     @property
+    def restricted(self):
+        """
+        Return `True` if the sample is restricted
+        """
+        return not self.restrictions.is_clear() or self._mass_restriced or self._index_restricted
+        
+    #---------------------------------------------------------------------------
+    @property
     def sample(self):
         """
         DataFrame holding the object info for the current sample
         """
-        if self.restrictions.is_clear():
+        if not self.restricted:
             if self.subsample_indices is None:
                 return self._data
             else:
@@ -180,6 +188,7 @@ class MockCatalog(object):
         Clear any restrictions
         """
         self.restrictions.clear_flags()
+        self._mass_restricted = self._index_restricted = False
         self._sample = None
     
     #---------------------------------------------------------------------------
@@ -191,6 +200,7 @@ class MockCatalog(object):
             raise TypeError("To restrict by index, please provide a pandas Index")
             
         self._sample = self._data.loc[index]
+        self._index_restricted = True
                     
     #---------------------------------------------------------------------------
     def restrict_by_mass_pdf(self, mass_pdf, mass_col='mass', unique_col=None,
@@ -208,11 +218,12 @@ class MockCatalog(object):
             
         # get the objids of the chosen ones
         index = tools.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total)
-            
+        
         # restrict the sample
         self._sample = self._data.loc[index]
+        self._mass_restricted = True
         
-        print "size of sample = ", self._sample_total
+        print "sample size = ", self._sample_total
                     
     #---------------------------------------------------------------------------
     def load(self, filename, info_dict, **kwargs):
