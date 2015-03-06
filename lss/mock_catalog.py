@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-import numpy as np
+from . import numpy as np, tool
 import copy
 import tempfile
 import operator
@@ -190,6 +190,26 @@ class MockCatalog(object):
         if not isinstance(index, pd.Index):
             raise TypeError("To restrict by index, please provide a pandas Index")
             
+        self._sample = self._data.loc[index]
+                    
+    #---------------------------------------------------------------------------
+    def restrict_by_mass_pdf(self, mass_pdf, mass_col='mass', unique_col=None,
+                                bins=None, total=None):
+        """
+        Restrict the sample size by the `objid` index
+        """
+        # first, get the masses
+        masses = self.sample[mass_col]
+        
+        # remove any non-unique masses, if so desired
+        if unique_col is not None:
+            groups = self.sample.groupby(unique_col)
+            masses = groups[mass_col].first()
+            
+        # get the objids of the chosen ones
+        index = tools.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total):
+            
+        # restrict the sample
         self._sample = self._data.loc[index]
                     
     #---------------------------------------------------------------------------

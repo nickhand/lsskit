@@ -6,12 +6,136 @@
  contact: nhand@berkeley.edu
  creation date: 08/24/2014
 """
-import numpy as np
+from . import numpy as np, tsal
 import itertools
 from glob import glob
-from . import tsal
 
+#-------------------------------------------------------------------------------
+def sample_by_mass_pdf(masses, masses0, bins=None, N=None):
+    """
+    Choose objects from the `masses` array such that the probability density
+    function (pdf) of the resulting masses is consistent with the distribution
+    of the `masses0` array.
     
+    Parameters
+    ----------
+    masses : pandas.Series
+        A Series holding the masses from which we will choose objects
+    masses0: array_like
+        The masses chosen from the desired pdf. These will be binned according
+        to `bins` to compute the pdf.
+    bins : optional
+        The bins keyword to pass to the `np.histogram` function. If `None`, 
+        use Scott's rule to determine the total number of bins
+    N : int, optional
+        The total number of objects to choose. If `None`, equal to the length
+        of `masses0`
+        
+    Returns
+    -------
+    index : array_like
+        A list of the index values of the objects chosen from `masses`. Each
+        value represent the "objid" of the object
+    """
+    from pandas import Series
+    
+    if not isinstance(masses, Series):
+        raise TypeError("Input masses to choose from must be an pandas.Series")
+        
+    # take the log10 of the masses
+    logM_full = np.log10(masses)
+    logM0 = np.log10(masses0)
+    
+    # get the bins, if not provided
+    if bins is None:
+        dM, bins = scotts_bin_width(logM0, return_bins=True)
+    N_bins = len(bins) - 1
+    
+    # total number
+    if N is None:
+        N = len(logM0)
+    
+    # number counts of the desired mass distribution
+    pdf, _ = np.histogram(logM0, bins=bins)
+    
+    # get the new counts
+    new_counts = np.bincount(np.random.choice(range(N_bins), p=1.*pdf/pdf.sum(), size=N))
+
+    # remove any objects in logM_full out of range
+    inds = (logM_full >= bins[0])&(logM_full <= bins[-1])
+    logM_full = logM_full[inds]
+
+    # the bin numbers
+    bin_numbers = Series(np.digitize(logM_full, bins) - 1, index=logM_full.index)
+
+    index = []
+    for bin_num, count in enumerate(new_counts):
+        if count == 0:
+            continue
+        print bin_num
+        possible = bin_numbers[bin_numbers == bin_num]
+        if len(possible) == 0:
+            continue
+            
+        if count > len(possible):
+            index += list(possible.index)
+        else:
+            index += list(np.random.choice(possible.index, size=count))
+        
+    return index
+
+
+#-------------------------------------------------------------------------------
+def scotts_bin_width(data, return_bins=False):
+    r"""Return the optimal histogram bin width using Scott's rule:
+
+    Parameters
+    ----------
+    data : array-like, ndim=1
+        observed (one-dimensional) data
+    return_bins : bool (optional)
+        if True, then return the bin edges
+
+    Returns
+    -------
+    width : float
+        optimal bin width using Scott's rule
+    bins : ndarray
+        bin edges: returned if `return_bins` is True
+
+    Notes
+    -----
+    The optimal bin width is
+
+    .. math::
+        \Delta_b = \frac{3.5\sigma}{n^{1/3}}
+
+    where :math:`\sigma` is the standard deviation of the data, and
+    :math:`n` is the number of data points.
+
+    See Also
+    --------
+    knuth_bin_width
+    freedman_bin_width
+    astroML.plotting.hist
+    """
+    data = np.asarray(data)
+    if data.ndim != 1:
+        raise ValueError("data should be one-dimensional")
+
+    n = data.size
+    sigma = np.std(data)
+
+    dx = 3.5 * sigma * 1. / (n ** (1. / 3))
+
+    if return_bins:
+        Nbins = np.ceil((data.max() - data.min()) * 1. / dx)
+        Nbins = max(1, Nbins)
+        bins = data.min() + dx * np.arange(Nbins + 1)
+        return dx, bins
+    else:
+        return dx
+
 #-------------------------------------------------------------------------------
 def compute_average_biases(pattern):
     """

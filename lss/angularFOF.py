@@ -6,13 +6,11 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-
-from . import kdtree
+from . import kdtree, numpy as np
 from utils import utilities, pytools
 from catIO import catalog
 
 import pickle
-import numpy as np
 import os
 import collections
 import copy

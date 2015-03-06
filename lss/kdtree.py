@@ -6,11 +6,10 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-
+from . import numpy as np
 import ctypes
 import multiprocessing as mp
 import copy
-import numpy as np
 import scipy.spatial
 
 if hasattr(scipy.spatial, 'cKDTree') and hasattr(scipy.spatial.cKDTree, 'query_ball_tree'):
