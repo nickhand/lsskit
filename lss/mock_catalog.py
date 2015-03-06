@@ -207,7 +207,7 @@ class MockCatalog(object):
             masses = groups[mass_col].first()
             
         # get the objids of the chosen ones
-        index = tools.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total):
+        index = tools.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total)
             
         # restrict the sample
         self._sample = self._data.loc[index]
