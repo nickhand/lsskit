@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-from . import numpy as np, tool
+from . import numpy as np, tools
 import copy
 import tempfile
 import operator
