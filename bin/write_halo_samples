@@ -48,9 +48,9 @@ def write_wide_bins(mock, mass_pdf_file, fields, units, output_name, which=None)
     Write out the wide bins, chosen from a distribution of halo masses
     """
     # do cenA, cenB, and sats
-    gal_restrict = ["(type == central)", "(type == central)", "(type == satellite)"]
-    halo_restrict = ["(N_sat == 0)",  "(N_sat > 0)", "(N_sat == 1)"]
-    tags = ['cenA', 'cenB', 'satA']
+    gal_restrict = ["(type == central)", "(type == central)", "(type == satellite)", '(type == central)']
+    halo_restrict = ["(N_sat == 0)",  "(N_sat > 0)", "(N_sat == 1)", None]
+    tags = ['cenA', 'cenB', 'satA', 'cen']
     
     # load the mock for the mass pdf
     mass_pdf_mock = load_catalog(mass_pdf_file)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--wide', action='store_true', help=h)
     
     h = 'which wide halo mass bin to do'
-    choices = ['cenA', 'cenB', 'satA']
+    choices = ['cenA', 'cenB', 'satA', 'cen']
     parser.add_argument('--which_wide_bin', type=str, choices=choices, help=h)
     
     h = 'the mock file for computing the wide mass bins'
