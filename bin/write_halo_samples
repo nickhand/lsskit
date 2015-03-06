@@ -34,6 +34,7 @@ def write_fine_bins(mock, fields, units, output_name):
         tag = "fine_halo_bin_%d" %i
                     
         output_file = output_name %tag
+        print "   saving %s..." %output_file
         mock.write_coordinates(output_file, fields, units=units, header=None, 
                                 temporary=False, replace_with_nearest=False)
 
@@ -62,7 +63,7 @@ def write_wide_bins(mock, mass_pdf_file, fields, units, output_name):
             mass_pdf_mock.restrict_galaxies(gr)
         if hr is not None:
             mass_pdf_mock.restrict_halos(hr)
-        masses = mass_pdf_mock.mass
+        masses = mass_pdf_mock.sample.mass
         
         # now restrict by the mass pdf
         mock.restrict_by_mass_pdf(masses)
@@ -71,6 +72,7 @@ def write_wide_bins(mock, mass_pdf_file, fields, units, output_name):
         tag = "wide_halo_bin_%s" %tags[i]
                     
         output_file = output_name %tag
+        print "   saving %s..." %output_file
         mock.write_coordinates(output_file, fields, units=units, header=None, 
                                 temporary=False, replace_with_nearest=False)
 
