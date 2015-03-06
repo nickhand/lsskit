@@ -159,7 +159,7 @@ class MockCatalog(object):
         """
         Return `True` if the sample is restricted
         """
-        return not self.restrictions.is_clear() or self.mass_restriced or self.index_restricted
+        return not self.restrictions.is_clear() or self.mass_restricted or self.index_restricted
         
     #---------------------------------------------------------------------------
     @property
