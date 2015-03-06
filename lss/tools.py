@@ -79,7 +79,7 @@ def sample_by_mass_pdf(masses, masses0, bins=None, N=None):
         if count > len(possible):
             index += list(possible.index)
         else:
-            index += list(np.random.choice(possible.index, size=count))
+            index += list(np.random.choice(possible.index, size=count, replace=False))
     return index
 
 
