@@ -98,7 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('pattern', type=str, help=h) 
 
     h = 'the galaxy sample'
-    choices = ['all', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB', 'halo']
+    choices = ['all', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
     parser.add_argument('sample', default='all', choices=choices, help=h)
     
     h = 'output directory to write results to'
