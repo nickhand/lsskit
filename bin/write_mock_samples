@@ -71,7 +71,8 @@ def main(args):
                 gal_cond = uncollided
         
         # now restrict
-        mock.restrict_galaxies(gal_cond)  
+        if gal_cond is not None:
+            mock.restrict_galaxies(gal_cond)  
         
         # write out the mock coordinates
         tag = args.sample
