@@ -16,7 +16,13 @@ def main(args):
     """
     Write out a formatted coordinates of the mock
     """
+    
+    # raise an error if removing collided and using collision weights
+    if args.remove_collided and args.use_collision_weights:
+        raise ValueError("Cannot remove collided galaxies and use collision weights")
+    
     # the restrictions
+    uncollided = "(collided == 0) or ((collided == 1) and (resolved == 1))"
     centrals = "(type == central)"
     satellites = "(type == satellite)"
     cen_halo_restricts = {'A' : "(N_sat == 0)", 'B' : "(N_sat > 0)"}
@@ -39,25 +45,6 @@ def main(args):
      
         # clear any restrictions
         mock.clear_restrictions()
-    
-        # galaxy restrictions
-        if args.sample == 'halo':            
-            conds = []
-            if args.min_logmass is not None:
-                conds.append("(mass >= %s)" %(10**args.min_logmass))
-            if args.max_logmass is not None:
-                conds.append("(mass < %s)" %(10**args.max_logmass))
-            
-            if len(conds) == 2:
-                mock.restrict_halos(" and ".join(conds))
-            else:
-                mock.restrict_halos(conds[0])
-            if hasattr(mock.sample, 'type'):
-                mock.restrict_galaxies(centrals)
-        elif 'cen' in args.sample:
-            mock.restrict_galaxies(centrals)
-        elif 'sat' in args.sample:
-            mock.restrict_galaxies(satellites)
 
         # halo restrictions
         if args.sample == 'cenA':
@@ -69,20 +56,33 @@ def main(args):
         elif args.sample == 'satB': 
             mock.restrict_halos(sat_halo_restricts['B'])
 
+        # galaxy restrictions
+        gal_cond = None
+        if 'cen' in args.sample:
+            gal_cond = centrals
+        elif 'sat' in args.sample:
+            gal_cond = satellites
+            
+        # get only the uncollided galaxies
+        if args.remove_collided:
+            if gal_cond is not None:
+                gal_cond = "(%s) and (%s)" %(gal_cond, uncollided)
+            else:
+                gal_cond = uncollided
+        
+        # now restrict
+        mock.restrict_galaxies(gal_cond)  
+        
         # write out the mock coordinates
         tag = args.sample
-        if tag == 'halo':
-            if len(conds) == 2:
-                tag += "_%.2f_to_%.2f" %(args.min_logmass, args.max_logmass)
-            else:
-                if args.min_logmass is not None:
-                    tag += "_gt_%.2f" %(args.min_logmass)
-                else:
-                    tag += "_lt_%.2f" %(args.max_logmass)
-                    
+        if args.remove_collided:
+            tag = "%s_uncollided" %tag
+        elif args.use_collision_weights:
+            tag = "%s_NN_weights" %tag
         output_file = "%s/%s_%s.dat" %(args.output_dir, basename, tag)
         mock.write_coordinates(output_file, fields, units=args.output_units, 
-                                header=None, temporary=False, replace_with_nearest=False)
+                                header=None, temporary=False, 
+                                replace_with_nearest=args.use_collision_weights)
     
 #end main
     
@@ -107,11 +107,12 @@ if __name__ == '__main__':
     h = 'output units'
     parser.add_argument('--output_units', type=str, choices=['relative', 'absolute'], default='relative', help=h)
     
-    h = 'log10 of the lower halo mass (inclusive) limit in M_sun/h'
-    parser.add_argument('--min_logmass', type=float, help=h)
+    h = 'whether to remove collided galaxies (that are not resolved)'
+    parser.add_argument('--remove_collided', action='store_true', default=False, help=h)
     
-    h = 'log10 of the upper halo mass (exclusive) limit in M_sun/h'
-    parser.add_argument('--max_logmass', type=float, help=h)
+    h = 'whether to use collision weights by double-counting nearest neighbor of '
+    h += 'collided galaxies'
+    parser.add_argument('--use_collision_weights', action='store_true', default=False, help=h)
     
     args = parser.parse_args()
     main(args)
