@@ -899,8 +899,8 @@ class PkmuMeasurement(PowerMeasurement):
             toret[cols] = toret[cols].subtract(toret['shot_noise'], axis='index')
         
         # multiply the factor and return
-        toret[cols] *= factor
-        toret['variance'] *= factor**2
+        toret[cols] = toret[cols].multiply(factor, axis='index')
+        toret['variance'] = toret['variance'].multiply(factor**2, axis='index')
         
         return toret
     #end data
