@@ -105,7 +105,7 @@ def read_pole_measurements(pattern, subtract_shot_noise=True, output_units='rela
     return tools.weighted_mean(monos), tools.weighted_mean(quads)
     
 #-------------------------------------------------------------------------------
-def write_multipoles(filename, mono, quad):
+def write_multipoles(filename, mono=None, quad=None, hexadec=None, remove_missing=False):
     """
     Save the power multipole measurements to a data file in ASCII format
     
@@ -117,30 +117,64 @@ def write_multipoles(filename, mono, quad):
         The monopole measurement object
     quad : QuadrupoleMeasurement
         The quadrupole measurement object
+    hex : HexadecapoleMeasurement
+        The hexadecapole measurement object
+    remove_missing : bool, optional
+        whether to remove any missing data points
     """ 
-    # check the output units
-    msg = "monopole and quadrupole must have same output k units"
-    assert mono.output_k_units == quad.output_k_units, msg
-    msg = "monopole and quadrupole must have same output power units"
-    assert mono.output_power_units == quad.output_power_units, msg
+    poles = {}
+    if mono is not None:
+        poles['monopole'] = mono
+    if quad is not None:
+        poles['quadrupole'] = quad
+    if hexadec is not None:
+        poles['hexadecapole'] = hexadec
     
-    k_units = "h/Mpc" if mono.output_k_units == 'relative' else "1/Mpc"
-    power_units = "(Mpc/h)^3" if mono.output_power_units == 'relative' else "(Mpc)^3"
+    if len(poles) == 0:
+        raise ValueError("Must supply at least one multipole measurement")
+    
+    # check the output units
+    k_units = [x.output_k_units for x in poles.values()]
+    if not all(k_units[0] == item for item in k_units):
+        raise ValueError("multipole measurements must have same output k units")
+        
+    power_units = [x.output_power_units for x in poles.values()]
+    if not all(power_units[0] == item for item in power_units):
+        raise ValueError("multipole measurements must have same output power units")
+   
+    # remove missing?
+    if remove_missing:
+        for name in poles:
+            poles[name]._data = poles[name]._data.dropna()
+    
+    name0 = poles.keys()[0]
+    pole0 = poles[name0]
+    k_units = "h/Mpc" if pole0.output_k_units == 'relative' else "1/Mpc"
+    power_units = "(Mpc/h)^3" if pole0.output_power_units == 'relative' else "(Mpc)^3"
     
     shot_noise_hdr = ""
-    if mono.subtract_shot_noise:
-        shot_noise_hdr = "shot noise subtracted from monopole: P_shot = %.5e %s\n" %(mono.shot_noise, power_units)
-    header = "Monopole/quadrupole in %s space at redshift z = %s\n" %(mono.space, mono.redshift) + \
-             "for k_cen = %.5f to %.5f %s,\n" %(np.amin(mono.ks), np.amax(mono.ks), k_units) + \
-             "number of wavenumbers equal to %d\n" %(len(mono.ks)) + \
-             shot_noise_hdr + \
-             "%s1:k_cen (%s)%s2:mono %s%s3:error %s%s4:quad %s%s5:error %s" \
-                %(" "*5, k_units, " "*5, power_units, " "*5, power_units, " "*5, power_units, " "*5, power_units)
+    if 'monopole' in poles and poles['monopole'].subtract_shot_noise:
+        Pshot = poles['monopole'].shot_noise
+        shot_noise_hdr = "shot noise subtracted from monopole: P_shot = %.5e %s\n" %(Pshot, power_units)
     
-    data = (mono.ks, mono.data.power, mono.data.variance**0.5, quad.data.power, quad.data.variance**0.5)
+    names = ", ".join(poles.keys()) if len(poles) > 1 else name0
+    header = "%s in %s space at redshift z = %s\n" %(names, pole0.space, pole0.redshift) + \
+             "for k_cen = %.5f to %.5f %s,\n" %(np.amin(pole0.ks), np.amax(pole0.ks), k_units) + \
+             "number of wavenumbers equal to %d\n" %(len(pole0.ks)) + \
+             shot_noise_hdr
+             
+    cols = "%s1:k_cen (%s)%s" %(" "*5, k_units, " "*5)
+    for i, name in enumerate(poles):
+        cols += "%d:%s %s%s%d:error %s%s" %(2*i+1, name, power_units, " "*5, 
+                                            2*(i+1), power_units, " "*5)
+    header += cols
+    
+    data = (pole0.ks,)
+    for name in poles:
+        pole = poles[name]
+        data += (pole.data.power, pole.data.variance**0.5)
     toret = np.vstack(data).T
     np.savetxt(filename, toret, header=header, fmt="%20.5e")
-#end write_multipoles
 
 #-------------------------------------------------------------------------------
 def load(filename):
@@ -579,7 +613,7 @@ class PowerMeasurement(tsal.TSAL):
         The shot noise in units specified by `self.output_power_units`
         """
         factor = self._h_conversion_factor('power', self.measurement_units['power'], self.output_power_units)
-        return self._data.shot_noise.iloc[0]*factor
+        return self._data.shot_noise.dropna().iloc[0]*factor
         
     #---------------------------------------------------------------------------
     @property
@@ -1574,6 +1608,10 @@ class PoleMeasurement(PowerMeasurement):
             # now make the data frame
             vals, errs = map(np.array, zip(*[pole[k] for k in ks]))
             self._data = DataFrame(data=np.vstack((vals, errs**2)).T, index=index, columns=['power', 'variance'])
+            
+            # remove power if it's zero
+            to_replace = np.isclose(self._data.power, 0.)
+            self._data.loc[to_replace, ['power', 'variance']] = np.NaN
             
         else:
             self._data = None
