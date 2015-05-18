@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--fine_bins_file', type=str, help=h)
     
     h = 'which fine halo mass bin to do'
-    parser.add_argument('--which_fine_bin', type=int, choices=choices, help=h)
+    parser.add_argument('--which_fine_bin', type=int, help=h)
     
     h = 'write out the wide halo mass bins'
     parser.add_argument('--wide', action='store_true', help=h)
