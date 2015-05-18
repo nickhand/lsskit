@@ -11,26 +11,33 @@ from lss import load_catalog
 import argparse
 import os
 from glob import glob
+import pandas as pd
 
 #-------------------------------------------------------------------------------
-def write_fine_bins(mock, fields, units, output_name, which=None):
+def write_fine_bins(mock, binning_file, fields, units, output_name, which=None):
     """
     Write out the fine bins
     """
-    min_masses = [13., 13.2, 13.4, 13.6, 13.8, 14.]
-    max_masses = [13.4, 13.6, 13.8, 14., 14.2, 14.4]
+    # load the binning file
+    bins = pd.read_csv(binning_file, names=['bin', 'min_mass', 'max_mass'],                             sep=' ', index_col='bin')
+    
+    # determine which bins
+    if which is None:
+        bin_nums = bins.index
+    else:
+        if which not in bins.index:
+            raise ValueError("Bin number %d is not valid for this binning file" %which)
+        bin_nums = [which]
     
     # loop over each bin
-    for i, (min_mass, max_mass) in enumerate(zip(min_masses, max_masses)):
+    for bin_num in bin_nums:
         
-        if which is not None:
-            if i != which:
-                continue
-
         # clear restrictions
         mock.clear_restrictions()
         
         # restrict by mass
+        min_mass = bins.loc[bin_num].min_mass
+        max_mass = bins.loc[bin_num].max_mass
         limits = (10**min_mass, 10**max_mass)
         mock.restrict_halos("(mass >= {}) and (mass < {})".format(*limits))
 
@@ -112,33 +119,32 @@ def main(args):
         output_file = "%s/%s_%s.dat" %(args.output_dir, basename, "%s")
     
         # do the fine halo mass bins
-        if args.fine:
-            write_fine_bins(mock, fields, args.output_units, output_file, 
+        if args.fine_bins_file is not None:
+            write_fine_bins(mock, args.fine_bins_file, fields,
+                            args.output_units, output_file,
                             which=args.which_fine_bin)
 
         # do the wide mass bins
         if args.wide:
-            write_wide_bins(mock, args.mass_pdf_file, fields, args.output_units, 
-                            output_file, which=args.which_wide_bin)
-            
-#end main
+            write_wide_bins(mock, args.mass_pdf_file, fields,
+                             args.output_units, output_file,
+                             which=args.which_wide_bin)
+                        
     
 #-------------------------------------------------------------------------------
 if __name__ == '__main__':
     
     # parse the input arguments
     desc = "write out halo samples as an ASCII file"
-    parser = argparse.ArgumentParser(description=desc, 
-                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description=desc,      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     h = "the pattern to match mock files on"
     parser.add_argument('pattern', type=str, help=h) 
 
-    h = 'write out the fine halo mass bins'
-    parser.add_argument('--fine', action='store_true', help=h)
+    h = 'the binning file to use for the fine halo mass bins'
+    parser.add_argument('--fine_bins_file', type=str, help=h)
     
     h = 'which fine halo mass bin to do'
-    choices = [0, 1, 2, 3, 4, 5]
     parser.add_argument('--which_fine_bin', type=int, choices=choices, help=h)
     
     h = 'write out the wide halo mass bins'
