@@ -42,7 +42,7 @@ def write_fine_bins(mock, binning_file, fields, units, output_name, which=None):
         mock.restrict_halos("(mass >= {}) and (mass < {})".format(*limits))
 
         # write out the mock coordinates
-        tag = "fine_halo_bin_%d" %i
+        tag = "fine_halo_bin_%d" %bin_num
                     
         output_file = output_name %tag
         print "   saving %s..." %output_file
