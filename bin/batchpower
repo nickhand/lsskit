@@ -16,7 +16,7 @@ parser = ap.ArgumentParser(description=desc,
 h = 'the name of the template argument file for power.py'
 parser.add_argument('param_file', type=str, help=h)
 h = 'the command to use; everything up until `power.py @params`'
-parser.add_argument('command', nargs="+", help=h)
+parser.add_argument('command', help=h)
 h = 'the value to start the counter at (required)'
 parser.add_argument('--start', default=0, type=int, help=h)
 h = 'the value to stop the counter at'
@@ -46,7 +46,7 @@ def main():
     
     # form the xargs
     xargs_command = ['xargs', '-P', str(args.xargs_nprocs), '-n', '1', '-I', '%']
-    xargs_command += args.command + ['power.py', '@%']
+    xargs_command += args.command.split() + ['power.py', '@%']
     
     # try to do the call
     try:
