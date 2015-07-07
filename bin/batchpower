@@ -51,13 +51,12 @@ def main():
             ff.write(param_file.format(**kwargs))
     
     # echo the names of the tempfiles
-    echo = subprocess.Popen(["echo"] + tempfiles, stdout=subprocess.PIPE)
+    echo = subprocess.Popen(["echo"] + ['\n'.join(tempfiles)], stdout=subprocess.PIPE)
     
     # form the xargs
     xargs_command = ['xargs', '-P', str(args.xargs_nprocs), '-n', '1', '-I', '%']
     xargs_command += args.command.split() + ['power.py', '@%']
     
-    print xargs_command
     # try to do the call
     try:
         xargs = subprocess.Popen(xargs_command, stdin=echo.stdout)
