@@ -57,6 +57,7 @@ def main():
     xargs_command = ['xargs', '-P', str(args.xargs_nprocs), '-n', '1', '-I', '%']
     xargs_command += args.command.split() + ['power.py', '@%']
     
+    print xargs_command
     # try to do the call
     try:
         xargs = subprocess.Popen(xargs_command, stdin=echo.stdout)
