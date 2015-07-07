@@ -17,6 +17,8 @@ h = 'the name of the template argument file for power.py'
 parser.add_argument('param_file', type=str, help=h)
 h = 'the command to use; everything up until `power.py @params`'
 parser.add_argument('command', help=h)
+h = 'output all files to this directory'
+parser.add_argument('-o', '--output', default=None, type=str, help=h)
 h = 'the value to start the counter at (required)'
 parser.add_argument('--start', default=0, type=int, help=h)
 h = 'the value to stop the counter at'
@@ -25,6 +27,10 @@ h = 'the increment of the counter'
 parser.add_argument('--increment', default=1, type=int, help=h)
 h = 'the number of xargs parallel processes to spawn'
 parser.add_argument('-p',dest='xargs_nprocs',default=1, type=int, help=h)
+h = 'the name of the counter argument in param file to be used in string format'
+parser.add_argument('--cnt-name', default='cnt', type=str, help=h)
+h = 'the name of the output directory in param file to be used in string format'
+parser.add_argument('--output-name', default='output', type=str, help=h)
 
 args = parser.parse_args()
 
@@ -39,7 +45,10 @@ def main():
     for cnt in range(args.start, args.stop, args.increment):
         with tempfile.NamedTemporaryFile(delete=False) as ff:
             tempfiles.append(ff.name)
-            ff.write(param_file.format(cnt))
+            kwargs = {args.cnt_name: cnt}
+            if args.output is not None:
+                kwargs[args.output_name] = args.output
+            ff.write(param_file.format(**kwargs))
     
     # echo the names of the tempfiles
     echo = subprocess.Popen(["echo"] + tempfiles, stdout=subprocess.PIPE)
