@@ -98,8 +98,7 @@ def enum_files(result_dir, basename, dims, coords):
     for idx, args in ndenumerate(dims, coords):
         try:            
             # see if path exists
-            filename = basename.format(**args)
-            f = os.path.join(result_dir, filename)
+            f = os.path.join(result_dir, basename).format(**args)
             if not os.path.exists(f): raise
         
             # yield index and filename

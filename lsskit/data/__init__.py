@@ -31,16 +31,30 @@ class PowerSpectraLoader:
     name = None
     classes = {}
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, root):
+        self.root = root
 
     @classmethod
     def store_class(cls, klass):
         cls.classes[klass.name] = klass
 
     @classmethod
-    def get(cls, name, path, plugin_path=None):
+    def get(cls, name, root_dir, plugin_path=None):
+        """
+        Return the PowerSpectraLoader plugin with
+        the name ``name``, optionally loading it from the 
+        path specified.
         
+        Parameters
+        ----------
+        name : str  
+            the registered name of the plugin
+        root_dir : str
+            the name of the root directory holding the results. This 
+            argument is passed to the plugin initialization
+        plugin_path : str, optional
+            the path of the plugin file to load 
+        """
         if plugin_path is not None:
             load(plugin_path)
             
@@ -51,7 +65,7 @@ class PowerSpectraLoader:
             else:
                 raise PluginException("no valid PowerSpectraLoader plugins registered")
             
-        return cls.classes[name](path)
+        return cls.classes[name](root_dir)
             
 #------------------------------------------------------------------------------          
 import os.path
