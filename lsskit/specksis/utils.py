@@ -3,23 +3,12 @@
     lsskit.specksis
     
     __author__ : Nick Hand
-    __desc__ : utilities for helping with analysis of power spectra
+    __desc__ : internal utilities for helping with analysis of power spectra
 """
 import os
 import itertools
 from .. import numpy as np
-
-# def trim_k(data, kmin, kmax):
-#     try:
-#         k = data['k_center']
-#     except:
-#         k = data.k_center
-#     mask = (~np.isnan(k))&(k>=kmin)&(k<=kmax)
-#     return data[mask]
-#
-            
           
-  
 def ndindex(dims, coords):
     """
     Generator to iterate over the all dimensions using the specified coordinate
