@@ -36,6 +36,7 @@ class RunPB(PowerSpectraLoader):
                 
             coords = [self.a, self.mass]
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phh.add_errors()
             setattr(self, '_Phh_'+space, Phh)
             return Phh
             
@@ -55,6 +56,7 @@ class RunPB(PowerSpectraLoader):
                 
             coords = [self.a]
             Pmm = SpectraSet.from_files(d, basename, coords, ['a'])
+            Pmm.add_errors()
             setattr(self, '_Pmm_'+space, Pmm)
             return Pmm
             
@@ -74,11 +76,11 @@ class RunPB(PowerSpectraLoader):
                 
             coords = [self.a, self.mass]
             Phm = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
-            Phm.add_errors(getattr(self, '_Phh_'+space), getattr(self, '_Pmm_'+space))
+            Phm.add_errors(self.get_Phh(space), self.get_Pmm(space))
             setattr(self, '_Phm_'+space, Phm)
             return Phm
             
-    def get_lambda(self, space='real', kind='A', bias_file=None):
+    def get_lambda(self, kind='A', space='real', bias_file=None):
         """
         Return the stochasticity 
         """
@@ -86,14 +88,41 @@ class RunPB(PowerSpectraLoader):
         try:
             return getattr(self, name)
         except AttributeError:
-            if bias_file is None:
-                bias_file = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins.pickle")
-                if not os.path.exists(bias_file):
-                    raise ValueError("no bias file at %s, please specify as keyword argument" %bias_file)
-                    
-            biases = HaloSpectraSet.load_biases(bias_file, ['a', 'mass'], (len(self.a), len(self.mass)))
-            data = specksis.HaloSpectraSet(self.get_Phh(space), self.get_Phm(space), self.get_Pmm(space), biases)
+
+            biases = self.get_halo_biases(bias_file)
+            data = HaloSpectraSet(self.get_Phh(space), self.get_Phm(space), self.get_Pmm(space), biases)
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
             return lam
-
+            
+    def get_halo_biases(self, filename=None):
+        """
+        Return the linear biases of each halo mass bin 
+        """
+        try:
+            return self._halo_biases
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            biases = HaloSpectraSet.load_biases(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            setattr(self, '_halo_biases', biases)
+            return biases
+            
+    def get_halo_masses(self, filename=None):
+        """
+        Return the average mass of each halo mass bin 
+        """
+        try:
+            return self._halo_masses
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/avg_halo_masses.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            masses = HaloSpectraSet.load_masses(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            setattr(self, '_halo_masses', masses)
+            return masses
