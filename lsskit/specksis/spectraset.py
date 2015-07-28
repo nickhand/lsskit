@@ -151,14 +151,14 @@ class HaloSpectraSet(xray.Dataset):
         super(HaloSpectraSet, self).__init__(data)
         
     @classmethod
-    def load_biases(cls, bias_file, dims, shape):
+    def load_masses(cls, filename, dims, shape):
         """
-        Load a pickled dictionary of linear biases and return
+        Load a pickled dictionary of average halo masses and return
         a `xray.DataArray`
         
         Parameters
         ----------
-        bias_file : str
+        filename : str
             the name of the file holding the pickled data
         dims : list of str
             the list of strings corresponding to the names of
@@ -170,7 +170,40 @@ class HaloSpectraSet(xray.Dataset):
         import pickle
         
         # load the data
-        biases = pickle.load(open(bias_file))
+        masses = pickle.load(open(filename))
+            
+        # sort keys and values by the keys
+        keys = masses.keys()
+        M = masses.values()
+        sorted_lists = sorted(zip(keys, M), key=lambda x: x[0])
+        keys, M = [[x[i] for x in sorted_lists] for i in range(2)]
+
+        # make the coords and return a DataArray
+        coords = zip(*keys)
+        coords = [np.unique(x) for x in coords]
+        return xray.DataArray(np.array(M).reshape(shape), coords, dims)
+        
+    @classmethod
+    def load_biases(cls, filename, dims, shape):
+        """
+        Load a pickled dictionary of linear biases and return
+        a `xray.DataArray`
+        
+        Parameters
+        ----------
+        filename : str
+            the name of the file holding the pickled data
+        dims : list of str
+            the list of strings corresponding to the names of
+            the dimensions of the dictionary keys
+        shape : list of int
+            the shape of the data values, corresponding to the
+            shape of dim 0, dim 1, etc
+        """
+        import pickle
+        
+        # load the data
+        biases = pickle.load(open(filename))
             
         # sort keys and values by the keys
         keys = biases.keys()
@@ -207,7 +240,7 @@ class HaloSpectraSet(xray.Dataset):
             Phh = self.loc[idx]['Phh'].values
             Phm = self.loc[idx]['Phm'].values
             Pmm = self.loc[idx]['Pmm'].values
-            b1  = self.data.loc[idx]['b1'].values
+            b1  = self.loc[idx]['b1'].values
             
             # subtract shot noise
             Phh_noshot = Phh['power'] - Phh.box_size**3/Phh.N1
@@ -218,11 +251,13 @@ class HaloSpectraSet(xray.Dataset):
                 lam = Phh_noshot - 2*b1*Phm['power'] + b1**2*Pmm_noshot
                 err = (Phh['error']**2 + (2*b1*Phm['error'])**2 + (b1**2*Pmm['error'])**2)**0.5
             # stoch type B
-            else:           
+            elif stoch_type.lower() == 'b':           
                 b1k = Phm['power'] / Pmm_noshot
                 b1k_err = b1k * ((Phm['error']/Phm['power'])**2 + (Pmm['error']/Pmm_noshot)**2)**0.5
-                lam = Phh['power'] - b1k**2 * Pmm['power']
-                err = (Phh['error']**2 + (2*b1k*Pmm['power']*b1k_err)**2 + (b1k*Pmm['error'])**2)**0.5
+                lam = Phh_noshot - b1k**2 * Pmm_noshot
+                err = (Phh['error']**2 + (2*b1k*Pmm_noshot*b1k_err)**2 + (b1k*Pmm['error'])**2)**0.5
+            else:
+                raise ValueError("stochasticity type not recognized")
 
             # make a new PkResult or PkmuResult class
             d = {}
