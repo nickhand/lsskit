@@ -1,27 +1,26 @@
 from lsskit.speckmod.plugins import ModelInput
-from lsskit import numpy as np
 from pyRSD.rsd import power_halo
 from pyRSD.rsd._cache import Cache, parameter, cached_property
 import lmfit
 
-class PhmCorrectedPTModel(lmfit.Model, ModelInput, Cache):
+class PhhModel(lmfit.Model, ModelInput, Cache):
 
-    name = "PhmCorrectedPTModel"
+    name = "PhhModel"
     plugin_type = 'model'
-    param_names = ['A0', 'A1', 'b2_00', 'k_t']
+    param_names = ['A1', 'A2', 'dP', 'R']
     
     def __init__(self, dict):
         
         ModelInput.__init__(self, dict)
         Cache.__init__(self)
-        super(PhmCorrectedPTModel, self).__init__(self.__call__, 
+        super(PhhModel, self).__init__(self.__call__, 
                                             independent_vars=['k'])
-                                            
+    
     @classmethod
     def register(cls):
         h = cls.add_parser(cls.name, usage=cls.name)
         h.set_defaults(klass=cls)
-        
+    
     @parameter
     def k(self, val):
         return val
@@ -50,36 +49,27 @@ class PhmCorrectedPTModel(lmfit.Model, ModelInput, Cache):
         return power_halo.HaloSpectrum(**kwargs)
             
     @cached_property('k', '_Phalo')
-    def _K00(self):
-        return self._Phalo.K00(self.k)
+    def _Phh_2halo(self):
+        return self._Phalo.P00_model.zeldovich_power(self.k)
         
     @cached_property('k', '_Phalo')
-    def _P00(self):
-        return self._Phalo.P00_model(self.k)
-            
-    def transition(self, k, k_transition=0.4, b=0.05):
-        return 0.5 + 0.5*np.tanh((k-k_transition)/b)
+    def _Phh_1halo(self):
+        return self._Phalo.P00_model.broadband_power(self.k)
     
     def __call__(self, k, **kwargs):
         
         # get the parameters
-        A0 = kwargs['A0']
         A1 = kwargs['A1']
-        b2_00 = kwargs['b2_00']
-        k_t = kwargs.get('k_t', 0.4)
+        A2 = kwargs['A2']
+        dP = kwargs['dP']
+        R = kwargs['R']
         
         # set the appropriate variables
         self.cosmo = kwargs['cosmo'].GetParamFile()
         self.z = kwargs['z']
         self.k = k
         
-        # computed normed K00
-        b1 = kwargs['b1']
-        normed_K00 = self._K00 / b1 / self._P00
-
-        # return the model
-        switch = self.transition(k, k_t)
-        return (1-switch)*b2_00*normed_K00 + switch*(A1*k + A0)
+        return A1**2 * self._Phh_2halo + A2 * self._Phh_1halo + dP/(1 + (k*R)**2)
         
         
     

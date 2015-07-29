@@ -79,7 +79,6 @@ def perform_fit():
 
         # save the output
         for output in outputs:
-            print "calling write"
             output.write(dict(key, **extra), result)
         
     # now let's save the params too

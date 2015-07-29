@@ -125,7 +125,7 @@ class ModelResultsStorage:
 #------------------------------------------------------------------------------      
 
 
-builtins = ['RunPBModelData', 'PhmResidualPadeModel', 'PhmCorrectedPTModel',
+builtins = ['RunPBModelData', 'PhmResidualPadeModel', 'PhmCorrectedPTModel', 'PhhModel',
             'BestfitParamStorage', 'BestfitFunctionStorage',
             'GaussianProcessStorage']
 for plugin in builtins:
