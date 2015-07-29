@@ -21,16 +21,16 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
     def R_dm(self, s8_z):
         return 26. * (s8_z/0.8)**0.15
     
-    def __call__(self, k, b1=None, s8_z=None, **params):
+    def __call__(self, k, **kwargs):
         
         # get the parameters
-        A0 = params['A0']
-        R1h = params['R1h']
+        A0 = kwargs['A0']
+        R1h = kwargs['R1h']
         
         # with defaults
-        R = params.get('R', self.R_dm(s8_z))
-        R1 = params.get('R1', 0.)
-        R2h = params.get('R2h', 0.)
+        R = kwargs.get('R', self.R_dm(kwargs['s8_z']))
+        R1 = kwargs.get('R1', 0.)
+        R2h = kwargs.get('R2h', 0.)
         
         # now return
         F = 1. - 1./(1. + (k*R)**2)
