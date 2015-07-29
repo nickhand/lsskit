@@ -91,11 +91,15 @@ class SpectraSet(xray.DataArray):
             dims = self.dims
         if isinstance(dims, basestring):
             dims = [dims]
-            
-        for d in utils.ndindex(dims, self.coords):
-            val = self.loc[d]
-            key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
-            yield key, val
+        
+        if not len(dims):
+            key = {k:v.values.tolist() for k,v in self.coords.iteritems()}
+            yield key, self
+        else:
+            for d in utils.ndindex(dims, self.coords):
+                val = self.loc[d]
+                key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
+                yield key, val
             
     def add_errors(self, power_x1=None, power_x2=None):
         """
