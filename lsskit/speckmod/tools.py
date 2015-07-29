@@ -1,8 +1,9 @@
 """
-    modeling.py
+    tools.py
+    lsskit.speckmod
     
     __author__ : Nick Hand
-    __desc__ : functions for helping with modeling of power spectra
+    __desc__ : tools for helping with modeling of power spectra
 """
 from .. import numpy as np
 
