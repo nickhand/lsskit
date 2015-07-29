@@ -42,8 +42,14 @@ def ndenumerate(dims, coords):
         list of coordinates for each dimension. `itertools.product` of
         each coordinate axis is yielded.
     """
-    if hasattr(coords, 'values'):
-        coords = [x.values for x in coords.values()]
+    if not is_dict_like(coords):
+        if len(dims) != len(coords):
+            raise ValueError("shape mismatch between supplied `dims` and `coords`")
+        coords = dict(zip(dims, coords))
+    dims = list(dims)
+    if not len(dims):
+        raise ValueError("cannot iterate if no dimension with size > 1 is provided")
+    coords = [coords[d] for d in dims]
        
     # make the array of dicts 
     shape, ndims = map(len, coords), len(dims)
