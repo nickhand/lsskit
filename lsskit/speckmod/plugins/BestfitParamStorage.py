@@ -20,10 +20,9 @@ class BestfitParamStorage(ModelResultsStorage):
     @classmethod
     def register(cls):
         
-        usage = cls.name+":path:variable"
+        usage = cls.name+":path"
         h = cls.add_parser(cls.name, usage=usage)
         h.add_argument("path", type=str, help="the output name")
-        h.add_argument("variable", type=str, help="the variable name we are saving")
         h.set_defaults(klass=cls)
         
     def __open__(self):
