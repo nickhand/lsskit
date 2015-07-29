@@ -11,7 +11,8 @@ setup(
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
-            'speckmod = lsskit.speckmod.__main__:perform_fit'
+            'speckmod = lsskit.speckmod.__main__:perform_fit',
+            'fit_gp = lsskit.speckmod.__main__:fit_gaussian_process'
         ]
     },
 )

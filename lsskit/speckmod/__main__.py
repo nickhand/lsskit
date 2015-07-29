@@ -79,6 +79,7 @@ def perform_fit():
 
         # save the output
         for output in outputs:
+            print "calling write"
             output.write(dict(key, **extra), result)
         
     # now let's save the params too
@@ -88,4 +89,23 @@ def perform_fit():
         for k,v in args.iteritems():
             if isinstance(v, list): v = map(str, v)
             ff.write("%s = %s\n" %(k, str(v)))
+            
+#------------------------------------------------------------------------------
+def fit_gaussian_process():
+    """
+    Fit a Gaussian Process to either best-fit parameters or functions.
+    This functions is installed as an entry point
+    """
+    # parse the input arguments
+    desc = "fit a Gaussian Process to either best-fit parameters or functions"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+
+    # the gaussian process  
+    h = "the input Gaussian Process arguments, specified as:\n\n"
+    parser.add_argument('gp_args', type=plugins.ModelResultsStorage.parse, 
+                            help=h+plugins.ModelResultsStorage.format_help('GP'))
+                            
+    args = parser.parse_args()
+    args.gp_args.write()
 
