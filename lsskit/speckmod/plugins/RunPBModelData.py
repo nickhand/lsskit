@@ -7,11 +7,26 @@
 """
 
 from lsskit.speckmod.plugins import ModelInput
-from lsskit import data as lss_data
+from lsskit import data as lss_data, numpy as np
 from lsskit.speckmod import tools
 
 from pyRSD import pygcl
 import pandas as pd
+import argparse
+
+class SelectAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(SelectAction, self).__init__(option_strings, dest, **kwargs)
+    
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest) is None:
+            setattr(namespace, self.dest, {})
+        fields = values.split(',')
+        for f in fields:
+            key, val = f.split('=')
+            getattr(namespace, self.dest)[key.strip()] = eval(val.strip())
        
 class RunPBModelData(object):
     """
@@ -28,6 +43,11 @@ class RunPBModelData(object):
         d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
         return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
             
+    @property
+    def multiindex(self):
+        indexes = [np.array(self._data.coords[k], ndmin=1) for k in self._data.coords]
+        return pd.MultiIndex.from_product(indexes, names=self._data.coords.keys())
+    
     def __iter__(self):
         """
         Iterate over the simulation data
@@ -53,6 +73,7 @@ class RunPBModelData(object):
         h.add_argument("path", type=str, help="the root directory of the data")
         h.add_argument('-kmin', type=float, help='the minimum wavenumber in h/Mpc to fit')
         h.add_argument('-kmax', type=float, help='the maximum wavenumber in h/Mpc to fit')
+        h.add_argument('-select', action=SelectAction, help='the maximum wavenumber in h/Mpc to fit')
         h.set_defaults(klass=cls)
         
         
@@ -69,8 +90,15 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
         
+    @property
+    def _data(self):
+        d = self.data.get_Phh('real')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+        
     def __iter__(self):
-        Phh = self.data.get_Phh('real')
+        Phh = self._data
         extra = {}
         for key, val in Phh.nditer():
             
@@ -87,7 +115,7 @@ class PhhRunPBData(ModelInput, RunPBModelData):
             df['y'] -= power.box_size**3 / power.N1
             
             # yield the index, extra dict, and power spectrum
-            yield (key['a'], key['mass']), extra, df
+            yield key, extra, df
             
 
 class PhmResidualRunPBData(ModelInput, RunPBModelData):
@@ -107,8 +135,15 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
+    @property
+    def _data(self):
+        d = self.data.get_Phm('real')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+    
     def __iter__(self):
-        Phm = self.data.get_Phm('real')
+        Phm = self._data
         if not hasattr(self, 'Pzel'):
             self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
             
@@ -128,7 +163,7 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
             df['y'] -= extra['b1']*self.Pzel(df.index.values)
             
             # yield the index, extra dict, and power spectrum
-            yield (key['a'], key['mass']), extra, df
+            yield key, extra, df
     
 
 class LambdaARunPBData(ModelInput, RunPBModelData):
@@ -143,8 +178,15 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
+    @property
+    def _data(self):
+        d = self.data.get_lambda(space='real', kind='A')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+        
     def __iter__(self):
-        lam = self.data.get_lambda(space='real', kind='A')            
+        lam = self._data      
         extra = {}
         for key, val in lam.nditer():
                         
@@ -156,7 +198,7 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
             extra['s8_z'] = self.cosmo.Sigma8_z(z)
             
             # yield the index, extra dict, and power spectrum
-            yield (key['a'], key['mass']), extra, self._to_dataframe(val)  
+            yield key, extra, self._to_dataframe(val)  
         
 class LambdaBRunPBData(ModelInput, RunPBModelData):
     """
@@ -170,8 +212,15 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
+    @property
+    def _data(self):
+        d = self.data.get_lambda(space='real', kind='B')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+        
     def __iter__(self):
-        lam = self.data.get_lambda(space='real', kind='B')            
+        lam = self._data  
         extra = {}
         for key, val in lam.nditer():
                         
@@ -183,6 +232,6 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
             extra['s8_z'] = self.cosmo.Sigma8_z(z)
             
             # yield the index, extra dict, and power spectrum
-            yield (key['a'], key['mass']), extra, self._to_dataframe(val)          
+            yield key, extra, self._to_dataframe(val)          
     
 
