@@ -1,3 +1,11 @@
+"""
+    RunPBModelData.py
+    lsskit.speckmod.plugins
+    
+    __author__ : Nick Hand
+    __desc__ : plugins for loading runPB data to be modeled
+"""
+
 from lsskit.speckmod.plugins import ModelInput
 from lsskit import data as lss_data
 from lsskit.speckmod import tools
