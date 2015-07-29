@@ -31,6 +31,9 @@ def get_one_sigma_errs(ks, params, model, **kwargs):
     return np.array([function(data, k=k) for k in ks])
 
 #-------------------------------------------------------------------------------
+def list_str(value):
+    return value.split()
+    
 class BestfitFunctionStorage(ModelResultsStorage):
     """
     Write out the best-fit function values, as computed from an MCMC run, 
@@ -42,9 +45,10 @@ class BestfitFunctionStorage(ModelResultsStorage):
     @classmethod
     def register(cls):
         
-        usage = cls.name+":path"
+        usage = cls.name+":path:index_cols"
         h = cls.add_parser(cls.name, usage=usage)
         h.add_argument("path", type=str, help="the output name")
+        h.add_argument("index_cols", type=list_str, help="the names of the columns to index by")
         h.set_defaults(klass=cls)
         
     def __open__(self):
@@ -58,20 +62,19 @@ class BestfitFunctionStorage(ModelResultsStorage):
     def __finalize__(self):
 
         # reindex properly b/c pandas is stupid
-        index = [v for v in self._output.index.values if len(v) == 3]
-        mi = pd.MultiIndex.from_tuples(index, names=self.index.names+['k'])
+        index = [v for v in self._output.index.values if len(v) == len(self.index_cols)+1]
+        mi = pd.MultiIndex.from_tuples(index, names=self.index_cols+['k'])
         self._output = pd.DataFrame(self._output.loc[index], index=mi)
 
         # save
         self._output.to_csv(self.path, sep=" ", float_format="%.4e")
         
-    def write(self, index, key, result):
+    def write(self, key, result):
         
-        if not hasattr(self, 'index'): self.index = index
         with self.open() as output:
             
             # transform the key
-            key = tuple(key[k] for k in self.index.names)
+            key = tuple(key[k] for k in self.index_cols)
         
             # columns
             names = result.param_names
@@ -84,7 +87,7 @@ class BestfitFunctionStorage(ModelResultsStorage):
             
             # new index with `k` as a column
             new_index = [key+(ki,) for ki in ks]
-            index_names = self.index.names+['k']
+            index_names = self.index_cols+['k']
             
             # the function mean
             mu = result.best_fit

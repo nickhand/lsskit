@@ -43,11 +43,6 @@ class RunPBModelData(object):
         d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
         return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
             
-    @property
-    def multiindex(self):
-        indexes = [np.array(self._data.coords[k], ndmin=1) for k in self._data.coords]
-        return pd.MultiIndex.from_product(indexes, names=self._data.coords.keys())
-    
     def __iter__(self):
         """
         Iterate over the simulation data
@@ -103,7 +98,7 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         for key, val in Phh.nditer():
             
             # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values
+            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
             
             # redshift and sigma8(z) value
             z = 1./float(key['a']) - 1.
@@ -151,7 +146,7 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
         for key, val in Phm.nditer():
                         
             # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values
+            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
             
             # redshift and sigma8(z) value
             z = 1./float(key['a']) - 1.
@@ -191,7 +186,7 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
         for key, val in lam.nditer():
                         
             # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values
+            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
             
             # redshift and sigma8(z) value
             z = 1./float(key['a']) - 1.
@@ -225,7 +220,7 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
         for key, val in lam.nditer():
                         
             # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values
+            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
             
             # redshift and sigma8(z) value
             z = 1./float(key['a']) - 1.

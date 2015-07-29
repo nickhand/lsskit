@@ -79,7 +79,7 @@ def perform_fit():
 
         # save the output
         for output in outputs:
-            output.write(data.multiindex, key, result)
+            output.write(dict(key, **extra), result)
         
     # now let's save the params too
     folder = params['driver']['folder'].value
