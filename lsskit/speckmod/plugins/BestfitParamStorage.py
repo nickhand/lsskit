@@ -7,8 +7,10 @@
 """
 
 from lsskit.speckmod.plugins import ModelResultsStorage
+from lsskit import numpy as np
 import pandas as pd
 import itertools
+
 
 def list_str(value):
     return value.split()
@@ -55,7 +57,10 @@ class BestfitParamStorage(ModelResultsStorage):
             # make a new dataframe and save
             d = dict(zip(columns, data))
             d.update({k:key[k] for k in self.index_cols})
-            self._output = output.append(pd.Series(d), ignore_index=True)
+            for k in d:
+                d[k] = np.array(d[k], ndmin=1)
+            self._output = output.append(pd.DataFrame(d))
+
 
         
 
