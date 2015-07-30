@@ -48,26 +48,19 @@ class BestfitFunctionStorage(ModelResultsStorage):
         usage = cls.name+":path:index_cols"
         h = cls.add_parser(cls.name, usage=usage)
         h.add_argument("path", type=str, help="the output name")
-        h.add_argument("index_cols", type=list_str, help="the names of the columns to index by")
+        h.add_argument("index_cols", type=list_str, 
+                help='the names of the fields to store as columns for later indexing')
         h.set_defaults(klass=cls)
         
     def __open__(self):
         try:
             return self._output
         except AttributeError:
-            columns = ['mean', 'error']
-            self._output = pd.DataFrame(columns=columns)
+            self._output = pd.DataFrame()
             return self._output
         
     def __finalize__(self):
-
-        # reindex properly b/c pandas is stupid
-        index = [v for v in self._output.index.values if len(v) == len(self.index_cols)+1]
-        mi = pd.MultiIndex.from_tuples(index, names=self.index_cols+['k'])
-        self._output = pd.DataFrame(self._output.loc[index], index=mi)
-
-        # save
-        self._output.to_csv(self.path, sep=" ", float_format="%.4e")
+        self._output.to_pickle(self.path)
         
     def write(self, key, result):
         from fitit import EmceeResults
@@ -75,10 +68,7 @@ class BestfitFunctionStorage(ModelResultsStorage):
             raise TypeError("`result` object in BestfitFunctionStorage.write must be a fitit.EmceeResults class")
         
         with self.open() as output:
-                
-            # transform the key
-            key = tuple(key[k] for k in self.index_cols)
-        
+                        
             # columns
             names = result.param_names
             columns = list(itertools.chain(*[(k, k+"_err") for k in names]))
@@ -87,11 +77,7 @@ class BestfitFunctionStorage(ModelResultsStorage):
             vals = [(result[k].value, result[k].stderr) for k in names]
             data = tuple(itertools.chain(*vals))
             ks = result.indep_vars['k']
-            
-            # new index with `k` as a column
-            new_index = [key+(ki,) for ki in ks]
-            index_names = self.index_cols+['k']
-            
+
             # the function mean
             mu = result.best_fit
         
@@ -102,9 +88,11 @@ class BestfitFunctionStorage(ModelResultsStorage):
             mean_errs = get_one_sigma_errs(ks, params, result.model.func, **extra_kwargs)
             
             # append to the output frame
-            d = {'mean':mu, 'error':mean_errs}
-            df = pd.DataFrame(d, index=pd.MultiIndex.from_tuples(new_index, names=index_names))
-            self._output = output.append(df)
+            d = {k:np.repeat(key[k], len(ks)) for k in self.index_cols}
+            d['mean'] = mu
+            d['error'] = mean_errs
+            d['k'] = ks
+            self._output = output.append(pd.DataFrame(d))
             
 
 

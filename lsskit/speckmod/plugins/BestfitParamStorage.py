@@ -26,7 +26,8 @@ class BestfitParamStorage(ModelResultsStorage):
         usage = cls.name+":path:index_cols"
         h = cls.add_parser(cls.name, usage=usage)
         h.add_argument("path", type=str, help="the output name")
-        h.add_argument("index_cols", type=list_str, help="the names of the columns to index by")
+        h.add_argument("index_cols", type=list_str, 
+                help='the names of the fields to store as columns for later indexing')
         h.set_defaults(klass=cls)
         
     def __open__(self):
@@ -37,22 +38,12 @@ class BestfitParamStorage(ModelResultsStorage):
             return self._output
         
     def __finalize__(self):
-        
-        # reindex properly b/c pandas is stupid
-        index = [v for v in self._output.index.values if len(v) == len(self.index_cols)]
-        mi = pd.MultiIndex.from_tuples(index, names=self.index_cols)
-        self._output = pd.DataFrame(self._output.loc[index], index=mi)
-        
-        # and save
-        self._output.to_csv(self.path, sep=" ", float_format="%.4e")
+        self._output.to_pickle(self.path)
         
     def write(self, key, result):
         
         with self.open() as output:
-            
-            # transform the key
-            key = tuple(key[k] for k in self.index_cols)
-        
+                    
             # columns
             names = result.param_names
             columns = list(itertools.chain(*[(k, k+"_err") for k in names]))
@@ -62,8 +53,9 @@ class BestfitParamStorage(ModelResultsStorage):
             data = tuple(itertools.chain(*vals))
             
             # make a new dataframe and save
-            df = pd.DataFrame(dict(zip(columns, data)), index=pd.Index([key]))
-            self._output = output.append(df)
+            d = dict(zip(columns, data))
+            d.update({k:key[k] for k in self.index_cols})
+            self._output = output.append(pd.Series(d), ignore_index=True)
 
         
 
