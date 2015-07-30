@@ -93,7 +93,7 @@ def perform_fit():
 def fit_gaussian_process():
     """
     Fit a Gaussian Process to either best-fit parameters or functions.
-    This functions is installed as an entry point
+    This function is installed as an entry point
     """
     # parse the input arguments
     desc = "fit a Gaussian Process to either best-fit parameters or functions"
@@ -107,4 +107,79 @@ def fit_gaussian_process():
                             
     args = parser.parse_args()
     args.gp_args.write()
+    
+#------------------------------------------------------------------------------
+def compare_bestfit_functions():
+    """
+    Compare the best-fit model to the data; this function is installed as 
+    an entry point
+    """
+    import plotify as pfy
+    import pandas as pd
+    
+    # parse the input arguments
+    desc = "compare the best-fit model to the data"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the input data  
+    h = "the input data, specified as:\n\n"
+    parser.add_argument('data', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('data'))
+                            
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit function means'
+    parser.add_argument('bestfit_file', type=str, help=h)
+        
+    # the integer index to select an individual bin from
+    h = 'the integer index to select an individual bin from'
+    parser.add_argument('select', type=int, nargs='+', help=h)
+    
+    # parse
+    args = parser.parse_args()
+    
+    # read the bestfits file and select
+    df = pd.read_pickle(args.bestfit_file)
+    if not all(x in df.columns for x in ['a', 'mass', 'k']):
+        raise ValueError("please specify a bestfit file with `a`, `mass`, and `k` columns")
+    df = df.set_index(['a', 'mass', 'k'])
+    
+    # get the key dictionary and print out what we are selecting
+    key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(args.select))
+    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
+    print "selecting " + msg
+    
+    # select the bestfit
+    select = tuple(df.index.levels[i][v] for i, v in enumerate(args.select))
+    df = df.xs(select)
+    
+    # select the data
+    data_df = args.data.to_dataframe(key)
+    
+    # plot the data
+    pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
+    
+    # plot the bestfit function mean
+    x = df.index.values
+    y = df['mean']
+    errs = df['error']
+    lines = pfy.plot(x, y)
+    pfy.plt.fill(np.concatenate([x, x[::-1]]),
+                 np.concatenate([y - errs,
+                                (y + errs)[::-1]]),
+                                alpha=.5, fc=lines[0].get_color(), ec='None')
+                                
+    ax = pfy.gca()
+    ax.title.update('Bestfit comparison for %s' %msg, fontsize=16)
+    ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
+    ax.ylabel.update(args.data.variable_str, fontsize=16)
+    pfy.show()
+
+#------------------------------------------------------------------------------
+
+    
+    
+    
+    
+    
 

@@ -42,6 +42,11 @@ class RunPBModelData(object):
     def _make_dataframe(self, d):
         return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
         
+    @property
+    def coords(self):
+        d = self.data if not isinstance(self.data, (list, tuple)) else self.data[0]
+        return d.coords
+        
     def __iter__(self):
         """
         Iterate over the simulation data
@@ -91,6 +96,7 @@ class PhhRunPBData(ModelInput, RunPBModelData):
     """
     name = 'PhhRunPBData'
     plugin_type = 'data'
+    variable_str = r"$P^{\ hh}(k)$"
     
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
@@ -128,6 +134,7 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
     """
     name = 'PhmResidualRunPBData'
     plugin_type = 'data'
+    variable_str = r"$P^{\ hm} - b_1 \ P_\mathrm{zel}$"
     
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
@@ -167,6 +174,7 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
     """
     name = 'LambdaARunPBData'
     plugin_type = 'data'
+    variable_str = r"$\Lambda_A(k)$"
     
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
@@ -192,12 +200,14 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
     """
     name = 'LambdaBRunPBData'
     plugin_type = 'data'
+    variable_str = r"$\Lambda_B(k)$"
     
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
     def to_dataframe(self, key):
+        key = {k:key[k] for k in key if k in self.data.dims}
         p = self.data.sel(**key)
         d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)                
         return self._make_dataframe(d)
@@ -222,6 +232,7 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
     """
     name = 'PhmRatioRunPBData'
     plugin_type = 'data'
+    variable_str = r"$P^{\ hm} / b_1 P^{\ mm} - 1$"
     
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
