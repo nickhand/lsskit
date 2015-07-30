@@ -70,9 +70,12 @@ class BestfitFunctionStorage(ModelResultsStorage):
         self._output.to_csv(self.path, sep=" ", float_format="%.4e")
         
     def write(self, key, result):
+        from fitit import EmceeResults
+        if not isinstance(result, EmceeResults):
+            raise TypeError("`result` object in BestfitFunctionStorage.write must be a fitit.EmceeResults class")
         
         with self.open() as output:
-            
+                
             # transform the key
             key = tuple(key[k] for k in self.index_cols)
         
