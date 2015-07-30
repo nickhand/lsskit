@@ -126,8 +126,7 @@ class ModelResultsStorage:
 
 
 builtins = ['RunPBModelData', 'PhmResidualPadeModel', 'PhmCorrectedPTModel', 'PhhModel',
-            'BestfitParamStorage', 'BestfitFunctionStorage',
-            'GaussianProcessStorage']
+            'LambdaPadeModel', 'BestfitParamStorage', 'BestfitFunctionStorage', 'GaussianProcessStorage']
 for plugin in builtins:
     filename = lsskit.path.join(lsskit.path.dirname(__file__), plugin + '.py')
     globals().update(lsskit.load(filename))
