@@ -34,15 +34,14 @@ class RunPBModelData(object):
     """    
     def __init__(self, dict):
   
-        # load the data and auxilliary info
-        self.data = lss_data.PowerSpectraLoader.get('RunPB', self.path)
-        self.biases = self.data.get_halo_biases()
+        # load all the data and auxilliary info
+        self.all_data = lss_data.PowerSpectraLoader.get('RunPB', self.path)
+        self.biases = self.all_data.get_halo_biases()
         self.cosmo = pygcl.Cosmology("runPB.ini")
-    
-    def _to_dataframe(self, p):
-        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
-        return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
             
+    def _make_dataframe(self, d):
+        return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
+        
     def __iter__(self):
         """
         Iterate over the simulation data
@@ -56,8 +55,20 @@ class RunPBModelData(object):
             `s8_z` for sigma8(z) and `b1` for the linear bias
         df : pandas.DataFrame
             dataframe holding the power as `y` column and error as `error` column
-        """
-        raise NotImplementedError
+        """  
+        extra = {}
+        extra['cosmo'] = self.cosmo
+        d = self.data if not isinstance(self.data, (list, tuple)) else self.data[0]
+        for key in d.ndindex():
+            
+            # add z, b1, and sigma8(z) to extra dict
+            z = 1./float(key['a']) - 1.
+            extra['s8_z'] = self.cosmo.Sigma8_z(z)
+            extra['z'] = z
+            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+
+            # yield the index, extra dict, and power spectrum
+            yield key, extra, self.to_dataframe(key)
         
     @classmethod
     def register(cls):
@@ -71,7 +82,7 @@ class RunPBModelData(object):
         h.add_argument('-select', action=SelectAction, help='the maximum wavenumber in h/Mpc to fit')
         h.set_defaults(klass=cls)
         
-        
+#------------------------------------------------------------------------------
 class PhhRunPBData(ModelInput, RunPBModelData):
     """
     A plugin to return the real-space halo-halo auto spectra data
@@ -85,37 +96,26 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
         
+    def to_dataframe(self, key):
+        
+        # power instance and shot noise
+        p = self.data.sel(**key)
+        Pshot = p.box_size**3 / p.N1
+        
+        # get the valid entries
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        d['power'] -= Pshot
+        
+        return self._make_dataframe(d)
+        
     @property
-    def _data(self):
-        d = self.data.get_Phh('real')
+    def data(self):
+        d = self.all_data.get_Phh('real')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
-        
-    def __iter__(self):
-        Phh = self._data
-        extra = {}
-        extra['cosmo'] = self.cosmo
-        
-        for key, val in Phh.nditer():
-            
-            # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
-            
-            # redshift and sigma8(z) value
-            z = 1./float(key['a']) - 1.
-            extra['s8_z'] = self.cosmo.Sigma8_z(z)
-            extra['z'] = z
-                    
-            # make the dataframe and subtract shot noise
-            df = self._to_dataframe(val)
-            power = val.values
-            df['y'] -= power.box_size**3 / power.N1
 
-            # yield the index, extra dict, and power spectrum
-            yield key, extra, df
-            
-
+#------------------------------------------------------------------------------
 class PhmResidualRunPBData(ModelInput, RunPBModelData):
     """
     A plugin to return the real-space halo-matter cross spectra data from
@@ -132,40 +132,34 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
     def __init__(self, dict):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
+        
+    def to_dataframe(self, key):
+        
+        # make sure 
+        if not hasattr(self, 'Pzel'):
+            self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
+            
+        # power instance and shot noise
+        p = self.data.sel(**key)
+                
+        # bias
+        b1 = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+        
+        # get the valid entries and subtract b1*Pzel
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        self.Pzel.SetRedshift(z)
+        d['power'] -= b1*self.Pzel(d['k'])
+                
+        return self._make_dataframe(d)
     
     @property
-    def _data(self):
-        d = self.data.get_Phm('real')
+    def data(self):
+        d = self.all_data.get_Phm('real')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
     
-    def __iter__(self):
-        Phm = self._data
-        if not hasattr(self, 'Pzel'):
-            self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
-            
-        extra = {}
-        extra['cosmo'] = self.cosmo
-        for key, val in Phm.nditer():
-                        
-            # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
-            
-            # redshift and sigma8(z) value
-            z = 1./float(key['a']) - 1.
-            extra['s8_z'] = self.cosmo.Sigma8_z(z)
-            extra['z'] = z
-            
-            # get the dataframe and subtract the Pzel term
-            self.Pzel.SetRedshift(z)
-            df = self._to_dataframe(val)
-            df['y'] -= extra['b1']*self.Pzel(df.index.values)
-            
-            # yield the index, extra dict, and power spectrum
-            yield key, extra, df
-    
-
+#------------------------------------------------------------------------------
 class LambdaARunPBData(ModelInput, RunPBModelData):
     """
     A plugin to return the real-space, type A stochasticity data from
@@ -178,30 +172,19 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
+    def to_dataframe(self, key):
+        p = self.data.sel(**key)
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)                
+        return self._make_dataframe(d)
+    
     @property
-    def _data(self):
-        d = self.data.get_lambda(space='real', kind='A')
+    def data(self):
+        d = self.all_data.get_lambda(space='real', kind='A')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
         
-    def __iter__(self):
-        lam = self._data      
-        extra = {}
-        extra['cosmo'] = self.cosmo
-        for key, val in lam.nditer():
-                        
-            # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
-            
-            # redshift and sigma8(z) value
-            z = 1./float(key['a']) - 1.
-            extra['s8_z'] = self.cosmo.Sigma8_z(z)
-            extra['z'] = z
-            
-            # yield the index, extra dict, and power spectrum
-            yield key, extra, self._to_dataframe(val)  
-        
+#------------------------------------------------------------------------------        
 class LambdaBRunPBData(ModelInput, RunPBModelData):
     """
     A plugin to return the real-space, type B stochasticity data from
@@ -214,31 +197,19 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
+    def to_dataframe(self, key):
+        p = self.data.sel(**key)
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)                
+        return self._make_dataframe(d)
+        
     @property
-    def _data(self):
-        d = self.data.get_lambda(space='real', kind='B')
+    def data(self):
+        d = self.all_data.get_lambda(space='real', kind='B')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
         
-    def __iter__(self):
-        lam = self._data  
-        extra = {}
-        extra['cosmo'] = self.cosmo
-        for key, val in lam.nditer():
-                        
-            # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
-            
-            # redshift and sigma8(z) value
-            z = 1./float(key['a']) - 1.
-            extra['s8_z'] = self.cosmo.Sigma8_z(z)
-            extra['z'] = z
-            
-            # yield the index, extra dict, and power spectrum
-            yield key, extra, self._to_dataframe(val)          
-    
-
+#------------------------------------------------------------------------------
 class PhmRatioRunPBData(ModelInput, RunPBModelData):
     """
     A plugin to return the real-space halo-matter cross spectra data from
@@ -256,23 +227,21 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
         ModelInput.__init__(self, dict)
         RunPBModelData.__init__(self, dict)
     
-    @property
-    def _data(self):
-        # Phm
-        d1 = self.data.get_Phm('real')
-        if self.select is not None:
-            d1 = d1.sel(**self.select)
-            
-        # Pmm
-        d2 = self.data.get_Pmm('real')
-        if self.select is not None:
-            key = {k:self.select[k] for k in self.select if k in d2.dims}
-            d2 = d2.sel(**key)
-            
-        return d1, d2
-    
-    def _to_dataframe(self, Phm, Pmm, b1):
-        Phm, Pmm = Phm.values, Pmm.values
+    def to_dataframe(self, key):
+        # the data
+        d = self.data
+        
+        # get Phm 
+        Phm = d[0].sel(**key).values
+        
+        # get Pmm
+        subkey = {k:key[k] for k in key if k in d[1].dims}
+        Pmm = d[1].sel(**subkey).values
+        
+        # linear bias
+        b1 = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+        
+        # select valid data and subtract shot noise
         x = tools.get_valid_data(Phm, kmin=self.kmin, kmax=self.kmax)
         y = tools.get_valid_data(Pmm, kmin=self.kmin, kmax=self.kmax)
         y['power'] -= Pmm.box_size**3 / Pmm.N1
@@ -280,27 +249,21 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
         sim_ratio = x['power']/(b1*y['power']) - 1.
         sim_err = (x['power']/y['power']/b1)*((y['error']/y['power'])**2 + (x['error']/x['power'])**2)**0.5
         
-        return pd.DataFrame(data={'y':sim_ratio, 'error':sim_err}, index=pd.Index(x['k'], name='k'))
-    
-    def __iter__(self):
+        return self._make_dataframe({'k':x['k'], 'power':sim_ratio, 'error':sim_err})
         
-        Phm, Pmm = self._data
+    @property
+    def data(self):
+        # Phm
+        d1 = self.all_data.get_Phm('real')
+        if self.select is not None:
+            d1 = d1.sel(**self.select)
             
-        extra = {}
-        extra['cosmo'] = self.cosmo
-        for key, x in Phm.nditer():
+        # Pmm
+        d2 = self.all_data.get_Pmm('real')
+        if self.select is not None:
+            key = {k:self.select[k] for k in self.select if k in d2.dims}
+            d2 = d2.sel(**key)
             
-            # get this Pmm
-            Pmm_key = {k:key[k] for k in key if k in Pmm.dims}
-            y = Pmm.sel(**Pmm_key)
-                        
-            # bias value for this mass bin
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
-            
-            # redshift and sigma8(z) value
-            z = 1./float(key['a']) - 1.
-            extra['s8_z'] = self.cosmo.Sigma8_z(z)
-            extra['z'] = z
-                        
-            # yield the index, extra dict, and power spectrum
-            yield key, extra, self._to_dataframe(x, y, extra['b1'])
+        return d1, d2
+    
+#------------------------------------------------------------------------------
