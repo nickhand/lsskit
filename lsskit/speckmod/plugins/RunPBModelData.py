@@ -42,11 +42,6 @@ class RunPBModelData(object):
     def _make_dataframe(self, d):
         return pd.DataFrame(data={'y':d['power'], 'error':d['error']}, index=pd.Index(d['k'], name='k'))
         
-    @property
-    def coords(self):
-        d = self.data if not isinstance(self.data, (list, tuple)) else self.data[0]
-        return d.coords
-        
     def __iter__(self):
         """
         Iterate over the simulation data
