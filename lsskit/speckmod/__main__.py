@@ -109,40 +109,27 @@ def fit_gaussian_process():
     args.gp_args.write()
     
 #------------------------------------------------------------------------------
-def compare_bestfit_functions():
+def compare_bestfit_function(args):
     """
-    Compare the best-fit model to the data; this function is installed as 
+    Compare a best-fit function to the data; this function is installed as 
     an entry point
     """
     import plotify as pfy
     import pandas as pd
-    
-    # parse the input arguments
-    desc = "compare the best-fit model to the data"
-    parser = argparse.ArgumentParser(description=desc)
-    parser.formatter_class = argparse.RawTextHelpFormatter
-    
-    # the input data  
-    h = "the input data, specified as:\n\n"
-    parser.add_argument('data', type=plugins.ModelInput.parse, 
-                            help=h+plugins.ModelInput.format_help('data'))
-                            
-    # the bestfit function file
-    h = 'the name of the file holding the dataframe of bestfit function means'
-    parser.add_argument('bestfit_file', type=str, help=h)
         
-    # the integer index to select an individual bin from
-    h = 'the integer index to select an individual bin from'
-    parser.add_argument('select', type=int, nargs='+', help=h)
-    
-    # parse
-    args = parser.parse_args()
+    # make the index cols
+    try:
+        args.index_cols = [x.split(':')[0] for x in args.select]
+        args.select = [int(x.split(':')[1]) for x in args.select]
+    except:
+        raise ValueError("``select`` should have format: `index_col`:value")
     
     # read the bestfits file and select
     df = pd.read_pickle(args.bestfit_file)
-    if not all(x in df.columns for x in ['a', 'mass', 'k']):
-        raise ValueError("please specify a bestfit file with `a`, `mass`, and `k` columns")
-    df = df.set_index(['a', 'mass', 'k'])
+    valid = args.index_cols+['k']
+    if not all(x in df.columns for x in valid):
+        raise ValueError("please specify a bestfit file with columns: %s" %(", ".join(valid)))
+    df = df.set_index(valid)
     
     # get the key dictionary and print out what we are selecting
     key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(args.select))
@@ -170,14 +157,128 @@ def compare_bestfit_functions():
                                 alpha=.5, fc=lines[0].get_color(), ec='None')
                                 
     ax = pfy.gca()
-    ax.title.update('Bestfit comparison for %s' %msg, fontsize=16)
+    ax.title.update('Bestfit (function) comparison for %s' %msg, fontsize=16)
     ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
     ax.ylabel.update(args.data.variable_str, fontsize=16)
     pfy.show()
 
 #------------------------------------------------------------------------------
-
+def compare_bestfit_params(args):
+    """
+    Compare the best-fit parameters to the data.
+    """
+    import plotify as pfy
+    import pandas as pd
     
+    # make the index cols
+    try:
+        args.index_cols = [x.split(':')[0] for x in args.select]
+        args.select = [int(x.split(':')[1]) for x in args.select]
+    except:
+        raise ValueError("``select`` should have format: `index_col`:value")
+    
+    # read the bestfits file and select
+    df = pd.read_pickle(args.bestfit_file)
+    valid = args.index_cols
+    if not all(x in df.columns for x in valid):
+        raise ValueError("please specify a bestfit file with columns: %s" %(", ".join(valid)))
+    df = df.set_index(valid)
+    
+    # get the key dictionary and print out what we are selecting
+    key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(args.select))
+    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
+    print "selecting " + msg
+    
+    # select the bestfit
+    select = tuple(df.index.levels[i][v] for i, v in enumerate(args.select))
+    bestfits = {k:df.loc[select, k] for k in args.model.param_names}
+    
+    args.data.select = key
+    # this should hopefully only loop over one thing
+    for key, extra, data_df in args.data:    
+        
+        # plot the data
+        pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
+    
+        # plot the bestfit parameters
+        x = data_df.index.values
+        y = args.model(x, **dict(bestfits, **extra))
+        lines = pfy.plot(x, y)
+
+                                
+    ax = pfy.gca()
+    ax.title.update('Bestfit (params) comparison for %s' %msg, fontsize=16)
+    ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
+    ax.ylabel.update(args.data.variable_str, fontsize=16)
+    pfy.show()
+
+#------------------------------------------------------------------------------   
+def compare():
+    """
+    Compare the best-fit model to the data.
+    """
+    # parse the input arguments
+    desc = "compare the best-fit model to the data"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    subparsers = parser.add_subparsers(dest='subparser_name', help='sub-command help')
+    
+    #--------------------------------------------------------------
+    # Function parser
+    #--------------------------------------------------------------
+    h = "compare the best-fit function to the data"
+    func_parser = subparsers.add_parser('function', help=h)
+    func_parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the input data  
+    h = "the input data, specified as:\n\n"
+    func_parser.add_argument('data', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('data'))
+                            
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit parameters'
+    func_parser.add_argument('bestfit_file', type=str, help=h)
+        
+    # the integer index to select an individual bin from
+    h = 'the integer index to select an individual bin from;'
+    h += ' the format should be `index_col`:value'
+    func_parser.add_argument('select', type=str, nargs='+', help=h)
+    
+    #--------------------------------------------------------------
+    # Params parser
+    #--------------------------------------------------------------
+    h = "compare the best-fit parameters to the data"
+    param_parser = subparsers.add_parser('params', help=h)
+    param_parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the input data  
+    h = "the input data, specified as:\n\n"
+    param_parser.add_argument('data', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('data'))
+                            
+    # the input model  
+    h = "the input model, specified as:\n\n"
+    param_parser.add_argument('model', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('model'))
+                            
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit parameters'
+    param_parser.add_argument('bestfit_file', type=str, help=h)
+        
+    # the integer index to select an individual bin from
+    h = 'the integer index to select an individual bin from;'
+    h += ' the format should be `index_col`:value'
+    param_parser.add_argument('select', type=str, nargs='+', help=h)
+    
+    # parse
+    args = parser.parse_args()
+    
+    if args.subparser_name == 'function':
+        compare_bestfit_function(args)
+    elif args.subparser_name == 'params':
+        compare_bestfit_params(args)
+
+#------------------------------------------------------------------------------  
     
     
     
