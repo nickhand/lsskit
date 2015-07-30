@@ -51,6 +51,15 @@ def perform_fit():
     model = params['driver']['model'].value
     outputs = params['driver']['storage'].value
     mode = params['driver']['mode'].value
+    folder = params['driver']['folder'].value
+    
+    # prepend the output folder to save results
+    for output in outputs:
+        output_name = os.path.join(folder, output.path)
+        odir = os.path.dirname(output_name)
+        if not os.path.isdir(odir):
+            raise RuntimeError("output directory `%s` must exist" %odir)
+        output.path = output_name
     
     # get the theory and model
     model, theory_params = fitit.store_extra_model_info(args['model'], params['theory'])
@@ -82,7 +91,6 @@ def perform_fit():
             output.write(dict(key, **extra), result)
         
     # now let's save the params too
-    folder = params['driver']['folder'].value
     filename = os.path.join(folder, 'params.dat')
     with open(filename, 'w') as ff:
         for k,v in args.iteritems():
