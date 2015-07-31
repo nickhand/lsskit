@@ -59,7 +59,7 @@ class BestfitParamStorage(ModelResultsStorage):
             d.update({k:key[k] for k in self.index_cols})
             for k in d:
                 d[k] = np.array(d[k], ndmin=1)
-            self._output = output.append(pd.DataFrame(d))
+            self._output = output.append(pd.DataFrame(d, index=[len(self._output)]))
 
 
         
