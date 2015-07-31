@@ -99,8 +99,9 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         
     def to_dataframe(self, key):
         
-        # power instance and shot noise
-        p = self.data.sel(**key).values
+        # get the power spectrum instance
+        subkey = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**subkey).values
         Pshot = p.box_size**3 / p.N1
         
         # get the valid entries
@@ -141,8 +142,9 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
         if not hasattr(self, 'Pzel'):
             self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
             
-        # power instance and shot noise
-        p = self.data.sel(**key)
+        # get the power spectrum instance
+        subkey = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**subkey)
                 
         # bias
         b1 = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
@@ -177,7 +179,8 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
         RunPBModelData.__init__(self, dict)
     
     def to_dataframe(self, key):
-        p = self.data.sel(**key)
+        key = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**key)    
         d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)                
         return self._make_dataframe(d)
     
@@ -239,7 +242,8 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
         d = self.data
         
         # get Phm 
-        Phm = d[0].sel(**key).values
+        subkey = {k:key[k] for k in key if k in d[0].dims}
+        Phm = d[0].sel(**subkey).values
         
         # get Pmm
         subkey = {k:key[k] for k in key if k in d[1].dims}
