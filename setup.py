@@ -13,7 +13,9 @@ setup(
         'console_scripts': [
             'speckmod = lsskit.speckmod.__main__:perform_fit',
             'fit_gp = lsskit.speckmod.__main__:fit_gaussian_process',
-            'speckmod_compare = lsskit.speckmod.__main__:compare'
+            'speckmod_compare = lsskit.speckmod.__main__:compare',
+            'speckmod_add_param = lsskit.speckmod.__main__:add_bestfit_param',
+            'fit_spline_table = lsskit.speckmod.__main__:fit_spline_table'
         ]
     },
 )

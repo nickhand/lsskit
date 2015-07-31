@@ -1,14 +1,15 @@
 """
-    GaussianProcessStorage.py
+    InterpolationStorage.py
     lsskit.speckmod.plugins
     
     __author__ : Nick Hand
-    __desc__ : plugin to fit a Gaussian Process to the best-fit parameters or functions
+    __desc__ : plugin to store interpolation schemes of the best-fit parameters or functions
 """
-
 from lsskit import numpy as np
 from lsskit.speckmod.plugins import ModelResultsStorage
+
 from sklearn.gaussian_process import GaussianProcess
+from scipy.interpolate import UnivariateSpline as spline
 import pandas as pd
 import cPickle
 
@@ -23,7 +24,7 @@ class BestfitFunctionGPStorage(ModelResultsStorage):
     Fit and save a Gaussian Process to the best-fit functions
     """
     name = "BestfitFunctionGPStorage"
-    plugin_type = 'GP'
+    plugin_type = 'gp_interp'
     
     @classmethod
     def register(cls):
@@ -88,7 +89,7 @@ class BestfitParamGPStorage(ModelResultsStorage):
     Fit and save a Gaussian Process to the best-fit parameters
     """
     name = "BestfitParamGPStorage"
-    plugin_type = 'GP'
+    plugin_type = 'gp_interp'
     
     @classmethod
     def register(cls):
@@ -152,6 +153,79 @@ class BestfitParamGPStorage(ModelResultsStorage):
     
         # now save
         cPickle.dump(toret, open(self.output, 'w'))
+        
+#------------------------------------------------------------------------------        
+class BestfitParamSplineStorage(ModelResultsStorage):
+    """
+    Fit and save a series of splines to the best-fit functions
+    """
+    name = "BestfitParamSplineStorage"
+    plugin_type = 'spline_interp'
+    
+    @classmethod
+    def register(cls):
+        
+        args = cls.name+":input:index_cols:param_names:output"
+        options = "[:-use_errors]"
+        h = cls.add_parser(cls.name, usage=args+options)
+        
+        # arguments
+        h.add_argument("input", type=str, help="the name of the input file to read")
+        h.add_argument("index_cols", type=list_str, help="the names of index columns in input file")
+        h.add_argument("param_names", type=list_str, help="the names of the parameters to fit")
+        h.add_argument("output", type=str, help="the output name")
+        
+        # options
+        choices = ['constant', 'linear', 'quadratic']
+        h.add_argument('-use_errors', action='store_true', default=False, 
+                        help='the regression type to use')
+        
+        h.set_defaults(klass=cls)
+        
+    def __open__(self):
+        return None
+        
+    def __finalize__(self): 
+        pass
+        
+    def write(self):
+        
+        if len(self.index_cols) != 2:
+            raise ValueError("spline storage only supports exactly two index columns")
+        table = {}
+        
+        # load the input data and set the index
+        data = pd.read_pickle(self.input)
+        data = data.set_index(self.index_cols)
+        
+        for key in data.index.levels[0]:
+            table[key] = {}
+            
+            # loop over each parameter
+            for name in self.param_names:
+            
+                d = data.xs(key)
+                
+                # get the data to be interpolated, making sure to remove nulls
+                y = d[name]
+                null_inds = y.notnull() 
+                y = np.array(y[null_inds])
+        
+                # X values are only b1 not sigma8 too
+                X = np.array(d.index)           
+  
+                # check for error columns
+                kwargs = {'k' : 2}
+                if self.use_errors and name+'_err' in data:
+                    dy = d[name+'_err'][null_inds]
+                    kwargs['w'] = 1.0/dy
+
+                # set the spline
+                table[key][name] = spline(X, y, **kwargs)
+
+        # now save
+        cPickle.dump(table, open(self.output, 'w'))
+        
 
         
         

@@ -6,7 +6,8 @@
     __desc__ : tools for helping with modeling of power spectra
 """
 from .. import numpy as np
-        
+ 
+#------------------------------------------------------------------------------       
 def convert_arg_line_to_args(self, line):
     """
     Custom function that reads arguments from file, to be used
@@ -25,6 +26,7 @@ def convert_arg_line_to_args(self, line):
     if len(line) == 0: return
     yield line
 
+#------------------------------------------------------------------------------
 def get_valid_data(data, kmin=None, kmax=None):
     """
     Return the valid data. First, any NaN entries are removed
@@ -62,6 +64,7 @@ def get_valid_data(data, kmin=None, kmax=None):
 
     return toret
 
+#------------------------------------------------------------------------------
 def make_param_table(param_names, dims, coords):
     """
     Return an empty ``pandas.DataFrame``, indexed by a ``MultiIndex``
@@ -93,14 +96,15 @@ def make_param_table(param_names, dims, coords):
     index = list(itertools.product(*[coords[i] for i in range(len(dims))]))
     index = pd.MultiIndex.from_tuples(index, names=dims)
     return pd.DataFrame(index=index, columns=param_plus_errs)
-    
+
+#------------------------------------------------------------------------------    
 def compare_bestfits(mode, **kwargs):
     """
     Compare the best-fit parameters to the data.
     
     Parameters
     ----------
-    mode : str, {`function`, `params`, `gp`}
+    mode : str, {`function`, `params`, `gp`, `spline`}
         either compare to bestfit function or bestfit params
     kwargs : key/value pairs
         data : subclass of lsskit.speckmod.plugins.ModelInput
@@ -119,9 +123,11 @@ def compare_bestfits(mode, **kwargs):
     import pandas as pd
     if mode == 'gp':
         from pyRSD.rsd.mu0_modeling import GPModelParams
+    elif mode == 'spline':
+        from pyRSD.rsd.mu0_modeling import SplineTableModelParams
         
-    if mode not in ['function', 'params', 'gp']:
-        raise ValueError("``mode`` in compare_bestfits must be `function`, `params`, `gp`")
+    if mode not in ['function', 'params', 'gp', 'spline']:
+        raise ValueError("``mode`` in compare_bestfits must be `function`, `params`, `gp`, or `spline`")
     
     # make the index cols
     try:
@@ -148,6 +154,7 @@ def compare_bestfits(mode, **kwargs):
     
     # load the GP
     if mode == 'gp':
+        
         gp = GPModelParams(kwargs['gp_file'])
         s8_z = df.loc[select, 's8_z']
         b1 = df.loc[select, 'b1']
@@ -158,11 +165,25 @@ def compare_bestfits(mode, **kwargs):
         actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
         print "actual bestfit values:\n-------------"
         print "\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems())
+    
+    # load the spline table
+    elif mode == 'spline':    
+        
+        table = SplineTableModelParams(kwargs['spline_file'])
+        s8_z = df.loc[select, 's8_z']
+        b1 = df.loc[select, 'b1']
+        bestfits = table(s8_z, b1)
+        print "spline table bestfit values:\n-------------"
+        print "\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems())
+        
+        actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
+        print "actual bestfit values:\n-------------"
+        print "\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems())
         
     elif mode == 'params':
         bestfits = {k:df.loc[select, k] for k in kwargs['model'].param_names}
         
-    if mode == 'params' or mode == 'gp':
+    if mode == 'params' or mode == 'gp' or mode == 'spline':
         kwargs['data'].select = key
         
         # this should hopefully only loop over one thing
@@ -201,3 +222,63 @@ def compare_bestfits(mode, **kwargs):
     ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
     ax.ylabel.update(kwargs['data'].variable_str, fontsize=16)
     pfy.show()
+    
+#------------------------------------------------------------------------------
+def add_bestfit_param(**kwargs):
+    """
+    Add a bestfit parameter to the specified dataframe
+    
+    Parameters
+    ----------
+    kwargs : key/value pairs
+        bestfit_file : str
+            the name of the file holding the pickled dataframe
+        expr : str
+            the expression for the new parameter; should be of 
+            the form ``param_name = expr``
+        output : str, optional
+            the name for the new dataframe; if none provided, 
+            the input dataframe is overwritten
+        error : str, {'fractional', 'absolute'}
+            the type of errors to use
+    """
+    import pandas as pd
+    
+    # load the parameters
+    df = pd.read_pickle(kwargs['bestfit_file'])
+    
+    # parse the expression
+    param_name, expr = kwargs['expr'].split("=")
+    param_name, expr = param_name.strip(), expr.strip()
+    
+    # find param names 
+    depends = []
+    for col in df.columns:
+        if '_err' in col:
+            continue
+        if col in expr:
+            depends.append(col)
+        
+    # get the eval'ed expression
+    eval_expr = expr
+    for d in depends:
+        eval_expr = eval_expr.replace(d, "df['%s']" %d)
+    df[param_name] = eval(eval_expr)
+    
+    # now compute the error
+    if kwargs['error'] == 'fractional':
+        var = 0
+        for d in depends:
+            var += (df[d+'_err']/df[d])**2
+        df[param_name+"_err"] = df[param_name] * var**0.5
+    else:
+        var = 0
+        for d in depends:
+            var += df[d+'_err']**2
+        df[param_name+"_err"] = var**0.5
+    
+    # save the output
+    if kwargs.get('output', None) is None:
+        df.to_pickle(kwargs['bestfit_file'])
+    else:
+        df.to_pickle(kwargs['output'])

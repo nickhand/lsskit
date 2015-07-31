@@ -113,10 +113,29 @@ def fit_gaussian_process():
     # the gaussian process  
     h = "the input Gaussian Process arguments, specified as:\n\n"
     parser.add_argument('gp_args', type=plugins.ModelResultsStorage.parse, 
-                            help=h+plugins.ModelResultsStorage.format_help('GP'))
+                            help=h+plugins.ModelResultsStorage.format_help('gp_interp'))
                             
     args = parser.parse_args()
     args.gp_args.write()
+    
+#------------------------------------------------------------------------------
+def fit_spline_table():
+    """
+    Fit a spline interpolation table to the best-fit parameters.
+    This function is installed as an entry point
+    """
+    # parse the input arguments
+    desc = "fit a spline interpolation table to the best-fit parameters"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+
+    # the gaussian process  
+    h = "the input spline table arguments, specified as:\n\n"
+    parser.add_argument('spline_args', type=plugins.ModelResultsStorage.parse, 
+                            help=h+plugins.ModelResultsStorage.format_help('spline_interp'))
+                            
+    args = parser.parse_args()
+    args.spline_args.write()
     
 #------------------------------------------------------------------------------   
 def compare():
@@ -206,6 +225,36 @@ def compare():
     h += ' the format should be `index_col`:value'
     gp_parser.add_argument('select', type=str, nargs='+', help=h)
     
+    #--------------------------------------------------------------
+    # spline table parser
+    #--------------------------------------------------------------
+    h = "compare the best-fit parameters from a spline table to the data"
+    spline_parser = subparsers.add_parser('spline', help=h)
+    spline_parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the input data  
+    h = "the input data, specified as:\n\n"
+    spline_parser.add_argument('data', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('data'))
+                            
+    # the input model  
+    h = "the input model, specified as:\n\n"
+    spline_parser.add_argument('model', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('model'))
+                            
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit parameters'
+    spline_parser.add_argument('bestfit_file', type=str, help=h)
+    
+    # the gp model file
+    h = 'the name of the file holding the spline table'
+    spline_parser.add_argument('spline_file', type=str, help=h)
+        
+    # the integer index to select an individual bin from
+    h = 'the integer index to select an individual bin from;'
+    h += ' the format should be `index_col`:value'
+    spline_parser.add_argument('select', type=str, nargs='+', help=h)
+    
     # parse
     args = parser.parse_args()
     
@@ -215,9 +264,41 @@ def compare():
         tools.compare_bestfits('params', **vars(args))
     elif args.subparser_name == 'gp':
         tools.compare_bestfits('gp', **vars(args))
+    elif args.subparser_name == 'spline':
+        tools.compare_bestfits('spline', **vars(args))
 
 #------------------------------------------------------------------------------  
+def add_bestfit_param():
+    """
+    Add a new parameter to a bestfit parameter file
+    """
+    import pandas as pd
     
+    # parse the input arguments
+    desc = "add a new parameter to a bestfit parameter file"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit parameters'
+    parser.add_argument('bestfit_file', type=str, help=h)
+    
+    # the expression
+    h = 'the expression for the new parameter; should be of the form'
+    h += ' param_name = expr'
+    parser.add_argument('expr', type=str, help=h)
+    
+    # the error type
+    h = 'the type of error calculation'
+    parser.add_argument('error', type=str, choices=['absolute', 'fractional'], help=h)
+    
+    # the expression
+    h = 'the name of the output file'
+    parser.add_argument('-o', '--output', type=str, help=h)
+    
+    args = parser.parse_args()
+    tools.add_bestfit_param(**vars(args))
+
     
     
     
