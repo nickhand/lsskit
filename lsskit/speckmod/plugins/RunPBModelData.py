@@ -149,6 +149,7 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
         
         # get the valid entries and subtract b1*Pzel
         d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        z = 1./float(key['a']) - 1.
         self.Pzel.SetRedshift(z)
         d['power'] -= b1*self.Pzel(d['k'])
                 
