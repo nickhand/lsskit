@@ -100,7 +100,7 @@ def compare_bestfits(mode, **kwargs):
     
     Parameters
     ----------
-    mode : str, {`function`, `params`}
+    mode : str, {`function`, `params`, `gp`}
         either compare to bestfit function or bestfit params
     kwargs : key/value pairs
         data : subclass of lsskit.speckmod.plugins.ModelInput
@@ -117,9 +117,11 @@ def compare_bestfits(mode, **kwargs):
     """
     import plotify as pfy
     import pandas as pd
-    
-    if mode not in ['function', 'params']:
-        raise ValueError("``mode`` in compare_bestfits must be `function` or `params`")
+    if mode == 'gp':
+        from pyRSD.rsd.mu0_modeling import GPModelParams
+        
+    if mode not in ['function', 'params', 'gp']:
+        raise ValueError("``mode`` in compare_bestfits must be `function`, `params`, `gp`")
     
     # make the index cols
     try:
@@ -128,7 +130,7 @@ def compare_bestfits(mode, **kwargs):
     except:
         raise ValueError("``select`` should have format: `index_col`:value")
     
-    # read the bestfits file and select
+    # read the bestfits file and select 
     df = pd.read_pickle(kwargs['bestfit_file'])
     valid = index_cols
     if mode == 'function': valid += ['k']
@@ -144,9 +146,23 @@ def compare_bestfits(mode, **kwargs):
     # select the bestfit
     select = tuple(df.index.levels[i][v] for i, v in enumerate(select))
     
-    if mode == 'params':
+    # load the GP
+    if mode == 'gp':
+        gp = GPModelParams(kwargs['gp_file'])
+        s8_z = df.loc[select, 's8_z']
+        b1 = df.loc[select, 'b1']
+        bestfits = gp.to_dict(s8_z, b1)
+        print "gp bestfit values:\n-------------"
+        print "\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems())
         
+        actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
+        print "actual bestfit values:\n-------------"
+        print "\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems())
+        
+    elif mode == 'params':
         bestfits = {k:df.loc[select, k] for k in kwargs['model'].param_names}
+        
+    if mode == 'params' or mode == 'gp':
         kwargs['data'].select = key
         
         # this should hopefully only loop over one thing

@@ -176,6 +176,36 @@ def compare():
     h += ' the format should be `index_col`:value'
     param_parser.add_argument('select', type=str, nargs='+', help=h)
     
+    #--------------------------------------------------------------
+    # GP parser
+    #--------------------------------------------------------------
+    h = "compare the best-fit parameters from a GP to the data"
+    gp_parser = subparsers.add_parser('gp', help=h)
+    gp_parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # the input data  
+    h = "the input data, specified as:\n\n"
+    gp_parser.add_argument('data', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('data'))
+                            
+    # the input model  
+    h = "the input model, specified as:\n\n"
+    gp_parser.add_argument('model', type=plugins.ModelInput.parse, 
+                            help=h+plugins.ModelInput.format_help('model'))
+                            
+    # the bestfit function file
+    h = 'the name of the file holding the dataframe of bestfit parameters'
+    gp_parser.add_argument('bestfit_file', type=str, help=h)
+    
+    # the gp model file
+    h = 'the name of the file holding the GP'
+    gp_parser.add_argument('gp_file', type=str, help=h)
+        
+    # the integer index to select an individual bin from
+    h = 'the integer index to select an individual bin from;'
+    h += ' the format should be `index_col`:value'
+    gp_parser.add_argument('select', type=str, nargs='+', help=h)
+    
     # parse
     args = parser.parse_args()
     
@@ -183,6 +213,8 @@ def compare():
         tools.compare_bestfits('function', **vars(args))
     elif args.subparser_name == 'params':
         tools.compare_bestfits('params', **vars(args))
+    elif args.subparser_name == 'gp':
+        tools.compare_bestfits('gp', **vars(args))
 
 #------------------------------------------------------------------------------  
     
