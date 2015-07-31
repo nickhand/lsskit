@@ -100,11 +100,11 @@ class PhhRunPBData(ModelInput, RunPBModelData):
     def to_dataframe(self, key):
         
         # power instance and shot noise
-        p = self.data.sel(**key)
+        p = self.data.sel(**key).values
         Pshot = p.box_size**3 / p.N1
         
         # get the valid entries
-        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        d = tools.get_valid_data(p, kmin=self.kmin, kmax=self.kmax)
         d['power'] -= Pshot
         
         return self._make_dataframe(d)
