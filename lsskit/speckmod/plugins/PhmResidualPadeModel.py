@@ -5,7 +5,7 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
 
     name = "PhmResidualPadeModel"
     plugin_type = 'model'
-    param_names = ['A0', 'R', 'R1', 'R1h', 'R2h']
+    param_names = ['A0', 'R1', 'R1h', 'R2h']
     
     def __init__(self, dict):
         
@@ -28,10 +28,10 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
         R1h = kwargs['R1h']
         
         # with defaults
-        R = kwargs.get('R', self.R_dm(kwargs['s8_z']))
+        R = self.R_dm(kwargs['s8_z'])
         R1 = kwargs.get('R1', 0.)
         R2h = kwargs.get('R2h', 0.)
-        
+
         # now return
         F = 1. - 1./(1. + (k*R)**2)
         return A0 * (1 + (k*R1)**2) / (1. + (k*R1h)**2 + (k*R2h)**4) * F
