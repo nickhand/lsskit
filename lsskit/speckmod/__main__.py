@@ -7,7 +7,7 @@
 """
 import fitit
 from .. import numpy as np
-from . import plugins
+from . import plugins, tools
 
 import argparse
 import os
@@ -19,6 +19,8 @@ def perform_fit():
     # parse the input arguments
     parser = fitit.arg_parser.initialize_parser()
     parser.formatter_class = argparse.RawTextHelpFormatter
+    parser.fromfile_prefix_chars = '@'
+    parser.convert_arg_line_to_args = lambda line: tools.convert_arg_line_to_args(parser, line)
 
     # the input data  
     h = "the input data, specified as:\n\n"

@@ -6,6 +6,24 @@
     __desc__ : tools for helping with modeling of power spectra
 """
 from .. import numpy as np
+        
+def convert_arg_line_to_args(self, line):
+    """
+    Custom function that reads arguments from file, to be used
+    as the ``argparse.ArgumentParser.convert_arg_line_to_args`` 
+    function
+    """
+    if line[0] == '#': return
+    r = line.find(' #')
+    if r >= 0:
+        line = line[:r] 
+    r = line.find('\t#')
+    if r >= 0:
+        line = line[:r] 
+
+    line = line.strip()
+    if len(line) == 0: return
+    yield line
 
 def get_valid_data(data, kmin=None, kmax=None):
     """
