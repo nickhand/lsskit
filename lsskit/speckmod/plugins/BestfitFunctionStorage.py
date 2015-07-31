@@ -70,7 +70,7 @@ class BestfitFunctionStorage(ModelResultsStorage):
         with self.open() as output:
                         
             # columns
-            names = result.param_names
+            names = result.free_param_names
             columns = list(itertools.chain(*[(k, k+"_err") for k in names]))
             
             # data values
