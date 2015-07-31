@@ -118,110 +118,6 @@ def fit_gaussian_process():
     args = parser.parse_args()
     args.gp_args.write()
     
-#------------------------------------------------------------------------------
-def compare_bestfit_function(args):
-    """
-    Compare a best-fit function to the data; this function is installed as 
-    an entry point
-    """
-    import plotify as pfy
-    import pandas as pd
-        
-    # make the index cols
-    try:
-        args.index_cols = [x.split(':')[0] for x in args.select]
-        args.select = [int(x.split(':')[1]) for x in args.select]
-    except:
-        raise ValueError("``select`` should have format: `index_col`:value")
-    
-    # read the bestfits file and select
-    df = pd.read_pickle(args.bestfit_file)
-    valid = args.index_cols+['k']
-    if not all(x in df.columns for x in valid):
-        raise ValueError("please specify a bestfit file with columns: %s" %(", ".join(valid)))
-    df = df.set_index(valid)
-    
-    # get the key dictionary and print out what we are selecting
-    key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(args.select))
-    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
-    print "selecting " + msg
-    
-    # select the bestfit
-    select = tuple(df.index.levels[i][v] for i, v in enumerate(args.select))
-    df = df.xs(select)
-    
-    # select the data
-    data_df = args.data.to_dataframe(key)
-    
-    # plot the data
-    pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
-    
-    # plot the bestfit function mean
-    x = df.index.values
-    y = df['mean']
-    errs = df['error']
-    lines = pfy.plot(x, y)
-    pfy.plt.fill(np.concatenate([x, x[::-1]]),
-                 np.concatenate([y - errs,
-                                (y + errs)[::-1]]),
-                                alpha=.5, fc=lines[0].get_color(), ec='None')
-                                
-    ax = pfy.gca()
-    ax.title.update('Bestfit (function) comparison for %s' %msg, fontsize=16)
-    ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
-    ax.ylabel.update(args.data.variable_str, fontsize=16)
-    pfy.show()
-
-#------------------------------------------------------------------------------
-def compare_bestfit_params(args):
-    """
-    Compare the best-fit parameters to the data.
-    """
-    import plotify as pfy
-    import pandas as pd
-    
-    # make the index cols
-    try:
-        args.index_cols = [x.split(':')[0] for x in args.select]
-        args.select = [int(x.split(':')[1]) for x in args.select]
-    except:
-        raise ValueError("``select`` should have format: `index_col`:value")
-    
-    # read the bestfits file and select
-    df = pd.read_pickle(args.bestfit_file)
-    valid = args.index_cols
-    if not all(x in df.columns for x in valid):
-        raise ValueError("please specify a bestfit file with columns: %s" %(", ".join(valid)))
-    df = df.set_index(valid)
-    
-    # get the key dictionary and print out what we are selecting
-    key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(args.select))
-    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
-    print "selecting " + msg
-    
-    # select the bestfit
-    select = tuple(df.index.levels[i][v] for i, v in enumerate(args.select))
-    bestfits = {k:df.loc[select, k] for k in args.model.param_names}
-    
-    args.data.select = key
-    # this should hopefully only loop over one thing
-    for key, extra, data_df in args.data:    
-        
-        # plot the data
-        pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
-    
-        # plot the bestfit parameters
-        x = data_df.index.values
-        y = args.model(x, **dict(bestfits, **extra))
-        lines = pfy.plot(x, y)
-
-                                
-    ax = pfy.gca()
-    ax.title.update('Bestfit (params) comparison for %s' %msg, fontsize=16)
-    ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
-    ax.ylabel.update(args.data.variable_str, fontsize=16)
-    pfy.show()
-
 #------------------------------------------------------------------------------   
 def compare():
     """
@@ -284,9 +180,9 @@ def compare():
     args = parser.parse_args()
     
     if args.subparser_name == 'function':
-        compare_bestfit_function(args)
+        tools.compare_bestfits('function', **vars(args))
     elif args.subparser_name == 'params':
-        compare_bestfit_params(args)
+        tools.compare_bestfits('params', **vars(args))
 
 #------------------------------------------------------------------------------  
     

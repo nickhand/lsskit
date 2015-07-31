@@ -93,3 +93,95 @@ def make_param_table(param_names, dims, coords):
     index = list(itertools.product(*[coords[i] for i in range(len(dims))]))
     index = pd.MultiIndex.from_tuples(index, names=dims)
     return pd.DataFrame(index=index, columns=param_plus_errs)
+    
+def compare_bestfits(mode, **kwargs):
+    """
+    Compare the best-fit parameters to the data.
+    
+    Parameters
+    ----------
+    mode : str, {`function`, `params`}
+        either compare to bestfit function or bestfit params
+    kwargs : key/value pairs
+        data : subclass of lsskit.speckmod.plugins.ModelInput
+            plugin instance specifying the data
+        model : subclass of lsskit.speckmod.plugins.ModelInput
+            plugin instance specifying the model, only needed
+            for `mode == params`
+        bestfit_file : str
+            the name of the file holding the pickled dataframe
+        select : list of str
+            a list holding strings with the format should 
+            `index_col`:value'. This specifies which bin to be
+            compared
+    """
+    import plotify as pfy
+    import pandas as pd
+    
+    if mode not in ['function', 'params']:
+        raise ValueError("``mode`` in compare_bestfits must be `function` or `params`")
+    
+    # make the index cols
+    try:
+        index_cols = [x.split(':')[0] for x in kwargs['select']]
+        select = [int(x.split(':')[1]) for x in kwargs['select']]
+    except:
+        raise ValueError("``select`` should have format: `index_col`:value")
+    
+    # read the bestfits file and select
+    df = pd.read_pickle(kwargs['bestfit_file'])
+    valid = index_cols
+    if mode == 'function': valid += ['k']
+    if not all(x in df.columns for x in valid):
+        raise ValueError("please specify a bestfit file with columns: %s" %(", ".join(valid)))
+    df = df.set_index(valid)
+    
+    # get the key dictionary and print out what we are selecting
+    key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(select))
+    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
+    print "selecting " + msg
+    
+    # select the bestfit
+    select = tuple(df.index.levels[i][v] for i, v in enumerate(select))
+    
+    if mode == 'params':
+        
+        bestfits = {k:df.loc[select, k] for k in kwargs['model'].param_names}
+        kwargs['data'].select = key
+        
+        # this should hopefully only loop over one thing
+        for key, extra, data_df in kwargs['data']:    
+        
+            # plot the data
+            pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
+    
+            # plot the bestfit parameters
+            x = data_df.index.values
+            y = kwargs['model'](x, **dict(bestfits, **extra))
+            lines = pfy.plot(x, y)
+            
+    else: # mode is `function`
+        df = df.xs(select)
+
+        # select the data
+        data_df = kwargs['data'].to_dataframe(key)
+    
+        # plot the data
+        pfy.errorbar(data_df.index.values, data_df['y'], data_df['error'])
+    
+        # plot the bestfit function mean
+        x = df.index.values
+        y = df['mean']
+        errs = df['error']
+        lines = pfy.plot(x, y)
+        pfy.plt.fill(np.concatenate([x, x[::-1]]),
+                     np.concatenate([y - errs,
+                                    (y + errs)[::-1]]),
+                                    alpha=.5, fc=lines[0].get_color(), ec='None')
+
+                                
+    ax = pfy.gca()
+    ax.title.update('Bestfit (%s) comparison for %s' %(mode,msg), fontsize=16)
+    ax.xlabel.update(r"$k$ ($h$/Mpc)", fontsize=16)
+    ax.ylabel.update(kwargs['data'].variable_str, fontsize=16)
+    pfy.show()
