@@ -1,5 +1,5 @@
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, HaloSpectraSet
+from lsskit.specksis import SpectraSet, HaloSpectraSet, utils
 import os
 
 class RunPB(PowerSpectraLoader):
@@ -95,6 +95,75 @@ class RunPB(PowerSpectraLoader):
             setattr(self, name, lam)
             return lam
             
+
+    def get_Pgal(self, space='real'):
+        """
+        Return galaxy component spectra
+        """
+        try:
+            return getattr(self, '_Pgal_'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'galaxy', space)
+            if space == 'real':
+                basename = 'pk_{sample}_runPB_%s.dat' %self.tag
+            else:
+                basename = 'pkmu_{sample}_runPB_%s_Nmu5.dat' %self.tag
+                
+            coords = [['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
+            Pgal = SpectraSet.from_files(d, basename, coords, ['sample'])
+            Pgal.add_errors()
+            setattr(self, '_Pgal_'+space, Pgal)
+            return Pgal
+    
+    def get_gal_x_matter(self, space='real'):
+        """
+        Return galaxy component spectra x matter
+        """
+        try:
+            return getattr(self, '_Pgal_x_mm_'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'galaxy', space)
+            if space == 'real':
+                basename = 'pk_{sample}_x_matter_runPB_%s.dat' %self.tag
+            else:
+                basename = 'pkmu_{sample}_x_matter_runPB_%s_Nmu5.dat' %self.tag
+            names = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
+            coords = [names]
+            Pgal = SpectraSet.from_files(d, basename, coords, ['sample'])
+            
+            # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
+            Pgal_autos = self.get_Pgal(space=space)
+            Pmm = self.get_Pmm(space=space).sel(a='0.6452').values
+            auto_names = ['gg', 'cc', 'cAcA', 'cBcB', 'ss', 'sAsA', 'sBsB']
+            keys = dict(zip(names, auto_names))
+            for k in names:
+                this_cross = Pgal.sel(sample=k).values
+                Pgal_auto = Pgal_autos.sel(sample=keys[k]).values
+                utils.add_errors(this_cross, Pgal_auto, Pmm)
+            
+            # set and return
+            setattr(self, '_Pgal_x_mm_'+space, Pgal)
+            return Pgal
+    
+    def get_gal_biases(self, filename=None):
+        """
+        Return the linear biases of each galaxy sample
+        """
+        try:
+            return self._gal_biases
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_galaxy_samples.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            biases = utils.load_data_from_file(filename, ['sample'], (7,))
+            setattr(self, '_gal_biases', biases)
+            return biases
+    
+    
     def get_halo_biases(self, filename=None):
         """
         Return the linear biases of each halo mass bin 
@@ -107,7 +176,7 @@ class RunPB(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = HaloSpectraSet.load_biases(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            biases = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
             setattr(self, '_halo_biases', biases)
             return biases
             
@@ -123,6 +192,6 @@ class RunPB(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            masses = HaloSpectraSet.load_masses(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            masses = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
             setattr(self, '_halo_masses', masses)
             return masses
