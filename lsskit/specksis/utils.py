@@ -137,4 +137,40 @@ def add_errors(power, power_x1=None, power_x2=None):
             err += (1./power['modes'])**0.5 * (power_x1['power']*power_x2['power'])**0.5 
             
     power.add_column('error', err)  
+    
+def load_data_from_file(filename, dims, shape):
+    """
+    Load a pickled dictionary of linear biases and return
+    a `xray.DataArray`
+    
+    Parameters
+    ----------
+    filename : str
+        the name of the file holding the pickled data
+    dims : list of str
+        the list of strings corresponding to the names of
+        the dimensions of the dictionary keys
+    shape : list of int
+        the shape of the data values, corresponding to the
+        shape of dim 0, dim 1, etc
+    """
+    import pickle
+    import xray
+    
+    # load the data
+    biases = pickle.load(open(filename))
+        
+    # sort keys and values by the keys
+    keys = biases.keys()
+    b1 = biases.values()
+    sorted_lists = sorted(zip(keys, b1), key=lambda x: x[0])
+    keys, b1 = [[x[i] for x in sorted_lists] for i in range(2)]
+
+    # make the coords and return a DataArray
+    coords = [keys]
+    if len(dims) > 1:
+        coords = zip(*keys)
+        coords = [np.unique(x) for x in coords]
+        b1 = np.array(b1).reshape(shape)
+    return xray.DataArray(b1, coords, dims)
 

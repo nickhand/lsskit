@@ -180,73 +180,7 @@ class HaloSpectraSet(xray.Dataset):
         # intialize with Phh, Phm, Pmm, and bias
         data = {'Phh':Phh, 'Phm':Phm, 'Pmm':Pmm, 'b1':bias}
         super(HaloSpectraSet, self).__init__(data)
-        
-    @classmethod
-    def load_masses(cls, filename, dims, shape):
-        """
-        Load a pickled dictionary of average halo masses and return
-        a `xray.DataArray`
-        
-        Parameters
-        ----------
-        filename : str
-            the name of the file holding the pickled data
-        dims : list of str
-            the list of strings corresponding to the names of
-            the dimensions of the dictionary keys
-        shape : list of int
-            the shape of the data values, corresponding to the
-            shape of dim 0, dim 1, etc
-        """
-        import pickle
-        
-        # load the data
-        masses = pickle.load(open(filename))
-            
-        # sort keys and values by the keys
-        keys = masses.keys()
-        M = masses.values()
-        sorted_lists = sorted(zip(keys, M), key=lambda x: x[0])
-        keys, M = [[x[i] for x in sorted_lists] for i in range(2)]
-
-        # make the coords and return a DataArray
-        coords = zip(*keys)
-        coords = [np.unique(x) for x in coords]
-        return xray.DataArray(np.array(M).reshape(shape), coords, dims)
-        
-    @classmethod
-    def load_biases(cls, filename, dims, shape):
-        """
-        Load a pickled dictionary of linear biases and return
-        a `xray.DataArray`
-        
-        Parameters
-        ----------
-        filename : str
-            the name of the file holding the pickled data
-        dims : list of str
-            the list of strings corresponding to the names of
-            the dimensions of the dictionary keys
-        shape : list of int
-            the shape of the data values, corresponding to the
-            shape of dim 0, dim 1, etc
-        """
-        import pickle
-        
-        # load the data
-        biases = pickle.load(open(filename))
-            
-        # sort keys and values by the keys
-        keys = biases.keys()
-        b1 = biases.values()
-        sorted_lists = sorted(zip(keys, b1), key=lambda x: x[0])
-        keys, b1 = [[x[i] for x in sorted_lists] for i in range(2)]
-
-        # make the coords and return a DataArray
-        coords = zip(*keys)
-        coords = [np.unique(x) for x in coords]
-        return xray.DataArray(np.array(b1).reshape(shape), coords, dims)
-        
+                
     def to_lambda(self, stoch_type):
         """
         Use the halo-halo auto spectra, halo-matter cross spectra, and
