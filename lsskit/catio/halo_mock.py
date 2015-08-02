@@ -6,16 +6,12 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-from . import mock_catalog as mc
+from . import mock_catalog, utils, numpy as np
 
-#-------------------------------------------------------------------------------
-class HaloMock(mc.MockCatalog):
+class HaloMock(mock_catalog.MockCatalog):
     """
     Subclass of `MockCatalog` to represent a halo mock catalog
-    """
-    def __init__(self, redshift, box_size, units, cosmo=None):
-        super(HaloMock, self).__init__(redshift, box_size, units, cosmo=cosmo)
-                    
+    """                    
     #---------------------------------------------------------------------------
     # Read-ony properties
     #---------------------------------------------------------------------------
@@ -25,8 +21,7 @@ class HaloMock(mc.MockCatalog):
         Total number of halos in the mock catalog
         """
         return self._sample_total
-        
-    #---------------------------------------------------------------------------    
+         
     def restrict_halos(self, halo_condition):
         """
         Restrict the halos included in the current sample by inputing a boolean
@@ -37,10 +32,11 @@ class HaloMock(mc.MockCatalog):
         self.restrictions.set_flags('halo', halo_condition)
         self._sample = self.restrictions.slice_frame(self._data)
           
-    #---------------------------------------------------------------------------
-    def load(self, filename, info_dict, halo_id, skip_lines=0):
+    @classmethod
+    def load(cls, filename, info_dict, halo_id, skip_lines=0):
         """
-        Load objects from a file
+        Create a HaloMock instance by reading object information from an 
+        ASCII file
         
         Parameters
         ----------
@@ -52,15 +48,16 @@ class HaloMock(mc.MockCatalog):
             numbers to read from the input file
         halo_id : str
             The name of the column defining the halo identifier                 
-        skip_lines : int
+        skip_lines : int, optional
             The number of lines to skip when reading the input file; 
             default is 0
         """
-        kwargs               = {}
-        kwargs['extra_info'] = {'halo_id' : halo_id}
-        kwargs['skip_lines'] = skip_lines  
-        mc.MockCatalog.load(self, filename, info_dict, **kwargs)
+        meta['skip_lines'] = skip_lines
+        meta['halo_id'] = halo_id
+        return mock_catalog.MockCatalog.from_ascii(filename, info_dict, **meta)
             
+    #---------------------------------------------------------------------------
+    # plotting functions
     #---------------------------------------------------------------------------
     def plot_mass_distribution(self, mass_col, N_bins=50):
         """
@@ -69,8 +66,8 @@ class HaloMock(mc.MockCatalog):
         import plotify as pfy
         
         # halo masses for all halos
-        masses = mc.np.asarray(self.sample[mass_col])
-        bins, pdf, dM = self._compute_pdf(masses, log=True, N_bins=N_bins)
+        masses = np.asarray(self.sample[mass_col])
+        bins, pdf, dM = utils.compute_pdf(masses, log=True, N_bins=N_bins)
 
         # plot
         ax = pfy.gca()
@@ -87,8 +84,6 @@ class HaloMock(mc.MockCatalog):
         ax.xlabel.update(r"$M_\mathrm{halo} \ (%s)$" %mass_units, fontsize=16)
 
         return ax        
-    #---------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
 
         

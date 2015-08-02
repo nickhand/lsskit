@@ -1,29 +1,26 @@
 """
- hod_mock.py
- lss: subclass of `MockCatalog` to hold an HOD galaxy mock catalog
- 
- author: Nick Hand
- contact: nhand@berkeley.edu
- creation date: 06/13/2014
-"""
-from . import mock_catalog as mc, angularFOF
+    hod_mock.py
+    lsskit.catio
 
+    __author__ : Nick Hand
+    __email__ : nhand@berkeley.edu
+    __desc__ : subclass of `catio.MockCatalog` to hold an HOD galaxy mock catalog
+"""
+from . import angularFOF, mock_catalog, utils, numpy as np
 from scipy.spatial.distance import pdist, squareform
+import pandas as pd
 try:
     from scipy.spatial import cKDTree as KDTree
 except:
     from scipy.spatial import KDTree
 
-#-------------------------------------------------------------------------------
-class HODMock(mc.MockCatalog):
+
+class HODMock(mock_catalog.MockCatalog):
     """
-    Subclass of `MockCatalog` to represent a galaxy HOD mock catalog
-    """
-    def __init__(self, redshift, box_size, units, cosmo=None):
-        super(HODMock, self).__init__(redshift, box_size, units, cosmo=cosmo)
-                    
+    Subclass of `catio.MockCatalog` to represent a galaxy HOD mock catalog
+    """                    
     #---------------------------------------------------------------------------
-    # Read-ony properties
+    # read-ony properties
     #---------------------------------------------------------------------------
     @property
     def total_galaxies(self):
@@ -32,7 +29,6 @@ class HODMock(mc.MockCatalog):
         """
         return self._sample_total
 
-    #---------------------------------------------------------------------------
     @property
     def potentially_collided(self):
         """
@@ -40,7 +36,6 @@ class HODMock(mc.MockCatalog):
         """
         return len(self.sample[self.sample.collided == 1])
     
-    #---------------------------------------------------------------------------
     @property
     def total_collided(self):
         """
@@ -49,7 +44,6 @@ class HODMock(mc.MockCatalog):
         cond = (self.sample.collided == 1)&(self.sample.resolved == 0)
         return len(self.sample[cond])
     
-    #---------------------------------------------------------------------------
     @property
     def total_resolved(self):
         """
@@ -57,7 +51,6 @@ class HODMock(mc.MockCatalog):
         """
         return len(self.sample[self.sample.resolved == 1])
     
-    #---------------------------------------------------------------------------
     @property
     def total_halos(self):
         """
@@ -65,7 +58,6 @@ class HODMock(mc.MockCatalog):
         """
         return len(self.sample.groupby(self.halo_id).groups)
 
-    #---------------------------------------------------------------------------
     @property
     def cen_sat_pairs(self):
         """
@@ -89,7 +81,6 @@ class HODMock(mc.MockCatalog):
         
         return 2*N_sat[(N_cen > 0)&(N_sat > 0)].sum()
         
-    #---------------------------------------------------------------------------
     @property
     def sat_sat_pairs(self):
         """
@@ -118,7 +109,6 @@ class HODMock(mc.MockCatalog):
             inds = (N_sat > 1)&(N_cen > 0)
         return (N_sat[inds]*(N_sat[inds]-1)).sum()
         
-    #---------------------------------------------------------------------------
     @property
     def nearest_neighbor_ids(self):
         """
@@ -127,11 +117,10 @@ class HODMock(mc.MockCatalog):
         """
         try:
             return self._nearest_neighbor_ids
-        except:
+        except AttributeError:
             self._find_nearest_neighbors()
             return self._nearest_neighbor_ids
     
-    #---------------------------------------------------------------------------
     @property
     def collided_unresolved_ids(self):
         """
@@ -140,16 +129,50 @@ class HODMock(mc.MockCatalog):
         """
         try:
             return self._collided_unresolved_ids
-        except:
+        except AttributeError:
             self._find_nearest_neighbors()
             return self._collided_unresolved_ids    
     
     #---------------------------------------------------------------------------
-    # Function calls    
+    # internal utility functions
     #---------------------------------------------------------------------------
+    def _add_halo_sizes(self, df):
+        """
+        Internal function to compute number of centrals/satellites per halo and 
+        add the information to the input DataFrame as a column
+        """
+        # delete N_sat, N_cen columns if they exist
+        if 'N_sat' in df.columns: del df['N_sat']
+        if 'N_cen' in df.columns: del df['N_cen']
+        
+        # these are grouped by type and then by halo id
+        halos = df.groupby(['type', self.halo_id])
+        
+        # the sizes
+        sizes = halos.size()
+        
+        # add N_cen if there are any centrals in this sample
+        if 'central' in sizes.index.levels[0]:
+            N_cen = pd.DataFrame(sizes['central'], columns=['N_cen'])
+            df = df.join(N_cen, on=self.halo_id, how='left')
+            
+            # now fill missing values with zeros
+            df.N_cen.fillna(value=0., inplace=True)
+        
+        # add the satellites
+        if 'satellite' in sizes.index.levels[0]:
+            N_sat = pd.DataFrame(sizes['satellite'], columns=['N_sat'])
+            df = df.join(N_sat, on=self.halo_id, how='left')
+    
+            # now fill missing values with zeros
+            df.N_sat.fillna(value=0., inplace=True)
+        
+        return df
+    
     def _find_nearest_neighbors(self):
         """
-        Compute the nearest neighbors of all collided/unresolved galaxies
+        Internal function to compute the nearest neighbors of all 
+        collided/unresolved galaxies
         """
         # we can double count using any uncollided galaxies (for which
         # we have a redshift)
@@ -166,7 +189,59 @@ class HODMock(mc.MockCatalog):
     
         self._collided_unresolved_ids = collided_gals.index
         self._nearest_neighbor_ids    = uncollided_gals.iloc[inds].index
+        self._metadata += ['_collided_unresolved_ids', '_nearest_neighbor_ids']
     
+    def _assign_fibers_multi(self, group):
+        """
+        Internal function to assign fibers to multi-galaxy collision groups by setting 
+        ``collided = 1`` for the galaxy that collides with the most objects
+        """
+        # first shuffle the member ids, so we select random element when tied
+        group_ids = list(group.index)
+        np.random.shuffle(group_ids)
+        
+        collided_ids = []
+        while len(group_ids) > 1:
+           
+            # compute the number of collisions
+            dists = squareform(pdist(group[self.coord_keys], metric='euclidean'))
+            n_collisions = np.sum((dists > 0.)&(dists <= self.collision_radius), axis=0)
+                    
+            # find the object that collides with the most
+            collided_index = n_collisions.argmax()    
+        
+            # make the collided galaxy and remove from group
+            collided_id = group_ids.pop(collided_index)
+            group = group.drop(collided_id)
+            
+            # only make this a collided object if its n_collisions > 0
+            # if n_collisions = 0, then the object can get a fiber for free
+            if n_collisions[collided_index] > 0:
+                collided_ids.append(collided_id)
+        
+        return collided_ids
+    
+    def _replace_with_nearest(self, cols, fields):
+        """
+        Internal function to find the nearest neighbor for all 
+        (collided and unresolved) galaxies and replace the collided object 
+        values with those of the nearest neighbor on the sky, i.e. double-counting
+        """        
+        # get the galaxy ids of galaxy to replace and the neighbors
+        gal_ids = self.collided_unresolved_ids
+        NN_ids  = self.nearest_neighbor_ids
+        
+        # initialize the output
+        output = self.sample.copy()
+        if isinstance(cols, bool):
+            output.loc[gal_ids, fields] = self._data.loc[NN_ids, fields].values    
+        else:
+            output.loc[gal_ids, cols] = self._data.loc[NN_ids, cols].values
+        
+        return output[fields]
+          
+    #---------------------------------------------------------------------------
+    # info functions
     #---------------------------------------------------------------------------
     def info(self):
         """
@@ -194,31 +269,7 @@ class HODMock(mc.MockCatalog):
             print "fraction without satellites in same halo = %.3f" %(1.*N_sA/N_s)
             print "fraction with satellites in same halo = %.3f" %(1.*N_sB/N_s)
             print
-
-    #---------------------------------------------------------------------------    
-    def restrict_halos(self, halo_condition):
-        """
-        Restrict the halos included in the current sample by inputing a boolean
-        condition in string format, 
-        
-        ``(key1 == value1)*(key2 == value2) + (key3 ==value3)``
-        """
-        self.restrictions.set_flags('halo', halo_condition)
-        self._sample = self.restrictions.slice_frame(self._data)
-    
-    #---------------------------------------------------------------------------
-    def restrict_galaxies(self, galaxy_condition):
-        """
-        Restrict the galaxies included in the current sample by inputing a boolean
-        condition in string format, 
-        
-        ``(key1 == value1)*(key2 == value2) + (key3 ==value3)``
-        """
-        self.restrictions.set_flags('galaxy', galaxy_condition)
-        self._sample = self.restrictions.slice_frame(self._data)
-        self._sample = self._add_halo_sizes(self._sample)
-        
-    #---------------------------------------------------------------------------
+          
     def centrals_totals(self):
         """
         Return the total number of centrals, centrals without satellites, and
@@ -244,7 +295,6 @@ class HODMock(mc.MockCatalog):
         
         return N_c, N_cA, N_cB
     
-    #---------------------------------------------------------------------------
     def satellites_totals(self):
         """
         Return the total number of satellites, satellites without other 
@@ -271,9 +321,13 @@ class HODMock(mc.MockCatalog):
         return N_s, N_sA, N_sB
           
     #---------------------------------------------------------------------------
-    def load(self, filename, info_dict, halo_id, object_types, skip_lines=0):
+    # general functions
+    #---------------------------------------------------------------------------
+    @classmethod
+    def from_ascii(cls, filename, info_dict, halo_id, object_types, skip_lines=0, **meta):
         """
-        Load objects from a file
+        Create a HODMock instance by reading object information from an 
+        ASCII file
         
         Parameters
         ----------
@@ -290,55 +344,23 @@ class HODMock(mc.MockCatalog):
             objects of different types. The `column` key should give
             the name of the column holding the type information and
             the `types` key holds a dict of the different types            
-        skip_lines : int
+        skip_lines : int, optional
             The number of lines to skip when reading the input file; 
             default is 0
+        meta : key, value pairs, optional
+            keyword arguments specifying the metadata for the class
         """
-        kwargs = {}
-        kwargs['extra_info']   = {'halo_id' : halo_id}
-        kwargs['object_types'] = object_types
-        kwargs['skip_lines']   = skip_lines  
-        mc.MockCatalog.load(self, filename, info_dict, **kwargs)
+        meta['skip_lines'] = skip_lines
+        meta['object_types'] = object_types
+        meta['halo_id'] = halo_id
+        mock = mock_catalog.MockCatalog.from_ascii(filename, info_dict, **meta)
         
         # add the N_cen, N_sat columns
         if object_types.get('column', None) is not None:
-            self._data = self._add_halo_sizes(self._data)
+            mock._data = self._add_halo_sizes(mock._data)
+        
+        return mock
 
-    #---------------------------------------------------------------------------
-    def _add_halo_sizes(self, df):
-        """
-        Compute number of centrals/satellites per halo and add to the 
-        input DataFrame as a column
-        """
-        # delete N_sat, N_cen columns if they exist
-        if 'N_sat' in df.columns: del df['N_sat']
-        if 'N_cen' in df.columns: del df['N_cen']
-        
-        # these are grouped by type and then by halo id
-        halos = df.groupby(['type', self.halo_id])
-        
-        # the sizes
-        sizes = halos.size()
-        
-        # add N_cen if there are any centrals in this sample
-        if 'central' in sizes.index.levels[0]:
-            N_cen = mc.pd.DataFrame(sizes['central'], columns=['N_cen'])
-            df = df.join(N_cen, on=self.halo_id, how='left')
-            
-            # now fill missing values with zeros
-            df.N_cen.fillna(value=0., inplace=True)
-        
-        # add the satellites
-        if 'satellite' in sizes.index.levels[0]:
-            N_sat = mc.pd.DataFrame(sizes['satellite'], columns=['N_sat'])
-            df = df.join(N_sat, on=self.halo_id, how='left')
-    
-            # now fill missing values with zeros
-            df.N_sat.fillna(value=0., inplace=True)
-        
-        return df
-    
-    #---------------------------------------------------------------------------
     def compute_collision_groups(self, radius, units, coord_keys=['x', 'y'], nprocs=1):
         """
         Compute fiber collision groups using the specified radius as the 
@@ -380,14 +402,14 @@ class HODMock(mc.MockCatalog):
         if units != self.units:
             
             if units == 'degrees':
-                radius = (radius*mc.np.pi/180.)*self.cosmo.Da_z(self.redshift)
+                radius = (radius*np.pi/180.)*self.cosmo.Da_z(self.redshift)
                 units = 'absolute'
 
             if self.units == 'absolute' and units == 'relative':
-                radius *= mc.h_conversion_factor('distance', units, self.units, self.cosmo['h'])
+                radius *= utils.h_conversion_factor('distance', units, self.units, self.cosmo['h'])
                 units = 'absolute'
             elif self.units == 'relative' and units == 'absolute':
-                radius *= mc.h_conversion_factor('distance', units, self.units, self.cosmo['h']) 
+                radius *= utils.h_conversion_factor('distance', units, self.units, self.cosmo['h']) 
                 units = 'relative'
                 
         if self.units != units:
@@ -395,21 +417,21 @@ class HODMock(mc.MockCatalog):
             
         self.collision_radius = radius # should be in units of `self.units`
         self.coord_keys = coord_keys
+        self._metadata += ['collision_radius', 'coord_keys']
            
         # now run the FOF algorithm
         groups = grp_finder.findGroups(self.collision_radius)
         
         # make a DataFrame of the group numbers
         group_numbers = {g.objid : gr_num for gr_num in groups for g in groups[gr_num].members}
-        index = mc.pd.Index(group_numbers.keys(), name='objid')
-        group_df = mc.pd.DataFrame(group_numbers.values(), index=index, columns=['group_number'])
+        index = pd.Index(group_numbers.keys(), name='objid')
+        group_df = pd.DataFrame(group_numbers.values(), index=index, columns=['group_number'])
         
         # now join to the main table
         self._data = self._data.join(group_df)
         
         del grp_finder   
 
-    #---------------------------------------------------------------------------
     def collision_group(self, group_number):
         """
         Return a DataFrame of the member galaxies of the group specified 
@@ -422,7 +444,6 @@ class HODMock(mc.MockCatalog):
         """
         return self._data[self._data.group_number == group_number]
     
-    #---------------------------------------------------------------------------
     def halo(self, halo_number):
         """
         Return a DataFrame of the member galaxies of the halo specified 
@@ -434,39 +455,7 @@ class HODMock(mc.MockCatalog):
             a pandas DataFrame where each row is an object in this halo
         """
         return self._data[self._data[self.halo_id] == halo_number]
-    
-    #---------------------------------------------------------------------------     
-    def _assign_fibers_multi(self, group):
-        """
-        Assign fibers to multi-galaxy collision groups by setting 
-        ``collided = 1`` for the galaxy that collides with the most objects
-        """
-        # first shuffle the member ids, so we select random element when tied
-        group_ids = list(group.index)
-        mc.np.random.shuffle(group_ids)
-        
-        collided_ids = []
-        while len(group_ids) > 1:
-           
-            # compute the number of collisions
-            dists = squareform(pdist(group[self.coord_keys], metric='euclidean'))
-            n_collisions = mc.np.sum((dists > 0.)&(dists <= self.collision_radius), axis=0)
-                    
-            # find the object that collides with the most
-            collided_index = n_collisions.argmax()    
-        
-            # make the collided galaxy and remove from group
-            collided_id = group_ids.pop(collided_index)
-            group = group.drop(collided_id)
-            
-            # only make this a collided object if its n_collisions > 0
-            # if n_collisions = 0, then the object can get a fiber for free
-            if n_collisions[collided_index] > 0:
-                collided_ids.append(collided_id)
-        
-        return collided_ids
-        
-    #---------------------------------------------------------------------------
+               
     def assign_fibers(self, resolution_fraction):
         """
         Assign fibers to galaxies, attempting to mimic the SDSS tiling algorithm
@@ -480,20 +469,20 @@ class HODMock(mc.MockCatalog):
         
         # first, make a DataFrame with group_size as a column
         groups = self._data.groupby('group_number')
-        sizes = mc.pd.DataFrame(groups.size(), columns=['group_size'])
+        sizes = pd.DataFrame(groups.size(), columns=['group_size'])
         frame = self._data.join(sizes, on='group_number', how='left')
         
         # handle group size = 2, setting collided = 1 for random element
         groups_pairs = frame[frame.group_size == 2].groupby('group_number')
-        index = [mc.np.random.choice(v) for v in groups_pairs.groups.values()]
-        self._data.loc[index, 'collided'] = mc.np.ones(len(index))
+        index = [np.random.choice(v) for v in groups_pairs.groups.values()]
+        self._data.loc[index, 'collided'] = np.ones(len(index))
         
         # handle group size > 2
         groups_multi = frame[frame.group_size > 2].groupby('group_number')
         collided_ids = []
         for group_number, group in groups_multi:
             collided_ids += self._assign_fibers_multi(group)
-        self._data.loc[collided_ids, 'collided'] = mc.np.ones(len(collided_ids))
+        self._data.loc[collided_ids, 'collided'] = np.ones(len(collided_ids))
         
         # print out the fiber collision fraction    
         f_collision = 1.*self.potentially_collided/self.total_galaxies
@@ -502,12 +491,13 @@ class HODMock(mc.MockCatalog):
         # now resolve any galaxies
         print "using resolution fraction = %.3f" %(resolution_fraction)
         self.resolution_fraction = resolution_fraction
+        self._metadata.append('resolution_fraction')
         
         if self.resolution_fraction < 1.:
         
             # randomly select values for resolved attribute
             probs = [1.-self.resolution_fraction, self.resolution_fraction]
-            new_resolved = mc.np.random.choice([0, 1], size=self.potentially_collided, p=probs)
+            new_resolved = np.random.choice([0, 1], size=self.potentially_collided, p=probs)
             
             # set the new resolved values
             self._data.loc[self._data.collided == 1, 'resolved'] = new_resolved
@@ -515,35 +505,37 @@ class HODMock(mc.MockCatalog):
         f_collision = 1.*self.total_collided/self.total_galaxies
         print "final collision fraction = %.3f" %f_collision
         
-    #---------------------------------------------------------------------------
     def clear_fiber_assignments(self):
         """
         Clear the fiber assignments
         """        
         self.resolution_fraction = 1. # all galaxies are uncollided
-        self._data['resolved'] = mc.np.zeros(self.total_galaxies)
-        self._data['collided'] = mc.np.zeros(self.total_galaxies)
+        self._data['resolved'] = np.zeros(self.total_galaxies)
+        self._data['collided'] = np.zeros(self.total_galaxies)
         
-    #---------------------------------------------------------------------------
-    def _replace_with_nearest(self, cols, fields):
+    def restrict_halos(self, halo_condition):
         """
-        Find the nearest neighbor for all (collided and unresolved) galaxies
-        and replace the collided object values with those of the 
-        nearest neighbor on the sky, i.e. double-counting
-        """        
-        # get the galaxy ids of galaxy to replace and the neighbors
-        gal_ids = self.collided_unresolved_ids
-        NN_ids  = self.nearest_neighbor_ids
+        Restrict the halos included in the current sample by inputing a boolean
+        condition in string format, 
         
-        # initialize the output
-        output = self.sample.copy()
-        if isinstance(cols, bool):
-            output.loc[gal_ids, fields] = self._data.loc[NN_ids, fields].values    
-        else:
-            output.loc[gal_ids, cols] = self._data.loc[NN_ids, cols].values
-        
-        return output[fields]
+        ``(key1 == value1)*(key2 == value2) + (key3 ==value3)``
+        """
+        self.restrictions.set_flags('halo', halo_condition)
+        self._sample = self.restrictions.slice_frame(self._data)
     
+    def restrict_galaxies(self, galaxy_condition):
+        """
+        Restrict the galaxies included in the current sample by inputing a boolean
+        condition in string format, 
+        
+        ``(key1 == value1)*(key2 == value2) + (key3 ==value3)``
+        """
+        self.restrictions.set_flags('galaxy', galaxy_condition)
+        self._sample = self.restrictions.slice_frame(self._data)
+        self._sample = self._add_halo_sizes(self._sample)
+    
+    #---------------------------------------------------------------------------
+    # plotting functions
     #---------------------------------------------------------------------------
     def plot_hod(self, mass_col, N_bins=10):
         """
@@ -567,8 +559,8 @@ class HODMock(mc.MockCatalog):
         x, y_sat, err_sat, w_sat = bin(mass, N_sat, nBins=N_bins, log=True)
 
         # plot
-        pfy.errorbar(x, y_cen, err_cen/mc.np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
-        pfy.errorbar(x, y_sat, err_cen/mc.np.sqrt(w_cen), marker='.', ls='--', label='satellite galaxies')
+        pfy.errorbar(x, y_cen, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
+        pfy.errorbar(x, y_sat, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='satellite galaxies')
         pfy.loglog(x, y_cen+y_sat, marker='.', c='k', label='all galaxies')
         
         ax = pfy.gca()
@@ -582,7 +574,6 @@ class HODMock(mc.MockCatalog):
         
         return ax
         
-    #---------------------------------------------------------------------------
     def plot_mass_distribution(self, mass_col, mass_units="h^{-1} M_\odot"):
         """
         Plot the mass distribution of all galaxies, and satellites only
@@ -590,14 +581,14 @@ class HODMock(mc.MockCatalog):
         import plotify as pfy
         
         # halo masses for all halos
-        mass_all = mc.np.asarray(self.sample[mass_col])
+        mass_all = np.asarray(self.sample[mass_col])
         
         # halo masses for satellites
-        mass_sat = mc.np.asarray(self.sample[self.sample.type == 'satellite'][mass_col])
+        mass_sat = np.asarray(self.sample[self.sample.type == 'satellite'][mass_col])
         
         # all galaxies and satellites only
-        bins1, pdf1, dM1 = self._compute_pdf(mass_all, log=True)
-        bins2, pdf2, dM2 = self._compute_pdf(mass_sat, log=True)
+        bins1, pdf1, dM1 = utils.compute_pdf(mass_all, log=True)
+        bins2, pdf2, dM2 = utils.compute_pdf(mass_sat, log=True)
 
         # plot
         ax = pfy.gca()
@@ -616,8 +607,6 @@ class HODMock(mc.MockCatalog):
         ax.legend(loc=0)
 
         return ax        
-    #---------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
 
         

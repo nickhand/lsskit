@@ -1,10 +1,10 @@
 """
- kdtree.py
- lss : code to implement a kd-tree, in parallel too!
- 
- author: Nick Hand
- contact: nhand@berkeley.edu
- creation date: 02/26/2015
+    kdtree.py
+    lsskit
+
+    __author__ : Nick Hand
+    __email__  : nhand@berkeley.edu
+    __desc__   : module implementing a kd-tree, in parallel
 """
 from . import numpy as np
 import ctypes

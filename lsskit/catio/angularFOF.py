@@ -1,10 +1,10 @@
 """
- angularFOF.py
- lss: code to compute angular clustering using a friends-of-friends algorithm
- 
- author: Nick Hand
- contact: nhand@berkeley.edu
- creation date: 02/26/2015
+    angularFOF.py
+    lsskit.catio
+
+    __author__ : Nick Hand
+    __email__  : nhand@berkeley.edu
+    __desc__   : module to compute angular clustering using a friends-of-friends algorithm
 """
 from . import kdtree, numpy as np
 from utils import utilities, pytools
