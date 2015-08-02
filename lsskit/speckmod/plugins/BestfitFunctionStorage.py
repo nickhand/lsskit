@@ -82,8 +82,12 @@ class BestfitFunctionStorage(ModelResultsStorage):
             mu = result.best_fit
         
             # get the 1sigma errors
-            params = np.vstack([result[k].flat_trace for k in names]).T
-            params = pd.DataFrame(params, columns=names)
+            traces = [result[k].flat_trace for k in names]
+            other_names = [name for name in result.param_names if name not in names]
+            traces += [np.repeat(result[name].value, len(traces[0])) for name in other_names]
+            
+            params = np.vstack(traces).T
+            params = pd.DataFrame(params, columns=names+other_names)
             extra_kwargs = getattr(result.model, 'extra_kwargs', {})
             mean_errs = get_one_sigma_errs(ks, params, result.model.func, **extra_kwargs)
             
