@@ -6,7 +6,7 @@
  contact: nhand@berkeley.edu
  creation date: 02/26/2015
 """
-from . import mock_catalog, utils, numpy as np
+from . import mock_catalog, _utils, numpy as np
 
 class HaloMock(mock_catalog.MockCatalog):
     """
@@ -67,7 +67,7 @@ class HaloMock(mock_catalog.MockCatalog):
         
         # halo masses for all halos
         masses = np.asarray(self.sample[mass_col])
-        bins, pdf, dM = utils.compute_pdf(masses, log=True, N_bins=N_bins)
+        bins, pdf, dM = _utils.compute_pdf(masses, log=True, N_bins=N_bins)
 
         # plot
         ax = pfy.gca()

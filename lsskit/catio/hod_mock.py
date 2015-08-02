@@ -6,7 +6,7 @@
     __email__ : nhand@berkeley.edu
     __desc__ : subclass of `catio.MockCatalog` to hold an HOD galaxy mock catalog
 """
-from . import angularFOF, mock_catalog, utils, numpy as np
+from . import angularFOF, mock_catalog, _utils, numpy as np
 from scipy.spatial.distance import pdist, squareform
 import pandas as pd
 try:
@@ -406,10 +406,10 @@ class HODMock(mock_catalog.MockCatalog):
                 units = 'absolute'
 
             if self.units == 'absolute' and units == 'relative':
-                radius *= utils.h_conversion_factor('distance', units, self.units, self.cosmo['h'])
+                radius *= _utils.h_conversion_factor('distance', units, self.units, self.cosmo['h'])
                 units = 'absolute'
             elif self.units == 'relative' and units == 'absolute':
-                radius *= utils.h_conversion_factor('distance', units, self.units, self.cosmo['h']) 
+                radius *= _utils.h_conversion_factor('distance', units, self.units, self.cosmo['h']) 
                 units = 'relative'
                 
         if self.units != units:
@@ -587,8 +587,8 @@ class HODMock(mock_catalog.MockCatalog):
         mass_sat = np.asarray(self.sample[self.sample.type == 'satellite'][mass_col])
         
         # all galaxies and satellites only
-        bins1, pdf1, dM1 = utils.compute_pdf(mass_all, log=True)
-        bins2, pdf2, dM2 = utils.compute_pdf(mass_sat, log=True)
+        bins1, pdf1, dM1 = _utils.compute_pdf(mass_all, log=True)
+        bins2, pdf2, dM2 = _utils.compute_pdf(mass_sat, log=True)
 
         # plot
         ax = pfy.gca()

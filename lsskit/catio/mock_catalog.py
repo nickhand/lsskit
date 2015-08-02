@@ -6,7 +6,7 @@
     __email__  : nhand@berkeley.edu
     __desc__   : class to hold a mock catalog of objects
 """
-from . import utils, selectionlanguage, numpy as np
+from . import _utils, selectionlanguage, numpy as np
 from pyRSD import pygcl
 import pandas as pd
 import operator
@@ -225,7 +225,7 @@ class MockCatalog(object):
             masses = groups[mass_col].first()
             
         # get the objids of the chosen ones
-        index = utils.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total)
+        index = _utils.sample_by_mass_pdf(masses, mass_pdf, bins=bins, N=total)
         
         # restrict the sample
         self._sample = self._data.loc[index]
@@ -338,7 +338,7 @@ class MockCatalog(object):
         # get the units conversion factor
         conversion_factor = 1.
         if units is not None:
-            conversion_factor = utils.h_conversion_factor('distance', self.units, units, self.cosmo['h'])
+            conversion_factor = _utils.h_conversion_factor('distance', self.units, units, self.cosmo['h'])
             
         # write out the header
         header_copy = list(header)

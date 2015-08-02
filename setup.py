@@ -11,6 +11,7 @@ setup(
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
+            'compute_fiber_collisions = lsskit.catio.__main__:compute_fiber_collisions',
             'speckmod = lsskit.speckmod.__main__:perform_fit',
             'fit_gp = lsskit.speckmod.__main__:fit_gaussian_process',
             'speckmod_compare = lsskit.speckmod.__main__:compare',
