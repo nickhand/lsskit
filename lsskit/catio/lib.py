@@ -14,6 +14,8 @@ def compute_fiber_collisions(**kwargs):
     Compute fiber collisions and assign fibers for a 
     ``catio.HODMock`` instance
     
+    Parameters
+    ----------
     kwargs : key/value pairs
         The required keyword arguments are:
             param_file : str
@@ -57,6 +59,8 @@ def load_mock(**kwargs):
     """
     Load and save the either a `HaloMock` or `HODMock` instance
     
+    Parameters
+    ----------
     kwargs : key/value pairs
         The required keyword arguments are:
             param_file : str
@@ -82,10 +86,54 @@ def load_mock(**kwargs):
     elif kwargs['type'] == 'galaxy':
         mock = HODMock.from_ascii(p['file'], p['fields'], params['halo_id'], params['type_params'], **meta)
     else:
-        raise NotImplementedError("do not understand `type` keyword")
+        raise ValueError("do not understand `type` keyword")
 
     # now save the file
     mock.to_hdf(params['outfile'])
+    
+def write_coordinates(**kwargs):
+    """
+    Write out the formatted coordinates of a MockCatalog
+    
+    Parameters
+    ----------
+    kwargs : key/value pairs
+        The required keyword arguments are:
+            param_file : str
+                the name of the parameter file
+            type : str, {'galaxy', 'halo'}
+                the type of MockCatalog to save, either 'halo' or 'galaxy'
+    """
+    # read in the parameter file
+    params = flipperDict.flipperDict()
+    params.readFromFile(kwargs['param_file'])
+
+    # load the mock file
+    if kwargs['type'] == 'galaxy':
+        cls = HODMock
+    elif kwargs['type'] == 'halo':
+        cls = HaloMock
+    else:
+        raise ValueError("do not understand `type` keyword")
+    mock = cls.from_hdf(params['mock_file'])
+ 
+    # clear any restrictions
+    mock.clear_restrictions()
+
+    # set the restrictions
+    if params['galaxy_restrict'] is not None:
+        mock.restrict_galaxies(params['galaxy_restrict'])
+
+    if params['halo_restrict'] is not None:
+        mock.restrict_halos(params['halo_restrict'])
+
+    # write out the mock coordinates
+    mock.to_coordinates(params['output_file'], params['output_fields'], 
+                        units=params['output_units'], 
+                        header=params['header'], 
+                        replace_with_nearest=params.get('replace_with_nearest', False),
+                        temporary=False)
+
 
 
 

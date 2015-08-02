@@ -50,7 +50,7 @@ def compute_fiber_collisions():
     lib.compute_fiber_collisions(**vars(parser.parse_args()))
 
 
-def load_mock(args):
+def load_mock():
     """
     Load and save the `HaloMock` or `HODMock` instance
     """
@@ -90,4 +90,44 @@ def load_mock(args):
     parser.add_argument('--type', type=str, choices=['halo', 'galaxy'], required=True, help=h)
 
     lib.load_mock(**vars(parser.parse_args()))
+    
+def write_coordinates():
+    """
+    Write out the formatted coordinates of a MockCatalog
+    """
+    # setup the main parser
+    desc = "load a mock catalog from an ASCII file"
+    parser = ap.ArgumentParser(description=desc)
+    parser.formatter_class = CustomFormatter
+    
+    h = """the name of the parameter file, which should have the following parameters:
+            mock_file : str
+                the name of the mock catalog file to load
+            output_file : str
+                the name of the output_file
+            output_fields : list of str
+                the names of the columns holding the coordinates to write
+            output_units : str, {'absolute', 'relative'}
+                the type of output units
+            galaxy_restrict : str, optional
+                string specifying a galaxy selection criterion
+            halo_restrict : str, optional
+                string specifying a halo selection criterion
+            header : list of dict, optional
+                list of dictionary with `line` key specifying each 
+                line to write as a header
+            replace_with_nearest : {str, bool}, optional
+                Replace the values of all collided galaxies with those of the 
+                nearest neighbor on the sky -- this is correcting for 
+                fiber collisions by double counting nearest neighbors
+        """
+    parser.add_argument('param_file', type=str, help=h)
+
+    h = 'either load and save a `HaloMock` or `HODMock` class'
+    parser.add_argument('--type', type=str, choices=['halo', 'galaxy'], required=True, help=h)
+    
+    lib.write_coordinates(**vars(parser.parse_args()))
+    
+
+    
 
