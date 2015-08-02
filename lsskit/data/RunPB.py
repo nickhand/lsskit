@@ -112,7 +112,15 @@ class RunPB(PowerSpectraLoader):
                 
             coords = [['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
             Pgal = SpectraSet.from_files(d, basename, coords, ['sample'])
+            
+            # add the errors
             Pgal.add_errors()
+            crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+            for x in crosses:
+                this_cross = Pgal.sel(sample=x).values
+                k1, k2 = crosses[x]
+                utils.add_errors(this_cross, Pgal.sel(sample=k1).values, Pgal.sel(sample=k2).values)
+                
             setattr(self, '_Pgal_'+space, Pgal)
             return Pgal
     
