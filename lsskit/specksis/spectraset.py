@@ -139,6 +139,7 @@ class SpectraSet(xray.DataArray):
         p1 = p2 = None
         for coord, power in self.nditer():
             power = power.values
+            if 'error' in power: continue
             if power_x1 is not None:
                 coord1 = {k:coord[k] for k in power_x1.dims}
                 p1 = power_x1.loc[coord1].values
