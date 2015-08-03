@@ -1,6 +1,7 @@
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, HaloSpectraSet, utils
 import os
+import pickle
 
 class RunPB(PowerSpectraLoader):
     name = "RunPB"
@@ -171,6 +172,21 @@ class RunPB(PowerSpectraLoader):
             setattr(self, '_gal_biases', biases)
             return biases
     
+    def get_gal_stats(self, filename=None):
+        """
+        Return a dictionary holding the galaxy sample statistics, fractions, etc
+        """
+        try:
+            return self._gal_stats
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/galaxy_sample_stats.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            stats = pickle.load(open(filename, 'r'))
+            setattr(self, '_gal_stats', stats)
+            return stats
     
     def get_halo_biases(self, filename=None):
         """
