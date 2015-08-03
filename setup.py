@@ -11,6 +11,7 @@ setup(
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
+            'save_runPB_galaxy_stats = lsskit.data.__main__:save_runPB_galaxy_stats',
             'compute_fiber_collisions = lsskit.catio.__main__:compute_fiber_collisions',
             'load_mock = lsskit.catio.__main__:load_mock',
             'write_mock_coordinates = lsskit.catio.__main__:write_coordinates',
