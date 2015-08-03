@@ -104,7 +104,7 @@ class MockCatalog(object):
         
         return cls.from_dataframe(df, **meta)
         
-    def to_hdf(filename):
+    def to_hdf(self, filename):
         """
         Write the class out to a HDF5 file
         
