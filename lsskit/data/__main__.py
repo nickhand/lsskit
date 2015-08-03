@@ -1,3 +1,11 @@
+"""
+    __main__.py
+    lsskit.data
+
+    __author__ : Nick Hand
+    __email__  : nhand@berkeley.edu
+    __desc__   : data-related functions to install as console scripts
+"""
 from .. import numpy as np
 import argparse
 
@@ -77,3 +85,4 @@ def save_runPB_galaxy_stats():
             
     # and save
     pickle.dump(toret, open(args.output_file, 'w'))
+        
