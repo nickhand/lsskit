@@ -19,7 +19,7 @@ class RunPB(PowerSpectraLoader):
         PowerSpectraLoader.store_class(cls)  
         
     #--------------------------------------------------------------------------
-    # data accessors
+    # halo data
     #--------------------------------------------------------------------------
     def get_Phh(self, space='real'):
         """
@@ -39,6 +39,26 @@ class RunPB(PowerSpectraLoader):
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
             Phh.add_errors()
             setattr(self, '_Phh_'+space, Phh)
+            return Phh
+            
+    def get_so_Phh(self, space='real'):
+        """
+        Return SO Phh in the space specified, either `real` or `redshift`
+        """
+        try:
+            return getattr(self, '_Phh_'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'halo', space)
+            if space == 'real':
+                basename = 'pk_hh{mass}_so_runPB_%s_{a}.dat' %self.tag
+            else:
+                basename = 'pkmu_hh{mass}_so_runPB_%s_{a}_Nmu5.dat' %self.tag
+                
+            coords = [['0.6452'], self.mass]
+            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phh.add_errors()
+            setattr(self, '_Phh_so_'+space, Phh)
             return Phh
             
     def get_Pmm(self, space='real'):
@@ -81,6 +101,26 @@ class RunPB(PowerSpectraLoader):
             setattr(self, '_Phm_'+space, Phm)
             return Phm
             
+    def get_so_Phm(self, space='real'):
+        """
+        Return SO Phm in the space specified, either `real` or `redshift`
+        """
+        try:
+            return getattr(self, '_Phm_so_'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'halo-matter', space)
+            if space == 'real':
+                basename = 'pk_hm{mass}_so_runPB_%s_{a}.dat' %self.tag
+            else:
+                basename = 'pkmu_hm{mass}_so_runPB_%s_{a}_Nmu5.dat' %self.tag
+                
+            coords = [['0.6452'], self.mass]
+            Phm = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phm.add_errors(self.get_so_Phh(space), self.get_Pmm(space))
+            setattr(self, '_Phm_'+space, Phm)
+            return Phm
+            
     def get_lambda(self, kind='A', space='real', bias_file=None):
         """
         Return the stochasticity 
@@ -95,8 +135,25 @@ class RunPB(PowerSpectraLoader):
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
             return lam
-            
+    
+    def get_so_lambda(self, kind='A', space='real', bias_file=None):
+        """
+        Return the stochasticity 
+        """
+        name = '_lambda%s_so_%s' %(kind, space)
+        try:
+            return getattr(self, name)
+        except AttributeError:
 
+            biases = self.get_so_halo_biases(bias_file)
+            data = HaloSpectraSet(self.get_so_Phh(space), self.get_so_Phm(space), self.get_Pmm(space), biases)
+            lam = data.to_lambda(kind)
+            setattr(self, name, lam)
+            return lam
+        
+    #--------------------------------------------------------------------------
+    # galaxy data
+    #--------------------------------------------------------------------------
     def get_Pgal(self, space='real'):
         """
         Return galaxy component spectra
@@ -111,16 +168,16 @@ class RunPB(PowerSpectraLoader):
             else:
                 basename = 'pkmu_{sample}_runPB_%s_Nmu5.dat' %self.tag
                 
-            coords = [['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['sample'])
+            coords = [['0.6452'], ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
+            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
             
             # add the errors
             Pgal.add_errors()
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
             for x in crosses:
-                this_cross = Pgal.sel(sample=x).values
+                this_cross = Pgal.sel(a='0.6452', sample=x).values
                 k1, k2 = crosses[x]
-                utils.add_errors(this_cross, Pgal.sel(sample=k1).values, Pgal.sel(sample=k2).values)
+                utils.add_errors(this_cross, Pgal.sel(a='0.6452', sample=k1).values, Pgal.sel(a='0.6452', sample=k2).values)
                 
             setattr(self, '_Pgal_'+space, Pgal)
             return Pgal
@@ -139,8 +196,8 @@ class RunPB(PowerSpectraLoader):
             else:
                 basename = 'pkmu_{sample}_x_matter_runPB_%s_Nmu5.dat' %self.tag
             names = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
-            coords = [names]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['sample'])
+            coords = [['0.6452'], names]
+            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
@@ -148,14 +205,17 @@ class RunPB(PowerSpectraLoader):
             auto_names = ['gg', 'cc', 'cAcA', 'cBcB', 'ss', 'sAsA', 'sBsB']
             keys = dict(zip(names, auto_names))
             for k in names:
-                this_cross = Pgal.sel(sample=k).values
-                Pgal_auto = Pgal_autos.sel(sample=keys[k]).values
+                this_cross = Pgal.sel(a='0.6452', sample=k).values
+                Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
                 utils.add_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
             setattr(self, '_Pgal_x_mm_'+space, Pgal)
             return Pgal
     
+    #--------------------------------------------------------------------------
+    # auxiliary data
+    #--------------------------------------------------------------------------
     def get_gal_biases(self, filename=None):
         """
         Return the linear biases of each galaxy sample
@@ -163,12 +223,14 @@ class RunPB(PowerSpectraLoader):
         try:
             return self._gal_biases
         except:
+            import xray
             if filename is None:
                 filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_galaxy_samples.pickle")
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
             biases = utils.load_data_from_file(filename, ['sample'], (7,))
+            biases = xray.DataArray(biases.values[None,:], coords=[['0.6452'], biases['sample'].values], dims=('a', 'sample'))
             setattr(self, '_gal_biases', biases)
             return biases
     
@@ -202,6 +264,22 @@ class RunPB(PowerSpectraLoader):
                     
             biases = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
             setattr(self, '_halo_biases', biases)
+            return biases
+            
+    def get_so_halo_biases(self, filename=None):
+        """
+        Return the SO linear biases of each halo mass bin 
+        """
+        try:
+            return self._so_halo_biases
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_so_halo_mass_bins.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            biases = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            setattr(self, '_so_halo_biases', biases)
             return biases
             
     def get_halo_masses(self, filename=None):
