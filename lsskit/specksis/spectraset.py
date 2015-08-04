@@ -1,7 +1,7 @@
 import xray 
 import itertools
 
-from . import utils, readers
+from . import utils, io
 from .. import numpy as np
 
 class SpectraSet(xray.DataArray):
@@ -71,7 +71,7 @@ class SpectraSet(xray.DataArray):
             
         data = np.empty(map(len, coords), dtype=object)
         for i, f in utils.enum_files(result_dir, basename, dims, coords):
-            data[i] = readers.load_data(f)
+            data[i] = io.load_data(f)
         return SpectraSet(data, coords=coords, dims=dims, **kwargs)
 
 
