@@ -46,7 +46,7 @@ class RunPB(PowerSpectraLoader):
         Return SO Phh in the space specified, either `real` or `redshift`
         """
         try:
-            return getattr(self, '_Phh_'+space)
+            return getattr(self, '_Phh_so_'+space)
         except AttributeError:
             
             d = os.path.join(self.root, 'halo', space)
@@ -229,8 +229,7 @@ class RunPB(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = utils.load_data_from_file(filename, ['sample'], (7,))
-            biases = xray.DataArray(biases.values[None,:], coords=[['0.6452'], biases['sample'].values], dims=('a', 'sample'))
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
             setattr(self, '_gal_biases', biases)
             return biases
     
@@ -278,7 +277,7 @@ class RunPB(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            biases = utils.load_data_from_file(filename, ['a', 'mass'], (1, len(self.mass)))
             setattr(self, '_so_halo_biases', biases)
             return biases
             
