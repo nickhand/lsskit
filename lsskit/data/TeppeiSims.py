@@ -22,7 +22,7 @@ def load_data(data, space, **meta):
     if space == 'redshift':
         Nmu = 5
         power = np.vstack([data[:,2*i+1] for i in range(Nmu)]).T
-        error = np.vstack([data[:,2*i+1] for i in range(Nmu)]).T
+        error = np.vstack([data[:,2*(i+1)] for i in range(Nmu)]).T
         data_dict = {'power' : power, 'error' : error}
         return pkmuresult.PkmuResult(kedges, np.linspace(0, 1, Nmu+1), data_dict, **meta)
     elif space == 'real':
