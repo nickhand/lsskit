@@ -201,12 +201,16 @@ class HaloSpectraSet(xray.Dataset):
         # loop over index
         data = np.empty(self['Phh'].shape, dtype=object)
         for ii, idx in utils.ndenumerate(self.dims, self.coords):
-            
+                        
             # get the data
-            Phh = self.loc[idx]['Phh'].values
-            Phm = self.loc[idx]['Phm'].values
-            Pmm = self.loc[idx]['Pmm'].values
-            b1  = self.loc[idx]['b1'].values
+            Phh = self.loc[idx]['Phh']
+            Phm = self.loc[idx]['Phm']
+            Pmm = self.loc[idx]['Pmm']
+            b1  = self.loc[idx]['b1']
+            
+            if Phh.isnull() or Phm.isnull() or Pmm.isnull() or b1.isnull():
+                continue
+            Phh, Phm, Pmm, b1 = Phh.values, Phm.values, Pmm.values, b1.values
             
             # subtract shot noise
             Phh_noshot = Phh['power'] - Phh.box_size**3/Phh.N1
@@ -239,7 +243,10 @@ class HaloSpectraSet(xray.Dataset):
                 
             data[ii] = power
         
-        return SpectraSet(data, coords=self.coords, dims=self.dims)
+        toret = SpectraSet(data, coords=self.coords, dims=self.dims)
+        for dim in toret.dims:
+            toret = toret.dropna(dim)
+        return toret
                 
             
 
