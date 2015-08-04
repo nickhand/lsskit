@@ -90,26 +90,33 @@ def compute_biases():
     """
     Compute the linear biases from set of cross/auto realspace spectra
     """
-    from lsskit import data as lss_data
+    from lsskit.data import tools
     import pickle
-    
+                    
     # parse the input arguments
     desc = "compute the linear biases from set of cross/auto realspace spectra"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('name', type=str, help='the name of the data to load')
-    parser.add_argument('root_dir', type=str, help="the root directory of the data")
-    parser.add_argument('Pxm_callable', type=str, help="the name of the function return the xm cross data")
-    parser.add_argument('Pmm_callable', type=str, help="the name of the function return the mm auto data")
-    parser.add_argument('-o', '--output', type=str, required=True, help='the name of the output file')
-    parser.add_argument('-X', type=str, help="the path of the data plugin to load")
+    
+    # required arguments
+    h = tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=tools.PowerSpectraParser.data, help=h)
+    h = tools.PowerSpectraCallable.format_help()
+    parser.add_argument('Pxm_callable', type=tools.PowerSpectraCallable.data, help=h)
+    h = tools.PowerSpectraCallable.format_help()
+    parser.add_argument('Pmm_callable', type=tools.PowerSpectraCallable.data, help=h)
+    h = 'the name of the output file'
+    parser.add_argument('-o', '--output', type=str, required=True, help=h)
+    
+    # options
+    h = "only consider a subset of keys; specify as ``-s a = '0.6452', '0.7143'``"
+    parser.add_argument('-s', '--subset', type=str, action=tools.StoreDataKeys, default={}, help=h)
+    h = "aliases to use for the keys; specify as ``--aliases sample = cc:cen, gg:gal"
+    parser.add_argument('--aliases', type=str, action=tools.AliasAction, default={}, help=h)
     args = parser.parse_args()
     
-    # load the data
-    data = lss_data.PowerSpectraLoader.get(args.name, args.root_dir, plugin_path=args.X)
-    
     # the spectra
-    Pxm = getattr(data, args.Pxm_callable)(space='real')
-    Pmm = getattr(data, args.Pmm_callable)(space='real')
+    Pxm = getattr(args.data, args.Pxm_callable['name'])(**args.Pxm_callable['kwargs'])
+    Pmm = getattr(args.data, args.Pmm_callable['name'])(**args.Pmm_callable['kwargs'])
     
     def squeeze(tup):
         if not (len(tup)-1):
@@ -124,7 +131,15 @@ def compute_biases():
     # loop over each
     toret = {}
     for key in Pxm.ndindex():
-        tup = squeeze(tuple(key[k] for k in Pxm.dims))
+        valid = True
+        for k in args.subset:
+            if key[k] not in args.subset[k]:
+                valid = False
+                break
+        if not valid:
+            continue
+            
+        tup = squeeze(list(key[k] for k in Pxm.dims))
         subkey = {k:key[k] for k in Pxm.dims if k in Pmm.dims}
         
         x = Pxm.sel(**key).values
@@ -133,7 +148,14 @@ def compute_biases():
         
         ratio = x['power']/(y['power'] - y_shot)
         b1 = determine_bias(x['k'], ratio)
-        toret[(tup)] = b1
+        
+        # substitute any alias
+        for i, v in enumerate(tup):
+            dim = Pxm.dims[i]
+            if dim in args.aliases:
+                if v in args.aliases[dim]:
+                    tup[i] = args.aliases[dim][v]
+        toret[tuple(tup)] = b1
         
     pickle.dump(toret, open(args.output, 'w'))
         
