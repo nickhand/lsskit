@@ -102,6 +102,7 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
     -----
     The format is:
     Nk [Nmu]
+    col1_name col2_name col3_name
     col1_0 col2_0 col3_0...
     col1_1 col2_1 col3_1...
     ...
@@ -145,19 +146,26 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
     valid = np.ones(data.data.shape, dtype=bool)
     if remove_missing:
         valid = ~data['power'].mask
-    
+    shape = ()
+    if hasattr(data, 'Nmu'):
+        valid = np.all(valid, axis=1)
+        shape += (valid.sum(),)
+        shape += (data.Nmu, )
+    else:
+        shape = (valid.sum(), )
+
     # now output
     with open(filename, 'w') as ff:
         if isinstance(data, pkmuresult.PkmuResult):
-            towrite = map(np.ravel, [data[col][valid] for col in columns])
+            towrite = map(np.ravel, [data[col][valid,...] for col in columns])
             towrite[columns.index('power')] -= Pshot
-            
-            ff.write("{:d} {:d}\n".format(*data.data.shape))
+            ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, zip(*towrite))
         elif isinstance(data, pkresult.PkResult):
-            ff.write("{:d}\n".format(*data.data.shape))
-            np.savetxt(ff, zip(*[data[col][valid] for col in columns]))
+            ff.write("{:d}\n".format(*shape))
+            ff.write(" ".join(columns)+"\n")
+            np.savetxt(ff, zip(*[data[col][valid,...] for col in columns]))
             
             
         
