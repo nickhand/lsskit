@@ -9,6 +9,7 @@ from lsskit import numpy as np
 from lsskit.speckmod.plugins import ModelResultsStorage
 import pandas as pd
 import itertools
+import os
 
 #-------------------------------------------------------------------------------
 def one_sigma(trace):
@@ -45,21 +46,28 @@ class BestfitFunctionStorage(ModelResultsStorage):
     @classmethod
     def register(cls):
         
-        usage = cls.name+":path:index_cols"
+        usage = cls.name+":path:index_cols[:-append]"
         h = cls.add_parser(cls.name, usage=usage)
         h.add_argument("path", type=str, help="the output name")
         h.add_argument("index_cols", type=list_str, 
                 help='the names of the fields to store as columns for later indexing')
+        h.add_argument("-append", action='store_true', default=False, 
+                help='append the results to the output dataframe')
         h.set_defaults(klass=cls)
         
     def __open__(self):
         try:
             return self._output
         except AttributeError:
-            self._output = pd.DataFrame()
+            if os.path.exists(self.path) and self.append:
+                self._output = pd.read_pickle(self.path)
+            else:
+                self._output = pd.DataFrame()
             return self._output
         
     def __finalize__(self):
+        if self.append:
+            self._output = self._output.drop_duplicates(subset=self.index_cols, take_last=True)
         self._output.to_pickle(self.path)
         
     def write(self, key, result):
