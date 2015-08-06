@@ -94,7 +94,7 @@ class BestfitParamGPStorage(ModelResultsStorage):
     @classmethod
     def register(cls):
         
-        args = cls.name+":input:index_cols:param_names:output"
+        args = cls.name+":input:param_names:index_cols:output"
         options = "[:-regr=quadratic][:-random_start=1][:-thetaU= 1 1 1]"
         h = cls.add_parser(cls.name, usage=args+options)
         
@@ -130,9 +130,9 @@ class BestfitParamGPStorage(ModelResultsStorage):
         # get the kwargs for the fit
         kwargs = {}
         kwargs['corr'] = 'squared_exponential'
-        kwargs['theta0'] = 0.1
-        kwargs['thetaL'] = 1e-4
-        kwargs['thetaU'] = self.thetaU
+        kwargs['theta0'] = [0.1]*len(self.index_cols)
+        kwargs['thetaL'] = [1e-4]*len(self.index_cols)
+        kwargs['thetaU'] = [self.thetaU]*len(self.index_cols)
         kwargs['regr'] = self.regr
         kwargs['random_start'] = self.random_start
                     
@@ -165,18 +165,17 @@ class BestfitParamSplineStorage(ModelResultsStorage):
     @classmethod
     def register(cls):
         
-        args = cls.name+":input:index_cols:param_names:output"
+        args = cls.name+":input:param_names:index_cols:output"
         options = "[:-use_errors]"
         h = cls.add_parser(cls.name, usage=args+options)
         
         # arguments
         h.add_argument("input", type=str, help="the name of the input file to read")
-        h.add_argument("index_cols", type=list_str, help="the names of index columns in input file")
         h.add_argument("param_names", type=list_str, help="the names of the parameters to fit")
+        h.add_argument("index_cols", type=list_str, help="the names of index columns in input file")
         h.add_argument("output", type=str, help="the output name")
         
         # options
-        choices = ['constant', 'linear', 'quadratic']
         h.add_argument('-use_errors', action='store_true', default=False, 
                         help='the regression type to use')
         
