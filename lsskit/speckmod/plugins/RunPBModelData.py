@@ -65,7 +65,8 @@ class RunPBModelData(object):
             z = 1./float(key['a']) - 1.
             extra['s8_z'] = self.cosmo.Sigma8_z(z)
             extra['z'] = z
-            extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+            if 'mass' in key:
+                extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
 
             # yield the index, extra dict, and power spectrum
             yield key, extra, self.to_dataframe(key)
@@ -278,3 +279,45 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
         return d1, d2
     
 #------------------------------------------------------------------------------
+class PmmResidualRunPBData(ModelInput, RunPBModelData):
+    """
+    A plugin to return the real-space matter auto spectra data from
+    the runPB simulation across several redshifts and mass bins. The 
+    data that is returned is:
+    
+        :math: y = P_mm(k, z, M) - Pzel(k, z),
+    
+    where Pzel(k,z) is the Zel'dovich matter power spectrum in real-space.
+    """
+    name = 'PmmResidualRunPBData'
+    plugin_type = 'data'
+    variable_str = r"$P^{\ mm} - P_\mathrm{zel}$"
+    
+    def __init__(self, dict):
+        ModelInput.__init__(self, dict)
+        RunPBModelData.__init__(self, dict)
+        
+    def to_dataframe(self, key):
+        
+        # make sure 
+        if not hasattr(self, 'Pzel'):
+            self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
+            
+        # get the power spectrum instance
+        subkey = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**subkey)
+
+        # get the valid entries and subtract Pzel
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        z = 1./float(key['a']) - 1.
+        self.Pzel.SetRedshift(z)
+        d['power'] -= self.Pzel(d['k'])
+                
+        return self._make_dataframe(d)
+    
+    @property
+    def data(self):
+        d = self.all_data.get_Pmm('real')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
