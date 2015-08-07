@@ -1,3 +1,4 @@
+from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, HaloSpectraSet, utils
 import os
@@ -39,6 +40,37 @@ class RunPB(PowerSpectraLoader):
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
             Phh.add_errors()
             setattr(self, '_Phh_'+space, Phh)
+            return Phh
+    
+    def get_Phh_cross(self, space='real'):
+        """
+        Return the Phh cross between different halo bins in the space 
+        specified, either `real` or `redshift`
+        """
+        if space != 'real':
+            raise NotImplementedError("only real-space results exist for Phh_cross")
+        try:
+            return getattr(self, '_Phh_x'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'halo', space)
+            basename = 'pk_hh{mass1}{mass2}_runPB_%s_{a}.dat' %self.tag
+
+            coords = [self.a, range(8), range(3, 8)]
+            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass1', 'mass2'], ignore_missing=True)
+            Phh = Phh.dropna('mass1', 'all')
+            Phh = Phh.dropna('mass2', 'all')
+            
+            # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
+            Phh_auto = self.get_Phh(space=space)
+            for key, cross in Phh.nditer():
+                if cross.isnull(): continue
+                this_cross = cross.values
+                Ph1h1 = Phh_auto.sel(a=key['a'], mass=key['mass1']).values
+                Ph2h2 = Phh_auto.sel(a=key['a'], mass=key['mass2']).values
+                utils.add_errors(this_cross, Ph1h1, Ph2h2)
+                
+            setattr(self, '_Phh_x_'+space, Phh)
             return Phh
             
     def get_so_Phh(self, space='real'):
@@ -135,6 +167,24 @@ class RunPB(PowerSpectraLoader):
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
             return lam
+    
+    
+    def get_lambda_cross(self, kind='A', space='real', bias_file=None):
+        """
+        Return the stochasticity for Phh_cross
+        """
+        name = '_lambda%s_x_%s' %(kind, space)
+        try:
+            return getattr(self, name)
+        except AttributeError:
+
+            biases = self.get_halo_biases(bias_file)
+            mass_keys = {'mass':['mass1', 'mass2']}
+            data = HaloSpectraSet(self.get_Phh_cross(space), self.get_Phm(space), self.get_Pmm(space), biases, mass_keys)
+            lam = data.to_lambda(kind)
+            setattr(self, name, lam)
+            return lam
+    
     
     def get_so_lambda(self, kind='A', space='real', bias_file=None):
         """
