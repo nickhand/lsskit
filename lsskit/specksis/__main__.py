@@ -22,7 +22,7 @@ def write_analysis_file():
     parser.add_argument('data', type=tools.PowerSpectraParser.data, help=h)
     h = tools.PowerSpectraCallable.format_help()
     parser.add_argument('callable', type=tools.PowerSpectraCallable.data, help=h)
-    h = 'the data keys to slice the data on'
+    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
     parser.add_argument('key', type=str, nargs='+', action=tools.StoreDataKeys, help=h)
     h = 'the data columns to write to the file'
     parser.add_argument('--cols', required=True, nargs='+', type=str)
@@ -34,7 +34,7 @@ def write_analysis_file():
     parser.add_argument('--keep_nans', action='store_true', default=False, help=h)
     h = 'whether to subtract the shot noise from the power before writing; default = False'
     parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
-    h = 'bins to reindex into, either in the `k` or `mu` dimensions'
+    h = "bins to reindex into, either in the `k` or `mu` dimensions; specified as k = range(...)"
     parser.add_argument('--reindex', nargs='*', action=tools.ReindexDict, default={}, help=h)
     
     # parse
