@@ -63,7 +63,7 @@ def ndenumerate(dims, coords):
 def is_dict_like(value):
     return hasattr(value, '__getitem__') and hasattr(value, 'keys')
     
-def enum_files(result_dir, basename, dims, coords):
+def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
     """
     A generator to enumerate over all files in `result_dir`,
     starting with `basename`. The string `basename` is formatted
@@ -100,8 +100,11 @@ def enum_files(result_dir, basename, dims, coords):
             yield idx, f
         
         except:
-            message = 'no file found for `%s`\n in directory `%s`' %(basename, result_dir)
-            raise IOError(message)
+            if not ignore_missing:
+                message = 'no file found for `%s`\n in directory `%s`' %(basename, result_dir)
+                raise IOError(message)
+            else:
+                yield idx, None
 
 def add_errors(power, power_x1=None, power_x2=None):
     """
