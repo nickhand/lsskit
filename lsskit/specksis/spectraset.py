@@ -37,7 +37,7 @@ class SpectraSet(xray.DataArray):
         
  
     @classmethod
-    def from_files(cls, result_dir, basename, coords, dims=None, **kwargs):
+    def from_files(cls, result_dir, basename, coords, dims=None, ignore_missing=False, **kwargs):
         """
         Return a SpectraSet instance by loading data from all files in 
         ``result_dir`` with base ``basename``. The filename is formatting using 
@@ -70,8 +70,14 @@ class SpectraSet(xray.DataArray):
             raise ValueError("shape mismatch between supplied `dims` and `coords`")
             
         data = np.empty(map(len, coords), dtype=object)
-        for i, f in utils.enum_files(result_dir, basename, dims, coords):
-            data[i] = io.load_data(f)
+        for i, f in utils.enum_files(result_dir, basename, dims, coords, ignore_missing=ignore_missing):
+            try:
+                data[i] = io.load_data(f)
+            except Exception as e:
+                if ignore_missing:
+                    data[i] = np.nan
+                else:
+                    raise Exception(e)
         return SpectraSet(data, coords=coords, dims=dims, **kwargs)
 
 
@@ -160,7 +166,7 @@ class HaloSpectraSet(xray.Dataset):
     The class also has the ability to output the stochasticity,
     as computed from Phh, Phm, Pmm, and the linear biases.
     """
-    def __init__(self, Phh, Phm, Pmm, bias):
+    def __init__(self, Phh, Phm, Pmm, bias, mass_keys={}):
         """
         Parameters
         ----------
@@ -172,15 +178,23 @@ class HaloSpectraSet(xray.Dataset):
             a ``SpectraSet`` storing the matter auto spectra
         b1  : xray.DataArray
             a ``xray.DataArray`` storing the linear biases
-        """
-        # first add errors
-        Phh.add_errors()
-        Pmm.add_errors()
-        Phm.add_errors(Phh, Pmm)
-        
+        mass_keys : dict
+            a dictionary with a single key specifying the mass column name
+            for the relevant auto spectra, and the matching keys
+            in the cross spectra
+        """        
         # intialize with Phh, Phm, Pmm, and bias
         data = {'Phh':Phh, 'Phm':Phm, 'Pmm':Pmm, 'b1':bias}
         super(HaloSpectraSet, self).__init__(data)
+                
+        if len(mass_keys):
+            self.auto_mass_key = mass_keys.keys()[0]
+            self.cross_mass_keys = mass_keys[self.auto_mass_key]
+            if len(self.cross_mass_keys) != 2:
+                raise ValueError("need exactly 2 keys for cross mass bins")
+        else:
+            self.auto_mass_key = None
+            self.cross_mass_keys = []
                 
     def to_lambda(self, stoch_type):
         """
@@ -200,32 +214,47 @@ class HaloSpectraSet(xray.Dataset):
 
         # loop over index
         data = np.empty(self['Phh'].shape, dtype=object)
-        for ii, idx in utils.ndenumerate(self.dims, self.coords):
-                        
+        for ii, idx in utils.ndenumerate(self['Phh'].dims, self['Phh'].coords):
+            
             # get the data
             Phh = self.loc[idx]['Phh']
             Phm = self.loc[idx]['Phm']
             Pmm = self.loc[idx]['Pmm']
             b1  = self.loc[idx]['b1']
+                             
+            if self.auto_mass_key is not None:
+                key1 = {self.auto_mass_key:idx[self.cross_mass_keys[0]]}
+                key2 = {self.auto_mass_key:idx[self.cross_mass_keys[-1]]}
+                Phm1, Phm2 = Phm.loc[key1], Phm.loc[key2]
+                b1_1, b1_2 = b1.loc[key1], b1.loc[key2]
+            else:
+                Phm1 = Phm2 = Phm
+                b1_1 = b1_2 = b1
             
-            if Phh.isnull() or Phm.isnull() or Pmm.isnull() or b1.isnull():
+            if any(x.isnull() for x in [Phh, Phm1, Phm2, Pmm, b1_1, b1_2]):
                 continue
-            Phh, Phm, Pmm, b1 = Phh.values, Phm.values, Pmm.values, b1.values
+                
+            Phh, Pmm = Phh.values, Pmm.values
+            Phm1, Phm2, b1_1, b1_2 = Phm1.values, Phm2.values, b1_1.values, b1_2.values
             
             # subtract shot noise
-            Phh_noshot = Phh['power'] - Phh.box_size**3/Phh.N1
+            Phh_noshot = Phh['power']
+            if self.auto_mass_key is None:
+                Phh_noshot -= Phh.box_size**3/Phh.N1
             Pmm_noshot = Pmm['power'] - Pmm.box_size**3/Pmm.N1
             
-            # stoch type A
+            # stoch type B uses b1(k)
+            if stoch_type.lower() == 'b':
+                b1_1 = Phm1['power'] / Pmm_noshot
+                b1_2 = Phm2['power'] / Pmm_noshot  
+            lam = Phh_noshot - b1_2*Phm1['power'] - b1_1*Phm2['power'] + b1_1*b1_2*Pmm_noshot
+            
             if stoch_type.lower() == 'a':
-                lam = Phh_noshot - 2*b1*Phm['power'] + b1**2*Pmm_noshot
-                err = (Phh['error']**2 + (2*b1*Phm['error'])**2 + (b1**2*Pmm['error'])**2)**0.5
-            # stoch type B
+                err = (Phh['error']**2 + (b1_1*Phm1['error'])**2 + (b1_2*Phm2['error'])**2 + (b1_1*b1_2*Pmm['error'])**2)**0.5
             elif stoch_type.lower() == 'b':           
-                b1k = Phm['power'] / Pmm_noshot
-                b1k_err = b1k * ((Phm['error']/Phm['power'])**2 + (Pmm['error']/Pmm_noshot)**2)**0.5
-                lam = Phh_noshot - b1k**2 * Pmm_noshot
-                err = (Phh['error']**2 + (2*b1k*Pmm_noshot*b1k_err)**2 + (b1k*Pmm['error'])**2)**0.5
+                b11_err = b1_1 * ((Phm1['error']/Phm1['power'])**2 + (Pmm['error']/Pmm_noshot)**2)**0.5
+                b12_err = b1_2 * ((Phm2['error']/Phm2['power'])**2 + (Pmm['error']/Pmm_noshot)**2)**0.5
+                err = Phh['error'] + (b1_1*b1_2*Pmm_noshot)*((b11_err/b1_1)**2 + (b12_err/b1_2)**2 + (Pmm['error']/Pmm_noshot)**2)**0.5
             else:
                 raise ValueError("stochasticity type not recognized")
 
@@ -243,9 +272,9 @@ class HaloSpectraSet(xray.Dataset):
                 
             data[ii] = power
         
-        toret = SpectraSet(data, coords=self.coords, dims=self.dims)
+        toret = SpectraSet(data, coords=self['Phh'].coords, dims=self['Phh'].dims)
         for dim in toret.dims:
-            toret = toret.dropna(dim)
+            toret = toret.dropna(dim, 'all')
         return toret
                 
             
