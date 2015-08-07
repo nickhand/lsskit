@@ -103,6 +103,7 @@ class SpectraSet(xray.DataArray):
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
+                if val.isnull(): continue
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key
                 
@@ -129,6 +130,7 @@ class SpectraSet(xray.DataArray):
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
+                if val.isnull(): continue
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key, val
             
