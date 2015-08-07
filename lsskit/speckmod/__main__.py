@@ -225,6 +225,10 @@ def compare():
     h += ' the format should be `index_col`:value'
     gp_parser.add_argument('select', type=str, nargs='+', help=h)
     
+    # the interpolation column keys
+    h = 'the names of the the interpolation columns'
+    gp_parser.add_argument('--interp_cols', type=str, nargs='+', default=['s8_z', 'b1'], help=h)
+    
     #--------------------------------------------------------------
     # spline table parser
     #--------------------------------------------------------------
