@@ -219,6 +219,63 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
             d = d.sel(**self.select)
         return d
         
+#------------------------------------------------------------------------------        
+class LambdaBCrossRunPBData(ModelInput, RunPBModelData):
+    """
+    A plugin to return the real-space, type B cross stochasticity data from
+    the runPB simulation across several redshifts and mass bins. 
+    """
+    name = 'LambdaBCrossRunPBData'
+    plugin_type = 'data'
+    variable_str = r"$\Lambda_B^\mathrm{cross}(k)$"
+    
+    def __init__(self, dict):
+        ModelInput.__init__(self, dict)
+        RunPBModelData.__init__(self, dict)
+    
+    def __iter__(self):
+        """
+        Iterate over the simulation data
+        
+        Returns
+        -------
+        (a, mass) : (str, int)
+            the index, specified by the string `a` and int `mass`
+        extra : dict
+            any extra information, stored as a dictionary. contains keys
+            `s8_z` for sigma8(z) and `b1` for the linear bias
+        df : pandas.DataFrame
+            dataframe holding the power as `y` column and error as `error` column
+        """  
+        extra = {}
+        extra['cosmo'] = self.cosmo
+        d = self.data if not isinstance(self.data, (list, tuple)) else self.data[0]
+        for key in d.ndindex():
+            
+            # add z, b1, and sigma8(z) to extra dict
+            z = 1./float(key['a']) - 1.
+            extra['s8_z'] = self.cosmo.Sigma8_z(z)
+            extra['z'] = z
+            extra['b1_1'] = self.biases.sel(a=key['a'], mass=key['mass1']).values.tolist()
+            extra['b1_2'] = self.biases.sel(a=key['a'], mass=key['mass2']).values.tolist()
+            extra['b1'] = (extra['b1_1']*extra['b1_2'])**0.5
+
+            # yield the index, extra dict, and power spectrum
+            yield key, extra, self.to_dataframe(key)
+            
+    def to_dataframe(self, key):
+        key = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**key)
+        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)                
+        return self._make_dataframe(d)
+        
+    @property
+    def data(self):
+        d = self.all_data.get_lambda_cross(space='real', kind='B')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+        
 #------------------------------------------------------------------------------
 class PhmRatioRunPBData(ModelInput, RunPBModelData):
     """
