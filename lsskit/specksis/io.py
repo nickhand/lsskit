@@ -135,9 +135,9 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
     # reindex to different bins?
     if len(reindex):
         if 'k' in reindex:
-            data = data.reindex_k(reindex['k'])
+            data = data.reindex_k(reindex['k'], weights='modes')
         if 'mu' in reindex:
-            data = data.reindex_mu(reindex['mu'])
+            data = data.reindex_mu(reindex['mu'], weights='modes')
     
     # optional values
     Pshot = 0
@@ -166,6 +166,21 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
             ff.write("{:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, zip(*[data[col][valid,...] for col in columns]))
+            
+def read_analysis_file(filename):
+    """
+    Read an ``analysis file`` as output by ``write_analysis_file``
+    """
+    with open(filename, 'r') as ff:
+        shape = tuple(map(int, ff.readline().split()))
+        columns = ff.readline().split()
+        data = np.loadtxt(ff)
+    dtype = [(col, 'f8') for col in columns]
+    toret = np.empty(shape, dtype=dtype)
+    for i, col in enumerate(columns):
+        toret[col] = data[...,i].reshape(shape)
+        
+    return toret
             
             
         
