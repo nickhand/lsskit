@@ -156,9 +156,8 @@ def compare_bestfits(mode, **kwargs):
     if mode == 'gp':
         
         gp = GPModelParams(kwargs['gp_file'])
-        s8_z = df.loc[select, 's8_z']
-        b1 = df.loc[select, 'b1']
-        bestfits = gp.to_dict(s8_z, b1)
+        args = tuple(df.loc[select, col] for col in kwargs['interp_cols'])
+        bestfits = gp.to_dict(*args)
         print "gp bestfit values:\n-------------"
         print "\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems())
         
