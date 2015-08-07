@@ -56,7 +56,7 @@ class RunPB(PowerSpectraLoader):
             d = os.path.join(self.root, 'halo', space)
             basename = 'pk_hh{mass1}{mass2}_runPB_%s_{a}.dat' %self.tag
 
-            coords = [self.a, range(8), range(3, 8)]
+            coords = [self.a, range(8), range(8)]
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass1', 'mass2'], ignore_missing=True)
             Phh = Phh.dropna('mass1', 'all')
             Phh = Phh.dropna('mass2', 'all')
