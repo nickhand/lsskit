@@ -47,9 +47,9 @@ def get_valid_data(data, kmin=None, kmax=None):
     -------
     toret : dict
         dictionary holding the trimmed data arrays, with keys
-        ``k``, ``power``, and optionally, ``error``.
+        ``k``, ``power``, and optionally, ``error`` and ``mu``.
     """
-    columns = ['k', 'power', 'error']
+    columns = ['k', 'mu', 'power', 'error']
     
     valid = ~np.isnan(data['power'])
     if kmin is not None:
