@@ -18,18 +18,21 @@ def one_sigma(trace):
     return [vals[2] - vals[0], vals[0] - vals[1]]
 
 #-------------------------------------------------------------------------------
-def get_one_sigma_errs(ks, params, model, **kwargs):
+def get_one_sigma_errs(indep_vars, params, model, **kwargs):
     """
     Return the function mean and 1-sigma error at each `k` value
     """         
     data = {name : params[name] for name in params.columns}
     data.update(kwargs)
-    def function(data, k=None):
-        values = model(k, **data)
+    def function(data, **indep_vars):
+        data.update(indep_vars)
+        values = model(**data)
         errs = one_sigma(values)
         return 0.5*(errs[0] + errs[1])
-        
-    return np.array([function(data, k=k) for k in ks])
+    
+    names = indep_vars.keys()    
+    indep_vars = np.vstack([v for v in indep_vars.values()]).T
+    return np.array([function(data, **dict(zip(names, row))) for row in indep_vars])
 
 #-------------------------------------------------------------------------------
 def list_str(value):
@@ -97,13 +100,15 @@ class BestfitFunctionStorage(ModelResultsStorage):
             params = np.vstack(traces).T
             params = pd.DataFrame(params, columns=names+other_names)
             extra_kwargs = getattr(result.model, 'extra_kwargs', {})
-            mean_errs = get_one_sigma_errs(ks, params, result.model.func, **extra_kwargs)
+            
+            mean_errs = get_one_sigma_errs(result.indep_vars, params, result.model.eval, **extra_kwargs)
             
             # append to the output frame
             d = {k:np.repeat(key[k], len(ks)) for k in self.index_cols}
             d['mean'] = mu
             d['error'] = mean_errs
-            d['k'] = ks
+            for x in result.indep_vars:
+                d[x] = result.indep_vars[x]
             self._output = output.append(pd.DataFrame(d))
             
 
