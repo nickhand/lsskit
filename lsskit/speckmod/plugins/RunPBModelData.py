@@ -10,6 +10,7 @@ from lsskit.speckmod.plugins import ModelInput
 from lsskit import data as lss_data, numpy as np
 from lsskit.speckmod import tools
 
+from pyRSD.rsd import power_halo
 from pyRSD import pygcl
 import pandas as pd
 import argparse
@@ -59,6 +60,7 @@ class RunPBModelData(object):
         extra = {}
         extra['cosmo'] = self.cosmo
         d = self.data if not isinstance(self.data, (list, tuple)) else self.data[0]
+
         for key in d.ndindex():
             
             # add z, b1, and sigma8(z) to extra dict
@@ -67,6 +69,7 @@ class RunPBModelData(object):
             extra['z'] = z
             if 'mass' in key:
                 extra['b1'] = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+            extra['Phalo'] = getattr(self, 'Phalo', None)
 
             # yield the index, extra dict, and power spectrum
             yield key, extra, self.to_dataframe(key)
@@ -378,3 +381,59 @@ class PmmResidualRunPBData(ModelInput, RunPBModelData):
         if self.select is not None:
             d = d.sel(**self.select)
         return d
+    
+#------------------------------------------------------------------------------    
+class HaloPkmuRunPBData(ModelInput, RunPBModelData):
+    """
+    A plugin to return the redshift-space halo-halo auto spectra data
+    (shot-noise subtracted) from the runPB simulation across several redshifts 
+    and mass bins.
+    """    
+    name = 'HaloPkmuRunPBData'
+    plugin_type = 'data'
+    variable_str = r"$P^{\ hh}(k, \mu)$"
+    
+    def __init__(self, dict):
+        ModelInput.__init__(self, dict)
+        RunPBModelData.__init__(self, dict)
+             
+    @property
+    def Phalo(self):
+        try:
+            return self._Phalo
+        except:
+            kwargs = {}
+            kwargs['z'] = 0.
+            kwargs['cosmo'] = self.cosmo.GetParamFile()
+            kwargs['include_2loop'] = False
+            kwargs['transfer_fit'] = "CLASS"
+            kwargs['max_mu'] = 4
+            kwargs['sigmav_from_sims'] = False
+            kwargs['interpolate'] = True
+            self._Phalo = power_halo.HaloSpectrum(**kwargs)
+            return self._Phalo
+                    
+    def to_dataframe(self, key):
+        
+        # get the power spectrum instance
+        subkey = {k:key[k] for k in key if k in self.data.dims}
+        p = self.data.sel(**subkey).values
+        Pshot = p.box_size**3 / p.N1
+        
+        # get the valid entries
+        d = tools.get_valid_data(p, kmin=self.kmin, kmax=self.kmax)
+        d['power'] -= Pshot
+        
+        return self._make_dataframe(d)
+        
+    def _make_dataframe(self, d):
+        df = pd.DataFrame(data={'y':d['power'], 'error':d['error'], 'k':d['k'], 'mu':d['mu']})
+        return df.set_index(['k', 'mu'])        
+        
+    @property
+    def data(self):
+        d = self.all_data.get_Phh('redshift')
+        if self.select is not None:
+            d = d.sel(**self.select)
+        return d
+
