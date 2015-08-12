@@ -29,7 +29,8 @@ class HaloPkmuModel(lmfit.Model, ModelInput):
         Phalo.f = Phalo.cosmo.f_z(Phalo.z)
         Phalo.b1 = kwargs['b1']
         
-        return Phalo.power(k, mu) + A * mu**6 * Phalo.P_mu6(k)
+        toret = Phalo.P_mu0(k) + mu**2 * Phalo.P_mu2(k) + mu**4 * Phalo.P_mu4(k) + A * mu**6 * Phalo.P_mu6(k)
+        return toret
         
         
     
