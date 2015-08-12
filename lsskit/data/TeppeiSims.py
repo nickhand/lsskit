@@ -18,15 +18,19 @@ def load_data(data, space, **meta):
     dk = 0.5*np.diff(k)
     kedges[0], kedges[-1] = k[0]-dk[0], k[-1]+dk[-1]
     kedges[1:-1] = k[1:]-dk
+    factor = 1./12**0.5
     
     if space == 'redshift':
         Nmu = 5
+        muedges = np.linspace(0, 1, Nmu+1)
+        mu = 0.5*(muedges[1:] + muedges[:-1])
+        k, mu = np.broadcast_arrays(k[...,None], mu[None,...])
         power = np.vstack([data[:,2*i+1] for i in range(Nmu)]).T
         error = np.vstack([data[:,2*(i+1)] for i in range(Nmu)]).T
-        data_dict = {'power' : power, 'error' : error}
-        return pkmuresult.PkmuResult(kedges, np.linspace(0, 1, Nmu+1), data_dict, **meta)
+        data_dict = {'power':power, 'error':error*factor, 'k':k, 'mu':mu}
+        return pkmuresult.PkmuResult(kedges, muedges, data_dict, **meta)
     elif space == 'real':
-        data_dict = {'power' : data[:,-2], 'error' : data[:,-1], 'k':k}
+        data_dict = {'power' : data[:,-2], 'error' : data[:,-1]*factor, 'k':k}
         return pkresult.PkResult(kedges, data_dict, **meta)
     else:
         raise ValueError
@@ -237,6 +241,18 @@ class TeppeiSims(PowerSpectraLoader):
             biases = xray.DataArray(data, coords=[samples], dims=['sample'])
             setattr(self, '_gal_biases', biases)
             return biases
+            
+    def get_gal_stats(self):
+        """
+        Return a dictionary holding the galaxy sample statistics, fractions, etc
+        """
+        try:
+            return self._gal_stats
+        except:
+            toret = {}
+            toret['mean'] = {'N_tot':1.5e7, 'fs':0.123, 'fsB':0.432, 'fcB':0.104, 'NcBs':1./2.77e-5, 'NsBsB':1.19e5}
+            setattr(self, '_gal_stats', toret)
+            return toret
 
 
     def get_halo_biases(self):
