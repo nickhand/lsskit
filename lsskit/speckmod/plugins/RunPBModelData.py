@@ -403,13 +403,13 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
             return self._Phalo
         except:
             kwargs = {}
-            kwargs['z'] = 0.
+            kwargs['z'] = 0.55
             kwargs['cosmo'] = self.cosmo.GetParamFile()
             kwargs['include_2loop'] = False
             kwargs['transfer_fit'] = "CLASS"
-            kwargs['max_mu'] = 4
+            kwargs['max_mu'] = 6
             kwargs['sigmav_from_sims'] = False
-            kwargs['interpolate'] = True
+            kwargs['interpolate'] = False
             self._Phalo = power_halo.HaloSpectrum(**kwargs)
             return self._Phalo
                     
