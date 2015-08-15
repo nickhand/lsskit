@@ -69,9 +69,10 @@ def perform_fit():
     # loop over the data
     for key, extra, data_df in data:
         
-        key_str = '_'.join(map(str,key.values()))
-        print "Fitting bin %s" %(", ".join("%s=%s" %(k,str(v)) for k,v in key.iteritems()))
-        print "____________________________"
+        if key is not None:
+            key_str = '_'.join(map(str,key.values()))
+            print "Fitting bin %s" %(", ".join("%s=%s" %(k,str(v)) for k,v in key.iteritems()))
+            print "____________________________"
 
         # do the fit
         kwargs = {}
@@ -89,6 +90,7 @@ def perform_fit():
             result.summarize_fit(to_screen=True)
 
         # save the output
+        if key is None: key = {}
         for output in outputs:
             output.write(dict(key, **extra), result)
         

@@ -104,7 +104,11 @@ class BestfitFunctionStorage(ModelResultsStorage):
             mean_errs = get_one_sigma_errs(result.indep_vars, params, result.model.eval, **extra_kwargs)
             
             # append to the output frame
-            d = {k:np.repeat(key[k], len(ks)) for k in self.index_cols}
+            d = {}
+            if key is not None:
+                for k in self.index_cols:
+                    if k in key:
+                        d[k] = np.repeat(key[k], len(ks))
             d['mean'] = mu
             d['error'] = mean_errs
             for x in result.indep_vars:

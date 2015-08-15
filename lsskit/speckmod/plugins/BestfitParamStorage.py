@@ -63,7 +63,9 @@ class BestfitParamStorage(ModelResultsStorage):
             
             # make a new dataframe and save
             d = dict(zip(columns, data))
-            d.update({k:key[k] for k in self.index_cols})
+            if key is not None:
+                for k in self.index_cols:
+                    if k in key: d[k] = key[k]
             for k in d:
                 d[k] = np.array(d[k], ndmin=1)
             self._output = output.append(pd.DataFrame(d, index=[len(self._output)]))
