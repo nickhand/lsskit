@@ -72,7 +72,7 @@ class TeppeiSims(PowerSpectraLoader):
             for i in range(len(redshifts)):
                 for j in range(len(mass_bins)):
                     args = {'mass':mass_bins[j], 'z':redshifts[i]}
-                    meta['N1'] = meta['N2'] = meta['box_size'] / Pshot[i][j]
+                    meta['N1'] = meta['N2'] = meta['box_size']**3 / Pshot[i][j]
                     
                     filename = os.path.join(d, basename.format(**args))
                     if os.path.exists(filename):
