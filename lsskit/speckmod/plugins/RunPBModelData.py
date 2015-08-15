@@ -38,6 +38,7 @@ class RunPBModelData(object):
         # load all the data and auxilliary info
         self.all_data = lss_data.PowerSpectraLoader.get('RunPB', self.path)
         self.biases = self.all_data.get_halo_biases()
+        self.masses = self.all_data.get_halo_masses()
         self.cosmo = pygcl.Cosmology("runPB.ini")
             
     def _make_dataframe(self, d):
@@ -436,4 +437,86 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
         if self.select is not None:
             d = d.sel(**self.select)
         return d
+
+
+#------------------------------------------------------------------------------
+class PhmResidualAllRunPBData(ModelInput, RunPBModelData):
+    """
+    A plugin to return the real-space halo-matter cross spectra data from
+    the runPB simulation across several redshifts and mass bins. The 
+    data that is returned is:
+    
+        :math: y = P_hm(k, z, M) - b_1 * Pzel(k, z),
+    
+    where Pzel(k,z) is the Zel'dovich matter power spectrum in real-space.
+    """
+    name = 'PhmResidualAllRunPBData'
+    plugin_type = 'data'
+    variable_str = r"$P^{\ hm} - b_1 \ P_\mathrm{zel}$"
+    
+    def __init__(self, dict):
+        ModelInput.__init__(self, dict)
+        RunPBModelData.__init__(self, dict)
+        
+    def to_dataframe(self, *args, **kwargs):
+        
+        d = self.data
+        out = pd.DataFrame()
+        
+        # make sure 
+        if not hasattr(self, 'Pzel'):
+            self.Pzel = pygcl.ZeldovichP00(self.cosmo, 0.)
+        
+        for key in self.data.ndindex():
+            
+            # add z, b1, and sigma8(z) to extra dict
+            z = 1./float(key['a']) - 1.
+            s8_z = self.cosmo.Sigma8_z(z)
+            b1 = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
+            M = self.masses.sel(a=key['a'], mass=key['mass']).values.tolist()
+            
+            # get the power spectrum instance
+            subkey = {k:key[k] for k in key if k in self.data.dims}
+            p = self.data.sel(**subkey)
+            
+            # valid data
+            d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+            self.Pzel.SetRedshift(z)
+            
+            # make the tmp DF
+            tmp = pd.DataFrame()
+            tmp['k'] = d['k']
+            tmp['y'] = d['power'] - b1*self.Pzel(d['k'])
+            tmp['error'] = d['error']
+            tmp['s8_z'] = np.repeat(s8_z, len(d['k']))
+            tmp['M'] = np.repeat(M, len(d['k']))
+            tmp['z'] = np.repeat(z, len(d['k']))
+            out = out.append(tmp)
+                       
+        return out.set_index(['z', 's8_z', 'M', 'k'])    
+    
+    @property
+    def data(self):
+        d = self.all_data.get_Phm('real')
+        return d
+        
+    def __iter__(self):
+        """
+        Iterate over the simulation data
+        
+        Returns
+        -------
+        (a, mass) : (str, int)
+            the index, specified by the string `a` and int `mass`
+        extra : dict
+            any extra information, stored as a dictionary. contains keys
+            `s8_z` for sigma8(z) and `b1` for the linear bias
+        df : pandas.DataFrame
+            dataframe holding the power as `y` column and error as `error` column
+        """  
+        extra = {}
+        extra['cosmo'] = self.cosmo
+        extra['rho_bar'] = self.cosmo.rho_bar_z(0.)
+        yield None, extra, self.to_dataframe()
+    
 
