@@ -139,6 +139,7 @@ def gal_to_halo_samples(**kwargs):
     Output halo samples matching the mass pdf of galaxy samples
     """
     import pandas as pd
+    import numpy as np
     
     # load
     gals = HODMock.from_hdf(kwargs['galaxy_file'])
