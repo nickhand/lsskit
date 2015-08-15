@@ -127,6 +127,33 @@ def write_coordinates():
     parser.add_argument('--type', type=str, choices=['halo', 'galaxy'], required=True, help=h)
     
     lib.write_coordinates(**vars(parser.parse_args()))
+
+def gal_to_halo_samples():
+    """
+    Output halo samples matching the mass pdf of galaxy samples
+    """
+    import argparse
+    desc = 'output halo samples matching the mass pdf of galaxy samples'
+    parser = argparse.ArgumentParser(description=desc)
+
+    h = 'the name of the HDF file holding the full galaxy sample'
+    parser.add_argument('galaxy_file', type=str, help=h)
+    h = 'the name of the HDF file holding the full halo sample'
+    parser.add_argument('halo_file', type=str, help=h)
+    h = 'the name of the output HDF file'
+    parser.add_argument('output', type=str, help=h)
+
+    lib.gal_to_halo_samples(**vars(parser.parse_args()))
+
+    
+    
+    
+    
+    
+
+
+
+
     
 
     
