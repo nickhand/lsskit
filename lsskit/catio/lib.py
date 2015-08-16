@@ -156,16 +156,16 @@ def gal_to_halo_samples(**kwargs):
     gals.restrict_halos("N_sat > 0")
     cenB_masses = gals.sample.mass
 
-    # get indices of "cenA" halos
-    halos.restrict_by_mass_pdf(cenA_masses)
-    cenA_inds = halos.sample.index
+    # get indices of "cenB" halos
+    halos.restrict_by_mass_pdf(cenB_masses)
+    cenB_inds = halos.sample.index
 
     # now do cenB from all other halos
     halos.clear_restrictions()
-    other_inds = halos.sample.index.drop(cenA_inds)
+    other_inds = halos.sample.index.drop(cenB_inds)
     halos.restrict_by_index(other_inds)
-    halos.restrict_by_mass_pdf(cenB_masses)
-    cenB_inds = halos.sample.index
+    halos.restrict_by_mass_pdf(cenA_masses)
+    cenA_inds = halos.sample.index
 
     # now do satA and satB
     gals.clear_restrictions()
@@ -174,7 +174,7 @@ def gal_to_halo_samples(**kwargs):
     satA_inds, satB_inds = [], []
     for N_sat in gals.sample.N_sat.unique()[::-1]:
         if N_sat < 1: continue
-        print "N_sat = ", N_sat
+
         gals.clear_restrictions()
         gals.restrict_halos("N_sat == %d" %N_sat)
         gals.restrict_galaxies("type == satellite")
