@@ -111,7 +111,15 @@ class RunPBHalo(PowerSpectraLoader):
                 
             coords = [['0.6452'], ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            
+            # add the errors
             Phh.add_errors()
+            crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+            for x in crosses:
+                this_cross = Phh.sel(a='0.6452', sample=x).values
+                k1, k2 = crosses[x]
+                utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
+                
             setattr(self, '_Phh_fof_gal_'+space, Phh)
             return Phh
                         
@@ -237,7 +245,15 @@ class RunPBHalo(PowerSpectraLoader):
                 
             coords = [['0.6452'], ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
             Phh = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            
+            # add the errors
             Phh.add_errors()
+            crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+            for x in crosses:
+                this_cross = Phh.sel(a='0.6452', sample=x).values
+                k1, k2 = crosses[x]
+                utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
+            
             setattr(self, '_Phh_so_gal_'+space, Phh)
             return Phh
                         
@@ -341,6 +357,38 @@ class RunPBHalo(PowerSpectraLoader):
                     
             biases = utils.load_data_from_file(filename, ['a', 'mass'], (1, len(self.mass)))
             setattr(self, '_so_halo_biases', biases)
+            return biases
+            
+    def get_so_gal_halo_biases(self, filename=None):
+        """
+        Return the SO linear biases of each halo mass bin, matched to the galaxy sample
+        """
+        try:
+            return self._so_gal_halo_biases
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_so_gal_halo_mass_bins.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
+            setattr(self, '_so_gal_halo_biases', biases)
+            return biases
+            
+    def get_fof_gal_halo_biases(self, filename=None):
+        """
+        Return the FoF linear biases of each halo mass bin, matched to the galaxy sample
+        """
+        try:
+            return self._fof_gal_halo_biases
+        except:
+            if filename is None:
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_fof_gal_halo_mass_bins.pickle")
+                if not os.path.exists(filename):
+                    raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
+                    
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
+            setattr(self, '_fof_gal_halo_biases', biases)
             return biases
     
     def get_fof_halo_masses(self, filename=None):
