@@ -2,8 +2,20 @@ import xray
 import itertools
 
 from . import utils, io
-from ..data import tools
 from .. import numpy as np
+
+def get_Pshot(power):
+    """
+    Return the shot noise from a power spectrum instance
+    """
+    if hasattr(power, 'volume'):
+        return power.volume / power.N1
+    elif hasattr(power, 'box_size'):
+        return power.box_size**3 / power.N1
+    elif all(hasattr(power, x) for x in ['Lx', 'Ly', 'Lz']):
+        return power.Lx*power.Ly*power.Lz / power.N1
+    else:
+        raise ValueError("cannot compute shot noise")
 
 class SpectraSet(xray.DataArray):
     """
@@ -243,8 +255,8 @@ class HaloSpectraSet(xray.Dataset):
             # subtract shot noise
             Phh_noshot = Phh['power'].copy()
             if self.auto_mass_key is None:
-                Phh_noshot -= tools.get_Pshot(Phh)
-            Pmm_noshot = Pmm['power'].copy() - tools.get_Pshot(Pmm)
+                Phh_noshot -= get_Pshot(Phh)
+            Pmm_noshot = Pmm['power'].copy() - get_Pshot(Pmm)
             
             # stoch type B uses b1(k)
             if stoch_type.lower() == 'b':

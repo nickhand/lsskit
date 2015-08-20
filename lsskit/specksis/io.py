@@ -9,6 +9,19 @@
 from nbodykit import files, pkresult, pkmuresult, plugins
 from .. import numpy as np
 
+def get_Pshot(power):
+    """
+    Return the shot noise from a power spectrum instance
+    """
+    if hasattr(power, 'volume'):
+        return power.volume / power.N1
+    elif hasattr(power, 'box_size'):
+        return power.box_size**3 / power.N1
+    elif all(hasattr(power, x) for x in ['Lx', 'Ly', 'Lz']):
+        return power.Lx*power.Ly*power.Lz / power.N1
+    else:
+        raise ValueError("cannot compute shot noise")
+        
 #------------------------------------------------------------------------------
 # readers
 #------------------------------------------------------------------------------
@@ -129,8 +142,6 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
     # checks and balances
     if 'error' not in data:
         raise RuntimeError("probably not a good idea to write a data file with no errors")
-    if subtract_shot_noise and (not hasattr(data, 'box_size') or not hasattr(data, 'N1')):
-        raise RuntimeError("can't subtract shot noise without ``box_size`` and ``N1`` attributes")
     
     # reindex to different bins?
     if len(reindex):
@@ -142,7 +153,7 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
     # optional values
     Pshot = 0
     if subtract_shot_noise:
-        Pshot = data.box_size**3 / data.N1
+        Pshot = get_Pshot(data)
     valid = np.ones(data.data.shape, dtype=bool)
     if remove_missing:
         valid = ~data['power'].mask
