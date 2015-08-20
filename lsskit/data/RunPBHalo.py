@@ -8,7 +8,7 @@ class RunPBHalo(PowerSpectraLoader):
     Class to return the halo-related data for the RunPB simulations
     """
     name = "RunPBHalo"
-    a = ['0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
+    a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
     mass = range(8)
     
     def __init__(self, root, realization='10mean'):
@@ -72,7 +72,7 @@ class RunPBHalo(PowerSpectraLoader):
         if space != 'real':
             raise NotImplementedError("only real-space results exist for Phh_cross")
         try:
-            return getattr(self, '_Phh_x'+space)
+            return getattr(self, '_Phh_x_'+space)
         except AttributeError:
             
             d = os.path.join(self.root, 'halo', space)
@@ -183,14 +183,14 @@ class RunPBHalo(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            biases = self.get_halo_biases(bias_file)
+            biases = self.get_fof_halo_biases(bias_file)
             data = HaloSpectraSet(self.get_fof_Phh(space), self.get_fof_Phm(space), self.get_Pmm(space), biases)
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
             return lam
     
     
-    def get_lambda_cross(self, kind='A', space='real', bias_file=None):
+    def get_fof_lambda_cross(self, kind='A', space='real', bias_file=None):
         """
         Return the stochasticity for Phh_cross
         """
@@ -199,7 +199,7 @@ class RunPBHalo(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            biases = self.get_halo_biases(bias_file)
+            biases = self.get_fof_halo_biases(bias_file)
             mass_keys = {'mass':['mass1', 'mass2']}
             data = HaloSpectraSet(self.get_fof_Phh_cross(space), self.get_fof_Phm(space), self.get_Pmm(space), biases, mass_keys)
             lam = data.to_lambda(kind)
@@ -306,7 +306,7 @@ class RunPBHalo(PowerSpectraLoader):
             coords = [['0.6452'], self.mass]
             Phm = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
             Phm.add_errors(self.get_so_Phh(space), self.get_Pmm(space))
-            setattr(self, '_Phm_'+space, Phm)
+            setattr(self, '_Phm_so_'+space, Phm)
             return Phm
     
     def get_so_lambda(self, kind='A', space='real', bias_file=None):
