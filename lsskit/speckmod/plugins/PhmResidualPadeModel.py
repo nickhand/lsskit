@@ -18,7 +18,7 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
     @classmethod
     def register(cls):
         h = cls.add_parser(cls.name, usage=cls.name)
-        h.add_argument("--fit_R", help="whether or not to fit R parameter", action='store_true')
+        h.add_argument("-fit_R", help="whether or not to fit R parameter", action='store_true')
         h.set_defaults(klass=cls)
         
     def R_dm(self, s8_z):

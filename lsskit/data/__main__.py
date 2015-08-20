@@ -7,6 +7,7 @@
     __desc__   : data-related functions to install as console scripts
 """
 from .. import numpy as np
+from . import tools
 import argparse
 
 def save_runPB_galaxy_stats():
@@ -144,7 +145,7 @@ def compute_biases():
         
         x = Pxm.sel(**key).values
         y = Pmm.sel(**subkey).values
-        y_shot = y.box_size**3 / y.N1
+        y_shot = tools.get_Pshot(y)
         
         ratio = x['power']/(y['power'] - y_shot)
         b1 = determine_bias(x['k'], ratio)

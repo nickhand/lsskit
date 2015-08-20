@@ -2,6 +2,7 @@ import xray
 import itertools
 
 from . import utils, io
+from ..data import tools
 from .. import numpy as np
 
 class SpectraSet(xray.DataArray):
@@ -240,15 +241,15 @@ class HaloSpectraSet(xray.Dataset):
             Phm1, Phm2, b1_1, b1_2 = Phm1.values, Phm2.values, b1_1.values, b1_2.values
             
             # subtract shot noise
-            Phh_noshot = Phh['power']
+            Phh_noshot = Phh['power'].copy()
             if self.auto_mass_key is None:
-                Phh_noshot -= Phh.box_size**3/Phh.N1
-            Pmm_noshot = Pmm['power'] - Pmm.box_size**3/Pmm.N1
+                Phh_noshot -= tools.get_Pshot(Phh)
+            Pmm_noshot = Pmm['power'].copy() - tools.get_Pshot(Pmm)
             
             # stoch type B uses b1(k)
             if stoch_type.lower() == 'b':
-                b1_1 = Phm1['power'] / Pmm_noshot
-                b1_2 = Phm2['power'] / Pmm_noshot  
+                b1_1 = Phm1['power'].copy() / Pmm_noshot
+                b1_2 = Phm2['power'].copy() / Pmm_noshot  
             lam = Phh_noshot - b1_2*Phm1['power'] - b1_1*Phm2['power'] + b1_1*b1_2*Pmm_noshot
             
             if stoch_type.lower() == 'a':

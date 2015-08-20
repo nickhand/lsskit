@@ -8,7 +8,7 @@
 
 from lsskit.speckmod.plugins import ModelInput
 from lsskit import data as lss_data, numpy as np
-from lsskit.speckmod import tools
+from lsskit.data import tools
 
 from pyRSD.rsd import power_halo
 from pyRSD import pygcl
@@ -36,9 +36,9 @@ class RunPBModelData(object):
     def __init__(self, dict):
   
         # load all the data and auxilliary info
-        self.all_data = lss_data.PowerSpectraLoader.get('RunPB', self.path)
-        self.biases = self.all_data.get_halo_biases()
-        self.masses = self.all_data.get_halo_masses()
+        self.all_data = lss_data.PowerSpectraLoader.get('RunPBHalo', self.path)
+        self.biases = self.all_data.get_fof_halo_biases()
+        self.masses = self.all_data.get_fof_halo_masses()
         self.cosmo = pygcl.Cosmology("runPB.ini")
             
     def _make_dataframe(self, d):
@@ -84,7 +84,7 @@ class RunPBModelData(object):
         h.add_argument("path", type=str, help="the root directory of the data")
         h.add_argument('-kmin', type=float, help='the minimum wavenumber in h/Mpc to fit')
         h.add_argument('-kmax', type=float, help='the maximum wavenumber in h/Mpc to fit')
-        h.add_argument('-select', action=SelectAction, help='the maximum wavenumber in h/Mpc to fit')
+        h.add_argument('-select', type=str, action=SelectAction, help='the maximum wavenumber in h/Mpc to fit')
         h.set_defaults(klass=cls)
         
 #------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         # get the power spectrum instance
         subkey = {k:key[k] for k in key if k in self.data.dims}
         p = self.data.sel(**subkey).values
-        Pshot = p.box_size**3 / p.N1
+        Pshot = tools.get_Pshot(p)
         
         # get the valid entries
         d = tools.get_valid_data(p, kmin=self.kmin, kmax=self.kmax)
@@ -117,7 +117,7 @@ class PhhRunPBData(ModelInput, RunPBModelData):
         
     @property
     def data(self):
-        d = self.all_data.get_Phh('real')
+        d = self.all_data.get_fof_Phh('real')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -164,7 +164,7 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
     
     @property
     def data(self):
-        d = self.all_data.get_Phm('real')
+        d = self.all_data.get_fof_Phm('real')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -191,7 +191,7 @@ class LambdaARunPBData(ModelInput, RunPBModelData):
     
     @property
     def data(self):
-        d = self.all_data.get_lambda(space='real', kind='A')
+        d = self.all_data.get_fof_lambda(space='real', kind='A')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -218,7 +218,7 @@ class LambdaBRunPBData(ModelInput, RunPBModelData):
         
     @property
     def data(self):
-        d = self.all_data.get_lambda(space='real', kind='B')
+        d = self.all_data.get_fof_lambda(space='real', kind='B')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -275,7 +275,7 @@ class LambdaBCrossRunPBData(ModelInput, RunPBModelData):
         
     @property
     def data(self):
-        d = self.all_data.get_lambda_cross(space='real', kind='B')
+        d = self.all_data.get_fof_lambda_cross(space='real', kind='B')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -317,7 +317,7 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
         # select valid data and subtract shot noise
         x = tools.get_valid_data(Phm, kmin=self.kmin, kmax=self.kmax)
         y = tools.get_valid_data(Pmm, kmin=self.kmin, kmax=self.kmax)
-        y['power'] -= Pmm.box_size**3 / Pmm.N1
+        y['power'] -= tools.get_Pshot(Pmm)
         
         sim_ratio = x['power']/(b1*y['power']) - 1.
         sim_err = (x['power']/y['power']/b1)*((y['error']/y['power'])**2 + (x['error']/x['power'])**2)**0.5
@@ -327,7 +327,7 @@ class PhmRatioRunPBData(ModelInput, RunPBModelData):
     @property
     def data(self):
         # Phm
-        d1 = self.all_data.get_Phm('real')
+        d1 = self.all_data.get_fof_Phm('real')
         if self.select is not None:
             d1 = d1.sel(**self.select)
             
@@ -419,7 +419,7 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
         # get the power spectrum instance
         subkey = {k:key[k] for k in key if k in self.data.dims}
         p = self.data.sel(**subkey).values
-        Pshot = p.box_size**3 / p.N1
+        Pshot = tools.get_Pshot(p)
         
         # get the valid entries
         d = tools.get_valid_data(p, kmin=self.kmin, kmax=self.kmax)
@@ -433,7 +433,7 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
         
     @property
     def data(self):
-        d = self.all_data.get_Phh('redshift')
+        d = self.all_data.get_fof_Phh('redshift')
         if self.select is not None:
             d = d.sel(**self.select)
         return d
@@ -497,7 +497,7 @@ class PhmResidualAllRunPBData(ModelInput, RunPBModelData):
     
     @property
     def data(self):
-        d = self.all_data.get_Phm('real')
+        d = self.all_data.get_fof_Phm('real')
         return d
         
     def __iter__(self):

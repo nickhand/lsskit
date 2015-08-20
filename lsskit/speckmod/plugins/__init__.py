@@ -22,7 +22,6 @@ class ModelInput:
     @classmethod
     def parse(cls, string): 
         words = string.split(':')
-        
         ns = cls.parser.parse_args(words)
         klass = ns.klass
         d = ns.__dict__
