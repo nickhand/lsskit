@@ -10,7 +10,7 @@ from lsskit.data import PowerSpectraLoader
 import argparse
 from .. import numpy as np
 
-def compute_pkmu_covariance(data, kbins=None, mubins=None, kmin=-np.inf, kmax=np.inf):
+def compute_pkmu_covariance(data, dk=None, kmin=-np.inf, kmax=np.inf):
     """
     Compute covariance matrix of P(k,mu) measurements
     
@@ -18,10 +18,8 @@ def compute_pkmu_covariance(data, kbins=None, mubins=None, kmin=-np.inf, kmax=np
     ----------
     data : SpectraSet
         a set of PkmuResult objects to compute the covariance from
-    kbins : int or array_like, optional
-        re-index the measurements using these k-bins
-    mubins : int or array_like, optional
-        re-index the measurements using these mu-bins
+    dk : float, optional
+        re-index the measurements using this k spacing
     kmin : float or array_like
         the minimum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
@@ -50,11 +48,9 @@ def compute_pkmu_covariance(data, kbins=None, mubins=None, kmin=-np.inf, kmax=np
         kmin_[:] = kmin
         kmax_[:] = kmax
         
-        # reindex k or mu bins
-        if kbins is not None:
-            p = p.reindex_k(kbins, weights='modes')
-        if mubins is not None:
-            p = p.reindex_mu(mubins, weights='modes')
+        # reindex k bins
+        if dk is not None:
+            p = p.reindex_k(dk, weights='modes')
             
         # get the valid entries and flatten so mus are stacked in order
         x, y, z = [], [], []
@@ -236,24 +232,6 @@ class StoreDataKeys(argparse.Action):
         for value in values:
             key, val = value.split('=')
             val = map(eval, val.split(','))
-            getattr(namespace, self.dest)[key.strip()] = val
-            
-class ReindexDict(argparse.Action):
-    """
-    Read reindex keys into a dictionary, optionally using numpy
-    
-    "k = numpy.arange(0.01, 0.5 0.01)" 
-    """
-    def __call__(self, parser, namespace, values, option_string=None):
-        from lsskit import numpy    
-        if getattr(namespace, self.dest) is None:
-            setattr(namespace, self.dest, {})
-        if isinstance(values, basestring):
-            values = [values]
-        for value in values:
-            key, val = value.split('=')
-            val = eval(val)
-            if not (len(val)-1): val = val[0]
             getattr(namespace, self.dest)[key.strip()] = val
             
 class AliasAction(argparse.Action):

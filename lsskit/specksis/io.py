@@ -7,7 +7,9 @@
     __desc__   : I/O tools for nbodykit's PkmuResult and PkResult
 """
 from nbodykit import files, pkresult, pkmuresult, plugins
+from ..data import tools
 from .. import numpy as np
+
 
 def get_Pshot(power):
     """
@@ -105,8 +107,8 @@ def write_1d_plaintext(power, filename):
     storage = plugins.PowerSpectrumStorage.get('1d', filename)
     storage.write(result, **meta)
     
-def write_analysis_file(filename, data, columns, remove_missing=True, 
-                        subtract_shot_noise=True, reindex={}):
+def write_analysis_file(filename, data, columns, subtract_shot_noise=True, 
+                        dk=None, kmin=None, kmax=None):
     """
     Write either a ``PkResult`` or ``PkmuResult`` as a plaintext file,
     with a format designed for easy analysis 
@@ -131,52 +133,46 @@ def write_analysis_file(filename, data, columns, remove_missing=True,
         the power instance to write
     columns : list of str
         list of strings specifying the names of the columns to write to file
-    remove_missing : bool, optional
-        if `True`, remove any masked elements before writing. Default is `True`.
     subtract_shot_noise : bool, optional
         if `True`, subtract the shot noise before outputing to file. Default is `True`
-    reindex : dict, optional
-        dictionary with optional keys `k`, `mu`, specifying new bins to use for
-        that dimension
+    dk : float, optional
+        If provided, re-bin the data using this bin size
+    kmin : float or array_like
+        the minimum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    kmax : float or array_like
+        the maximum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
     """
     # checks and balances
     if 'error' not in data:
         raise RuntimeError("probably not a good idea to write a data file with no errors")
     
     # reindex to different bins?
-    if len(reindex):
-        if 'k' in reindex:
-            data = data.reindex_k(reindex['k'], weights='modes')
-        if 'mu' in reindex:
-            data = data.reindex_mu(reindex['mu'], weights='modes')
+    if dk is not None:
+        data = data.reindex_k(dk, weights='modes')
     
-    # optional values
+    # subtract shot noise?
     Pshot = 0
-    if subtract_shot_noise:
-        Pshot = get_Pshot(data)
-    valid = np.ones(data.data.shape, dtype=bool)
-    if remove_missing:
-        valid = ~data['power'].mask
-    shape = ()
-    if hasattr(data, 'Nmu'):
-        valid = np.all(valid, axis=1)
-        shape += (valid.sum(),)
-        shape += (data.Nmu, )
-    else:
-        shape = (valid.sum(), )
-
+    if subtract_shot_noise: Pshot = get_Pshot(data)
+    
+    # get the data
+    data = data.data.copy()
+    data = tools.get_valid_data(data, kmin=kmin, kmax=kmax)
+    shape = data.shape
+    data['power'] -= Pshot
+    
     # now output
     with open(filename, 'w') as ff:
-        if isinstance(data, pkmuresult.PkmuResult):
-            towrite = map(np.ravel, [data[col][valid,...] for col in columns])
-            towrite[columns.index('power')] -= Pshot
+        if len(shape) > 1:
+            towrite = map(np.ravel, [data[col] for col in columns])
             ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, zip(*towrite))
-        elif isinstance(data, pkresult.PkResult):
+        else:
             ff.write("{:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
-            np.savetxt(ff, zip(*[data[col][valid,...] for col in columns]))
+            np.savetxt(ff, zip(*[data[col] for col in columns]))
             
 def read_analysis_file(filename):
     """

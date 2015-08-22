@@ -11,6 +11,7 @@ setup(
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
+            'write_covariance = lsskit.specksis.__main__:write_covariance',
             'write_analysis_file = lsskit.specksis.__main__:write_analysis_file',
             'compute_biases = lsskit.data.__main__:compute_biases',
             'save_runPB_galaxy_stats = lsskit.data.__main__:save_runPB_galaxy_stats',
