@@ -9,11 +9,13 @@ class RunPBGalaxy(PowerSpectraLoader):
     spectra = ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']
     samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
     
-    def __init__(self, root, realization='10mean'):
+    def __init__(self, root, realization='10mean', kbins=None, mubins=None):
         
         # store the root directory and the realization
         self.root = root
         self.tag = realization
+        self.kbins = kbins
+        self.mubins = mubins
       
     @classmethod
     def register(cls):

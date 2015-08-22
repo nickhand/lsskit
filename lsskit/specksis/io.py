@@ -7,7 +7,7 @@
     __desc__   : I/O tools for nbodykit's PkmuResult and PkResult
 """
 from nbodykit import files, pkresult, pkmuresult, plugins
-from ..data import tools
+from . import tools
 from .. import numpy as np
 
 
