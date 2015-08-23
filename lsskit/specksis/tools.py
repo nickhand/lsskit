@@ -8,7 +8,7 @@
 """
 from .. import numpy as np
 
-def compute_pkmu_covariance(data, dk=None, kmin=-np.inf, kmax=np.inf):
+def compute_pkmu_covariance(data, kmin=-np.inf, kmax=np.inf):
     """
     Compute covariance matrix of P(k,mu) measurements
     
@@ -16,8 +16,6 @@ def compute_pkmu_covariance(data, dk=None, kmin=-np.inf, kmax=np.inf):
     ----------
     data : SpectraSet
         a set of PkmuResult objects to compute the covariance from
-    dk : float, optional
-        re-index the measurements using this k spacing
     kmin : float or array_like
         the minimum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
@@ -45,10 +43,6 @@ def compute_pkmu_covariance(data, dk=None, kmin=-np.inf, kmax=np.inf):
         kmax_ = np.empty(p.Nmu)
         kmin_[:] = kmin
         kmax_[:] = kmax
-        
-        # reindex k bins
-        if dk is not None:
-            p = p.reindex_k(dk, weights='modes')
             
         # get the valid entries and flatten so mus are stacked in order
         x, y, z = [], [], []

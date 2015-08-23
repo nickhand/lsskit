@@ -108,7 +108,7 @@ def write_1d_plaintext(power, filename):
     storage.write(result, **meta)
     
 def write_analysis_file(filename, data, columns, subtract_shot_noise=True, 
-                        dk=None, kmin=None, kmax=None):
+                        kmin=None, kmax=None):
     """
     Write either a ``PkResult`` or ``PkmuResult`` as a plaintext file,
     with a format designed for easy analysis 
@@ -135,8 +135,6 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
         list of strings specifying the names of the columns to write to file
     subtract_shot_noise : bool, optional
         if `True`, subtract the shot noise before outputing to file. Default is `True`
-    dk : float, optional
-        If provided, re-bin the data using this bin size
     kmin : float or array_like
         the minimum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
@@ -147,10 +145,6 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
     # checks and balances
     if 'error' not in data:
         raise RuntimeError("probably not a good idea to write a data file with no errors")
-    
-    # reindex to different bins?
-    if dk is not None:
-        data = data.reindex_k(dk, weights='modes')
     
     # subtract shot noise?
     Pshot = 0

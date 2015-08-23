@@ -32,8 +32,6 @@ def write_analysis_file():
     # options
     h = 'whether to subtract the shot noise from the power before writing; default = False'
     parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
-    h = "bin size to rebin the `k` dimensions"
-    parser.add_argument('--dk', type=float, help=h)
     h = "the minimum wavenumber to use"
     parser.add_argument('--kmin', nargs='+', default=None, help=h)
     h = "the maximum wavenumber to use"
@@ -64,7 +62,6 @@ def write_analysis_file():
     kwargs['subtract_shot_noise'] = args.subtract_shot_noise
     kwargs['kmin'] = args.kmin
     kwargs['kmax'] = args.kmax
-    kwargs['dk'] = args.dk
     io.write_analysis_file(args.output, power, args.cols, **kwargs)
 
 def write_covariance():
@@ -87,8 +84,6 @@ def write_covariance():
     parser.add_argument('-o', '--output', required=True, type=str, help=h)
     
     # options
-    h = "bin size to rebin the `k` dimensions"
-    parser.add_argument('--dk', type=float, help=h)
     h = "the minimum wavenumber to use"
     parser.add_argument('--kmin', nargs='+', default=None, help=h)
     h = "the maximum wavenumber to use"
@@ -108,7 +103,6 @@ def write_covariance():
     kwargs = {}
     if args.kmin is not None: kwargs['kmin'] = args.kmin
     if args.kmax is not None: kwargs['kmax'] = args.kmax
-    kwargs['dk'] = args.dk
     _, _, _, C = tools.compute_pkmu_covariance(data, **kwargs)    
     
     # now output
