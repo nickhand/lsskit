@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils, io, tools
+from lsskit.specksis import SpectraSet, io, tools
 import os
 
 class QPMMocks(PowerSpectraLoader):

@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils
+from lsskit.specksis import SpectraSet
 import os
 
 class ChallengeMocks(PowerSpectraLoader):

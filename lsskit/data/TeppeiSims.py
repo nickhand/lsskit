@@ -1,5 +1,5 @@
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, HaloSpectraSet, utils
+from lsskit.specksis import SpectraSet, HaloSpectraSet
 from lsskit import numpy as np
 from pyRSD import data as sim_data
 import os
