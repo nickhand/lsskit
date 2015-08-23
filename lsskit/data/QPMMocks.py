@@ -1,15 +1,16 @@
 from lsskit import numpy as np
-from lsskit.data import PowerSpectraLoader, tools
-from lsskit.specksis import SpectraSet, utils, io
+from lsskit.data import PowerSpectraLoader
+from lsskit.specksis import SpectraSet, utils, io, tools
 import os
 
 class QPMMocks(PowerSpectraLoader):
     name = "QPMMocks"
     boxes = range(1, 991)
     
-    def __init__(self, root):
+    def __init__(self, root, dk=None):
         self.root = root
-      
+        self.dk = dk
+        
     @classmethod
     def register(cls):
         PowerSpectraLoader.store_class(cls)  
@@ -31,6 +32,11 @@ class QPMMocks(PowerSpectraLoader):
             basename = 'pkmu_qpm_%s_990mean_0.6452_Nmu5.dat' %tag
             filename = os.path.join(self.root, space, basename)
             Pgal = io.load_data(filename)
+            if self.dk is not None:
+                Pgal = Pgal.reindex_k(self.dk, weights='modes', force=True)
+            
+            
+            # add errors
             errs = (2./Pgal['modes'])**0.5 * Pgal['power']
             Pgal.add_column('error', errs)
             setattr(self, name, Pgal)
@@ -50,7 +56,7 @@ class QPMMocks(PowerSpectraLoader):
             d = os.path.join(self.root, space)
             basename = 'pkmu_qpm_%s_{box:04d}_0.6452_Nmu5.dat' %tag
             coords = [self.boxes]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['box'])
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)
             
             # add the errors
             Pgal.add_errors()

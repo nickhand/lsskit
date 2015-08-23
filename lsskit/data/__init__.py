@@ -9,6 +9,17 @@ class PowerSpectraLoader:
     def __init__(self, root):
         self.root = root
 
+    def reindex(self, spectra, dk):
+        """
+        Reindex all power classes in the input SpectraSet
+        using the k spacing provided
+        """
+        if dk is None:
+            return spectra
+        for key, p in spectra.nditer():
+            spectra.loc[key] = p.values.reindex_k(dk, weights='modes', force=True)
+        return spectra
+    
     @classmethod
     def store_class(cls, klass):
         cls.classes[klass.name] = klass

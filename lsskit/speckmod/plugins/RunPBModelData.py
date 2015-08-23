@@ -8,7 +8,7 @@
 
 from lsskit.speckmod.plugins import ModelInput
 from lsskit import data as lss_data, numpy as np
-from lsskit.data import tools
+from lsskit.specksis import tools
 
 from pyRSD.rsd import power_halo
 from pyRSD import pygcl

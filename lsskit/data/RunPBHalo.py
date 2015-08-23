@@ -11,12 +11,13 @@ class RunPBHalo(PowerSpectraLoader):
     a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
     mass = range(8)
     
-    def __init__(self, root, realization='10mean'):
+    def __init__(self, root, realization='10mean', dk=None):
         
         # store the root directory and the realization
         self.root = root
         self.tag = realization
-      
+        self.dk = dk
+        
     @classmethod
     def register(cls):
         PowerSpectraLoader.store_class(cls)  
@@ -36,7 +37,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [self.a]
-            Pmm = SpectraSet.from_files(d, basename, coords, ['a'])
+            Pmm = self.reindex(self.SpectraSet.from_files(d, basename, coords, ['a']), self.dk)
             Pmm.add_errors()
             setattr(self, '_Pmm_'+space, Pmm)
             return Pmm
@@ -59,7 +60,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_hh{mass}_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [self.a, self.mass]
-            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phh = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'mass']), self.dk)
             Phh.add_errors()
             setattr(self, '_Phh_'+space, Phh)
             return Phh
@@ -79,7 +80,7 @@ class RunPBHalo(PowerSpectraLoader):
             basename = 'pk_hh{mass1}{mass2}_runPB_%s_{a}.dat' %self.tag
 
             coords = [self.a, range(8), range(8)]
-            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass1', 'mass2'], ignore_missing=True)
+            Phh = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'mass1', 'mass2'], ignore_missing=True), self.dk)
             Phh = Phh.dropna('mass1', 'all')
             Phh = Phh.dropna('mass2', 'all')
             
@@ -110,7 +111,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_{sample}_fof_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [['0.6452'], ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
-            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Phh = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # add the errors
             Phh.add_errors()
@@ -138,7 +139,7 @@ class RunPBHalo(PowerSpectraLoader):
 
             samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
             coords = [['0.6452'], samples]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_fof_gal_Phh(space=space)
@@ -169,7 +170,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_hm{mass}_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [self.a, self.mass]
-            Phm = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phm = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'mass']), self.dk)
             Phm.add_errors(self.get_fof_Phh(space), self.get_Pmm(space))
             setattr(self, '_Phm_'+space, Phm)
             return Phm
@@ -224,7 +225,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_hh{mass}_so_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [['0.6452'], self.mass]
-            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phh = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'mass']), self.dk)
             Phh.add_errors()
             setattr(self, '_Phh_so_'+space, Phh)
             return Phh
@@ -244,7 +245,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_{sample}_so_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [['0.6452'], ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']]
-            Phh = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Phh = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # add the errors
             Phh.add_errors()
@@ -272,7 +273,7 @@ class RunPBHalo(PowerSpectraLoader):
 
             samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
             coords = [['0.6452'], samples]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_so_gal_Phh(space=space)
@@ -304,7 +305,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_hm{mass}_so_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [['0.6452'], self.mass]
-            Phm = SpectraSet.from_files(d, basename, coords, ['a', 'mass'])
+            Phm = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'mass']), self.dk)
             Phm.add_errors(self.get_so_Phh(space), self.get_Pmm(space))
             setattr(self, '_Phm_so_'+space, Phm)
             return Phm

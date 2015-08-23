@@ -7,8 +7,9 @@ class ChallengeMocks(PowerSpectraLoader):
     name = "ChallengeMocks"
     boxes = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
     
-    def __init__(self, root):
+    def __init__(self, root, dk=None):
         self.root = root
+        self.dk = dk
       
     @classmethod
     def register(cls):
@@ -27,7 +28,7 @@ class ChallengeMocks(PowerSpectraLoader):
         except AttributeError:
             basename = 'pkmu_challenge_box{box}_scaled_Nmu5.dat'
             coords = [self.boxes]
-            Pgal = SpectraSet.from_files(self.root, basename, coords, ['box'])
+            Pgal = self.reindex(SpectraSet.from_files(self.root, basename, coords, ['box']), self.dk)
             
             # add the errors
             Pgal.add_errors()

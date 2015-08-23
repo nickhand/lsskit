@@ -9,17 +9,36 @@ class RunPBGalaxy(PowerSpectraLoader):
     spectra = ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']
     samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
     
-    def __init__(self, root, realization='10mean', kbins=None, mubins=None):
+    def __init__(self, root, realization='10mean', dk=None):
         
         # store the root directory and the realization
         self.root = root
         self.tag = realization
-        self.kbins = kbins
-        self.mubins = mubins
+        self.dk = dk
       
     @classmethod
     def register(cls):
-        PowerSpectraLoader.store_class(cls)  
+        PowerSpectraLoader.store_class(cls) 
+    
+    def get_Pmm(self, space='real'):
+        """
+        Return Pmm in the space specified, either `real` or `redshift`
+        """
+        try:
+            return getattr(self, '_Pmm_'+space)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'matter', space)
+            if space == 'real':
+                basename = 'pk_mm_runPB_%s_{a}.dat' %self.tag
+            else:
+                basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %self.tag
+                
+            coords = [self.a]
+            Pmm = self.reindex(SpectraSet.from_files(d, basename, coords, ['a']), self.dk)
+            Pmm.add_errors()
+            setattr(self, '_Pmm_'+space, Pmm)
+            return Pmm 
         
     #--------------------------------------------------------------------------
     # galaxy data
@@ -39,7 +58,7 @@ class RunPBGalaxy(PowerSpectraLoader):
                 basename = 'pkmu_{sample}_runPB_%s_Nmu5.dat' %self.tag
                 
             coords = [self.a, self.spectra]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # add the errors
             Pgal.add_errors()
@@ -66,7 +85,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             else:
                 basename = 'pkmu_{sample}_x_matter_runPB_%s_Nmu5.dat' %self.tag
             coords = [['0.6452'], self.samples]
-            Pgal = SpectraSet.from_files(d, basename, coords, ['a', 'sample'])
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
