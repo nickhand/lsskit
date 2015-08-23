@@ -7,8 +7,8 @@
     __desc__   : analysis functions to be installed as console scripts
 """
 import argparse
-from lsskit.data import tools as data_tools
-from lsskit.specksis import io, tools
+from ..data import parse_tools
+from ..specksis import io, tools
 
 def write_analysis_file():
     """
@@ -18,12 +18,12 @@ def write_analysis_file():
     parser.formatter_class = argparse.RawTextHelpFormatter
     
     # required arguments
-    h = data_tools.PowerSpectraParser.format_help()
-    parser.add_argument('data', type=data_tools.PowerSpectraParser.data, help=h)
-    h = data_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('callable', type=data_tools.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = "the data keys to slice the data on; specified as `a = '0.6452'`"
-    parser.add_argument('key', type=str, nargs='+', action=data_tools.StoreDataKeys, help=h)
+    parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the data columns to write to the file'
     parser.add_argument('--cols', required=True, nargs='+', type=str)
     h = 'the output file name'
@@ -74,10 +74,10 @@ def write_covariance():
     parser.formatter_class = argparse.RawTextHelpFormatter
     
     # required arguments
-    h = data_tools.PowerSpectraParser.format_help()
-    parser.add_argument('data', type=data_tools.PowerSpectraParser.data, help=h)
-    h = data_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('callable', type=data_tools.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = 'the data format to use, either `pickle` or `plaintext`'
     parser.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
     h = 'the output file name'

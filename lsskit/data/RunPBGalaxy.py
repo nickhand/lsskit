@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, _utils
+from lsskit.specksis import SpectraSet, utils
 import os
 
 class RunPBGalaxy(PowerSpectraLoader):
@@ -66,7 +66,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             for x in crosses:
                 this_cross = Pgal.sel(a='0.6452', sample=x).values
                 k1, k2 = crosses[x]
-                _utils.add_errors(this_cross, Pgal.sel(a='0.6452', sample=k1).values, Pgal.sel(a='0.6452', sample=k2).values)
+                utils.add_errors(this_cross, Pgal.sel(a='0.6452', sample=k1).values, Pgal.sel(a='0.6452', sample=k2).values)
                 
             setattr(self, '_Pgal_'+space, Pgal)
             return Pgal
@@ -95,7 +95,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             for k in self.samples:
                 this_cross = Pgal.sel(a='0.6452', sample=k).values
                 Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
-                _utils.add_errors(this_cross, Pgal_auto, Pmm)
+                utils.add_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
             setattr(self, '_Pgal_x_mm_'+space, Pgal)
@@ -117,7 +117,7 @@ class RunPBGalaxy(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = _utils.load_data_from_file(filename, ['a', 'sample'], (len(self.a), len(self.samples)))
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (len(self.a), len(self.samples)))
             setattr(self, '_gal_biases', biases)
             return biases
     

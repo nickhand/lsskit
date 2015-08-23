@@ -7,7 +7,7 @@
     __desc__   : data-related functions to install as console scripts
 """
 from .. import numpy as np
-from . import _utils
+from . import parse_tools
 from ..specksis import tools
 import argparse
 
@@ -99,20 +99,20 @@ def compute_biases():
     parser = argparse.ArgumentParser(description=desc)
     
     # required arguments
-    h = _utils.PowerSpectraParser.format_help()
-    parser.add_argument('data', type=_utils.PowerSpectraParser.data, help=h)
-    h = _utils.PowerSpectraCallable.format_help()
-    parser.add_argument('Pxm_callable', type=_utils.PowerSpectraCallable.data, help=h)
-    h = _utils.PowerSpectraCallable.format_help()
-    parser.add_argument('Pmm_callable', type=_utils.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('Pxm_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('Pmm_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = 'the name of the output file'
     parser.add_argument('-o', '--output', type=str, required=True, help=h)
     
     # options
     h = "only consider a subset of keys; specify as ``-s a = '0.6452', '0.7143'``"
-    parser.add_argument('-s', '--subset', type=str, action=_utils.StoreDataKeys, default={}, help=h)
+    parser.add_argument('-s', '--subset', type=str, action=parse_tools.StoreDataKeys, default={}, help=h)
     h = "aliases to use for the keys; specify as ``--aliases sample = cc:cen, gg:gal"
-    parser.add_argument('--aliases', type=str, action=_utils.AliasAction, default={}, help=h)
+    parser.add_argument('--aliases', type=str, action=parse_tools.AliasAction, default={}, help=h)
     args = parser.parse_args()
     
     # the spectra

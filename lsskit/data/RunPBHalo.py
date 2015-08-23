@@ -1,6 +1,6 @@
 from lsskit import numpy as np
+from lsskit.specksis import SpectraSet, HaloSpectraSet, utils
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, HaloSpectraSet, _utils
 import os
 
 class RunPBHalo(PowerSpectraLoader):
@@ -37,7 +37,7 @@ class RunPBHalo(PowerSpectraLoader):
                 basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %self.tag
                 
             coords = [self.a]
-            Pmm = self.reindex(self.SpectraSet.from_files(d, basename, coords, ['a']), self.dk)
+            Pmm = self.reindex(SpectraSet.from_files(d, basename, coords, ['a']), self.dk)
             Pmm.add_errors()
             setattr(self, '_Pmm_'+space, Pmm)
             return Pmm
@@ -91,7 +91,7 @@ class RunPBHalo(PowerSpectraLoader):
                 this_cross = cross.values
                 Ph1h1 = Phh_auto.sel(a=key['a'], mass=key['mass1']).values
                 Ph2h2 = Phh_auto.sel(a=key['a'], mass=key['mass2']).values
-                _utils.add_errors(this_cross, Ph1h1, Ph2h2)
+                utils.add_errors(this_cross, Ph1h1, Ph2h2)
                 
             setattr(self, '_Phh_x_'+space, Phh)
             return Phh
@@ -119,7 +119,7 @@ class RunPBHalo(PowerSpectraLoader):
             for x in crosses:
                 this_cross = Phh.sel(a='0.6452', sample=x).values
                 k1, k2 = crosses[x]
-                _utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
+                utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
                 
             setattr(self, '_Phh_fof_gal_'+space, Phh)
             return Phh
@@ -149,7 +149,7 @@ class RunPBHalo(PowerSpectraLoader):
             for k in samples:
                 this_cross = Pgal.sel(a='0.6452', sample=k).values
                 Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
-                _utils.add_errors(this_cross, Pgal_auto, Pmm)
+                utils.add_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
             setattr(self, '_Phm_fof_gal_'+space, Pgal)
@@ -253,7 +253,7 @@ class RunPBHalo(PowerSpectraLoader):
             for x in crosses:
                 this_cross = Phh.sel(a='0.6452', sample=x).values
                 k1, k2 = crosses[x]
-                _utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
+                utils.add_errors(this_cross, Phh.sel(a='0.6452', sample=k1).values, Phh.sel(a='0.6452', sample=k2).values)
             
             setattr(self, '_Phh_so_gal_'+space, Phh)
             return Phh
@@ -283,7 +283,7 @@ class RunPBHalo(PowerSpectraLoader):
             for k in samples:
                 this_cross = Pgal.sel(a='0.6452', sample=k).values
                 Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
-                _utils.add_errors(this_cross, Pgal_auto, Pmm)
+                utils.add_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
             setattr(self, '_Phm_so_gal_'+space, Pgal)
@@ -340,7 +340,7 @@ class RunPBHalo(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = _utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            biases = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
             setattr(self, '_halo_biases', biases)
             return biases
                         
@@ -356,7 +356,7 @@ class RunPBHalo(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = _utils.load_data_from_file(filename, ['a', 'mass'], (1, len(self.mass)))
+            biases = utils.load_data_from_file(filename, ['a', 'mass'], (1, len(self.mass)))
             setattr(self, '_so_halo_biases', biases)
             return biases
             
@@ -372,7 +372,7 @@ class RunPBHalo(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = _utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
             setattr(self, '_so_gal_halo_biases', biases)
             return biases
             
@@ -388,7 +388,7 @@ class RunPBHalo(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            biases = _utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
+            biases = utils.load_data_from_file(filename, ['a', 'sample'], (1, 7))
             setattr(self, '_fof_gal_halo_biases', biases)
             return biases
     
@@ -404,7 +404,7 @@ class RunPBHalo(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            masses = _utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
+            masses = utils.load_data_from_file(filename, ['a', 'mass'], (len(self.a), len(self.mass)))
             setattr(self, '_halo_masses', masses)
             return masses
             

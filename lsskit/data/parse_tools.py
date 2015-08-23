@@ -6,7 +6,7 @@
     __email__  : nhand@berkeley.edu
     __desc__   : tools for dealing with the power spectra data
 """
-from lsskit.data import PowerSpectraLoader
+from . import PowerSpectraLoader
 import argparse
 
 def parse_options(options):
