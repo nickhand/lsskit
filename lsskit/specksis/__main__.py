@@ -88,6 +88,8 @@ def write_covariance():
     parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
     h = "the maximum wavenumber to use"
     parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
+    h = "set off-diagonal elements to zero"
+    parser.add_argument('--force_diagonal', action='store_true', help=h)
         
     # parse
     args = parser.parse_args()
@@ -103,6 +105,7 @@ def write_covariance():
     kwargs = {}
     if args.kmin is not None: kwargs['kmin'] = args.kmin
     if args.kmax is not None: kwargs['kmax'] = args.kmax
+    kwargs['force_diagonal'] = args.force_diagonal
     _, _, _, C = tools.compute_pkmu_covariance(data, **kwargs)    
     
     # now output

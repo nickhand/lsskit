@@ -79,7 +79,7 @@ class QPMMocks(PowerSpectraLoader):
             
             # form the filename and load the data
             d = os.path.join(self.root, space)
-            basename = 'pkmu_qpm_%s_{box:04d}_0.6452%s_Nmu5.dat' %(tag, spacing)
+            basename = 'pkmu_qpm_%s_{box:04d}_0.6452_%sNmu5.dat' %(tag, spacing)
             coords = [self.boxes]
             Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)
             
