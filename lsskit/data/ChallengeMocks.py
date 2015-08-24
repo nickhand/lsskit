@@ -18,24 +18,34 @@ class ChallengeMocks(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
-    def get_Pgal(self, scaled=False):
+    def get_Pgal(self, spacing="dk005", scaled=False):
         """
         Return the total galaxy spectrum in redshift space
+        
+        Parameters
+        ----------
+        spacing : str, optional
+            the tag used to identify results with different k spacing, i.e. `dk005`
+        scaled : bool, optional
+            return the results that have/haven't been scaled by AP factors
         """
         tag = 'unscaled' if not scaled else 'scaled'
+        if spacing: spacing += "_"
+        name = '_Pgal_%s%s' %(spacing, tag)
         try:
-            return getattr(self, '_Pgal_'+tag)
+            return getattr(self, name)
         except AttributeError:
-            basename = 'pkmu_challenge_box{box}_scaled_Nmu5.dat'
+            
+            # load the data from file
+            basename = 'pkmu_challenge_box{box}_scaled_%sNmu5.dat' %spacing
             coords = [self.boxes]
             Pgal = self.reindex(SpectraSet.from_files(self.root, basename, coords, ['box']), self.dk)
             
             # add the errors
             Pgal.add_errors()
-            setattr(self, '_Pgal_'+tag, Pgal)
+            setattr(self, name, Pgal)
             return Pgal
     
-
     def get_box_stats(self):
         """
         Return a dictionary holding the box size, redshift, scalings for each box

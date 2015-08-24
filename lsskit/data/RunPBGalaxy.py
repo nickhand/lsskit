@@ -43,32 +43,41 @@ class RunPBGalaxy(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
-    def get_Pgal(self, space='real'):
+    def get_Pgal(self, space='real', spacing=""):
         """
         Return galaxy component spectra
         """
+        if spacing: spacing = "_"+spacing
+        name = '_Pgal_%s%s' %(self.tag, spacing)
         try:
-            return getattr(self, '_Pgal_'+space)
+            return getattr(self, name)
         except AttributeError:
             
             d = os.path.join(self.root, 'galaxy', space)
             if space == 'real':
-                basename = 'pk_{sample}_runPB_%s.dat' %self.tag
+                if spacing:
+                    basename = 'pk_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
             else:
-                basename = 'pkmu_{sample}_runPB_%s_Nmu5.dat' %self.tag
+                basename = 'pkmu_{sample}_runPB_%s%s_Nmu5.dat' %(self.tag, spacing)
                 
+            # load the data from file
             coords = [self.a, self.spectra]
-            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample'], ignore_missing=True), self.dk)
             
             # add the errors
             Pgal.add_errors()
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
             for x in crosses:
-                this_cross = Pgal.sel(a='0.6452', sample=x).values
+                
+                this_cross = Pgal.sel(a='0.6452', sample=x)
+                if this_cross.isnull(): continue
+                this_cross = this_cross.values
                 k1, k2 = crosses[x]
                 utils.add_errors(this_cross, Pgal.sel(a='0.6452', sample=k1).values, Pgal.sel(a='0.6452', sample=k2).values)
                 
-            setattr(self, '_Pgal_'+space, Pgal)
+            if not Pgal.notnull().sum():
+                raise ValueError("there appears to be no non-null entries -- something probably went wrong")
+            setattr(self, name, Pgal)
             return Pgal
     
     def get_gal_x_matter(self, space='real'):

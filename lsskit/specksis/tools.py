@@ -8,7 +8,7 @@
 """
 from .. import numpy as np
 
-def compute_pkmu_covariance(data, kmin=-np.inf, kmax=np.inf):
+def compute_pkmu_covariance(data, kmin=-np.inf, kmax=np.inf, force_diagonal=False):
     """
     Compute covariance matrix of P(k,mu) measurements
     
@@ -16,12 +16,14 @@ def compute_pkmu_covariance(data, kmin=-np.inf, kmax=np.inf):
     ----------
     data : SpectraSet
         a set of PkmuResult objects to compute the covariance from
-    kmin : float or array_like
+    kmin : float or array_like (`-numpy.inf`)
         the minimum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
-    kmax : float or array_like
+    kmax : float or array_like, (`numpy.inf`)
         the maximum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
+    force_diagonal : bool, optional (`False`)
+        If `True`, set off-diagonal elements to zero before returning
     
     Returns
     -------
@@ -63,6 +65,9 @@ def compute_pkmu_covariance(data, kmin=-np.inf, kmax=np.inf):
     power = np.asarray(power)
     
     C = np.cov(power, rowvar=False)
+    if force_diagonal:
+        diags = np.diag(C)
+        C = np.diag(diags)
     return sizes, ks.mean(axis=0), mus.mean(axis=0), C
     
 

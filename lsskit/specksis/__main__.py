@@ -33,9 +33,9 @@ def write_analysis_file():
     h = 'whether to subtract the shot noise from the power before writing; default = False'
     parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
     h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', default=None, help=h)
+    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
     h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', default=None, help=h)
+    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
     
     # parse
     args = parser.parse_args()
@@ -85,9 +85,9 @@ def write_covariance():
     
     # options
     h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', default=None, help=h)
+    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
     h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', default=None, help=h)
+    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
         
     # parse
     args = parser.parse_args()
