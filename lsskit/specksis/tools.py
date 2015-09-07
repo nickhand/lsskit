@@ -219,7 +219,7 @@ def get_valid_data(data, kmin=None, kmax=None):
         columns = data.columns
         data = data.data
         shape = data.shape
-       
+   
     valid = np.ones(shape, dtype=bool)
     for col in columns:
         valid &= ~np.isnan(data[col])    
@@ -228,17 +228,28 @@ def get_valid_data(data, kmin=None, kmax=None):
     if kmax is not None:
         valid &= (data['k'] <= kmax)
     
-    # collapse across all dimensions  
+    # align multiple dimensions
     if valid.ndim > 1:
-        valid = np.all(valid, axis=-1)
-    shape = list(data[columns[0]].shape)
-    shape[0] = valid.sum()
-    
+        row_inds = np.arange(shape[0])
+        min_idx = min([row_inds[valid[:,i]].min() for i in range(shape[1])])
+        max_idx = max([row_inds[valid[:,i]].max() for i in range(shape[1])])
+        nan_inds = np.zeros(shape, dtype=bool)
+        nan_inds[:,min_idx:max_idx] = True
+        nan_inds &= ~valid
+        valid[:,min_idx:max_idx] = True
+        
+    shape = list(shape)
+    shape[0] = valid.sum(axis=0)
+    if valid.ndim > 1:
+        shape[0] = shape[0][0]
+        
     # make the output
     dtype = [(name, 'f8') for name in columns]
     toret = np.empty(shape, dtype=dtype)
     for col in columns:
-        toret[col] = data[col][valid,...]
+        if valid.ndim > 1:
+            data[col][nan_inds] = np.nan
+        toret[col] = data[col][valid].reshape(shape)
     return toret
 
 def get_Pshot(power):
