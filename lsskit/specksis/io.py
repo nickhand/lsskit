@@ -32,7 +32,14 @@ def read_1d_data(filename):
     Read a `PkResult` from a file with the format used by ``nbodykit::power.py``
     """
     d, meta = files.ReadPower1DPlainText(filename)
-    pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], sum_only=['modes'], **meta)
+    
+    # try to extract the columns from the first line of the file
+    columns = open(filename, 'r').readline()
+    if columns[0] == '#':
+        columns = columns.split()[1:]
+    else:
+        columns = ['k', 'power', 'modes']
+    pk = pkresult.PkResult.from_dict(d, columns, sum_only=['modes'], **meta)
     return pk
    
 def read_2d_data(filename):
@@ -110,13 +117,13 @@ def write_1d_plaintext(power, filename):
 def write_analysis_file(filename, data, columns, subtract_shot_noise=True, 
                         kmin=None, kmax=None):
     """
-    Write either a ``PkResult`` or ``PkmuResult`` as a plaintext file,
+    Write either a (set of) `PkResult`` or ``PkmuResult`` as a plaintext file,
     with a format designed for easy analysis 
     
     Notes
     -----
     The format is:
-    Nk [Nmu]
+    Nk [Nmu|Nell]
     col1_name col2_name col3_name
     col1_0 col2_0 col3_0...
     col1_1 col2_1 col3_1...

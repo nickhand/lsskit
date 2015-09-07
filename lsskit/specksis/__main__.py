@@ -192,7 +192,6 @@ def compute_multipoles():
     Compute the power spectrum multipoles from a set of P(k, mu) measurements
     """
     from nbodykit import pkmuresult
-    from lsskit.specksis import io
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     rank = comm.rank
@@ -229,7 +228,7 @@ def compute_multipoles():
         poles = pkmu.to_multipoles(*args.ell)
         for iell , ell in enumerate(args.ell):
             filename = args.output.format(pole=pole_names[ell])
-            io.write_1d_plaintext(poles[iell], filename)
+            poles[iell].to_plaintext(filename)
     else:    
         for i, (key, spec) in enumerate(pkmu.nditer()):
             if i % size != rank:
@@ -245,7 +244,7 @@ def compute_multipoles():
             for iell , ell in enumerate(args.ell):
                 valid['pole'] = pole_names[ell]
                 filename = args.output.format(**valid)
-                io.write_1d_plaintext(poles[iell], filename)
+                poles[iell].to_plaintext(filename)
             
         
     
