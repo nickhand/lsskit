@@ -405,12 +405,20 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
         except:
             kwargs = {}
             kwargs['z'] = 0.55
-            kwargs['cosmo'] = self.cosmo.GetParamFile()
+            kwargs['cosmo_filename'] = self.cosmo.GetParamFile()
             kwargs['include_2loop'] = False
             kwargs['transfer_fit'] = "CLASS"
-            kwargs['max_mu'] = 6
             kwargs['sigmav_from_sims'] = False
-            kwargs['interpolate'] = False
+            kwargs['use_mean_bias'] = False
+            kwargs['use_tidal_bias'] = False
+            kwargs['use_P00_model'] = True
+            kwargs['use_P01_model'] = True
+            kwargs['use_P11_model'] = True
+            kwargs['use_Pdv_model'] = True
+            kwargs['Phm_model'] = 'halo_zeldovich'
+            kwargs['use_mu_corrections'] = False
+            kwargs['interpolate'] = True
+            kwargs['max_mu'] = 6
             self._Phalo = power_halo.HaloSpectrum(**kwargs)
             return self._Phalo
                     
@@ -424,6 +432,7 @@ class HaloPkmuRunPBData(ModelInput, RunPBModelData):
         # get the valid entries
         d = tools.get_valid_data(p, kmin=self.kmin, kmax=self.kmax)
         d['power'] -= Pshot
+        d = d.ravel(order='F')
         
         return self._make_dataframe(d)
         
