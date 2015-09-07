@@ -37,7 +37,7 @@ class ChallengeMocks(PowerSpectraLoader):
         except AttributeError:
             
             # load the data from file
-            basename = 'pkmu_challenge_box{box}_scaled_%sNmu5.dat' %spacing
+            basename = 'pkmu_challenge_box{box}_%s_%sNmu5.dat' %(tag, spacing)
             coords = [self.boxes]
             Pgal = self.reindex(SpectraSet.from_files(self.root, basename, coords, ['box']), self.dk)
             
@@ -56,12 +56,12 @@ class ChallengeMocks(PowerSpectraLoader):
             stats = {}
             for box in self.boxes:
                 stats[box] = {}
-                if box in ['A', 'F', 'G']:
+                if box in ['A', 'B', 'F', 'G']:
                     stats[box]['qperp'] = 0.998753592
                     stats[box]['qpar'] = 0.9975277944
                     stats[box]['z'] = 0.562
                     stats[box]['box_size'] = 2500.
-                elif box in ['B', 'C']:
+                elif box == 'C':
                     stats[box]['qperp'] = 0.9875682111
                     stats[box]['qpar'] = 0.9751013789
                     stats[box]['z'] = 0.441
