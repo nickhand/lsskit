@@ -8,6 +8,100 @@
 """
 from .. import numpy as np
 
+def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf, 
+                            force_diagonal=False, return_extras=False):
+    """
+    Compute the covariance matrix of multipole measurements, optionally 
+    returning the center k and mu bins, and the mean power
+    
+    Parameters
+    ----------
+    power_list : SpectraSet
+        a set of PkResult objects to compute the covariance from
+    ells : list of integers
+        list of multipoles numbers identifying the multipoles to concatenate
+    kmin : float or array_like (`-numpy.inf`)
+        the minimum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    kmax : float or array_like, (`numpy.inf`)
+        the maximum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    force_diagonal : bool, optional (`False`)
+        If `True`, set off-diagonal elements to zero before returning
+    return_extras : bool, optional (`False`)
+        If `True`, also return the center of the k/mu bins, and the mean power
+    
+    Returns
+    -------
+    covar : array_like
+        the covariance matrix
+    
+    """
+    import warnings
+    
+    # get the kmin/kmax as arrays
+    if kmin is None: kmin = -np.inf
+    if kmax is None: kmax = np.inf
+    kmin_ = np.empty(len(ells))
+    kmax_ = np.empty(len(ells))
+    kmin_[:] = kmin
+    kmax_[:] = kmax
+    
+    dims = power_list.coords.keys()
+    if 'ell' not in dims:
+        raise ValueError("`ell` dimension must be present to compute pole covariance")
+    dims.remove('ell')
+    if len(dims) != 1:
+        raise ValueError("SpectraSet must have dimension `ell` plus one other dimension")
+    other_dim = dims[0]
+    
+    N = len(power_list)
+    data, shapes = [], []
+    for i, key in enumerate(power_list[other_dim]):
+        
+        poles = power_list.loc[{'ell':ells, other_dim:key}]
+
+        # get the valid entries and flatten so mus are stacked in order
+        this_data = []
+        for iell, ell in enumerate(ells):
+            p = poles.sel(ell=ell).values
+            p.add_column('k_center', p.k_center)   
+            this_data.append(get_valid_data(p, kmin=kmin_[iell], kmax=kmax_[iell]))
+            if i == 0:
+                shapes.append(this_data[-1].shape[0])
+        this_data = np.concatenate(this_data)
+        data.append(this_data)
+        
+    data = np.asarray(data)    
+    power = data['power']
+    
+    def align_2d_data(arr, shapes):
+        N0 = arr.shape[0]
+        N = np.amax(shapes)
+        
+        out = np.ones((N0, N, len(shapes)))*np.nan
+        for j, x in enumerate(arr):
+            lower = 0
+            for i, shape in enumerate(shapes):
+                out[j, :shape, i] = x[lower : lower+shape]
+                lower += shape
+        return out
+    
+    with warnings.catch_warnings():
+        mean_power = np.nanmean(align_2d_data(data['power'], shapes), axis=0)
+        k_center = np.nanmean(align_2d_data(data['k_center'], shapes), axis=0)
+        modes = np.nanmean(align_2d_data(data['modes'], shapes), axis=0)
+        
+    C = np.cov(power, rowvar=False)
+    if force_diagonal:
+        diags = np.diag(C)
+        C = np.diag(diags)
+    if return_extras: 
+        extras = {'mean_power':mean_power, 'modes' : modes}
+        return C, k_center, extras
+    else:
+        return C
+
 
 def compute_pkmu_covariance(power_list, kmin=-np.inf, kmax=np.inf, 
                             force_diagonal=False, return_extras=False):
