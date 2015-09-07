@@ -90,7 +90,7 @@ def write_2d_plaintext(power, filename):
     meta = {k:getattr(power, k) for k in power._metadata}
     
     # and write
-    storage = plugins.PowerSpectrumStorage.get('2d', filename)
+    storage = plugins.PowerSpectrumStorage.new('2d', filename)
     storage.write(result, **meta)
     
 def write_1d_plaintext(power, filename):
@@ -104,7 +104,7 @@ def write_1d_plaintext(power, filename):
     meta['edges'] = power.kedges
     
     # and write
-    storage = plugins.PowerSpectrumStorage.get('1d', filename)
+    storage = plugins.PowerSpectrumStorage.new('1d', filename)
     storage.write(result, **meta)
     
 def write_analysis_file(filename, data, columns, subtract_shot_noise=True, 

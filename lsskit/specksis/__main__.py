@@ -191,6 +191,7 @@ def compute_multipoles():
     """
     Compute the power spectrum multipoles from a set of P(k, mu) measurements
     """
+    from nbodykit import pkmuresult
     from lsskit.specksis import io
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
@@ -224,21 +225,27 @@ def compute_multipoles():
     if any(ell not in pole_names.keys() for ell in args.ell):
         raise ValueError("valid `ell` integers are %s" %str(pole_names.keys()))
     
-    for i, (key, spec) in enumerate(pkmu.nditer()):
-        if i % size != rank:
-            continue    
-        key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.iteritems()])
-        print "rank %d: processing %s ..." %(rank, key_str)
-        
-        # compute the multipoles
-        spec = spec.values
-        poles = spec.to_multipoles(*args.ell)
-        
-        valid = {k:v for k,v in key.iteritems() if k in str_kwargs}
+    if isinstance(pkmu, pkmuresult.PkmuResult):
+        poles = pkmu.to_multipoles(*args.ell)
         for iell , ell in enumerate(args.ell):
-            valid['pole'] = pole_names[ell]
-            filename = args.output.format(**valid)
+            filename = args.output.format(pole=pole_names[ell])
             io.write_1d_plaintext(poles[iell], filename)
+    else:    
+        for i, (key, spec) in enumerate(pkmu.nditer()):
+            if i % size != rank:
+                continue    
+            key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.iteritems()])
+            print "rank %d: processing %s ..." %(rank, key_str)
+        
+            # compute the multipoles
+            spec = spec.values
+            poles = spec.to_multipoles(*args.ell)
+        
+            valid = {k:v for k,v in key.iteritems() if k in str_kwargs}
+            for iell , ell in enumerate(args.ell):
+                valid['pole'] = pole_names[ell]
+                filename = args.output.format(**valid)
+                io.write_1d_plaintext(poles[iell], filename)
             
         
     
