@@ -114,6 +114,79 @@ def write_covariance():
         C.to_pickle(args.output)
     else:
         C.to_plaintext(args.output)
+        
+def plot_mcmc_bestfit():
+    """
+    Load a mcmc bestfit and plot it
+    """
+    from pyRSD.rsdfit import FittingDriver
+    import plotify as pfy
+    
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # arguments
+    h = 'the name of directory holding the results'
+    parser.add_argument('results_dir', type=str, help=h)
+    h = 'the name of the results file to load'
+    parser.add_argument('results_file', type=str, help=h)
+    h = 'the name of the model to load'
+    parser.add_argument('model', type=str, help=h)
+    h = 'the output file name'
+    parser.add_argument('-o', '--output', type=str, help=h)
+    h = 'the number of burnin steps to set'
+    parser.add_argument('-b', '--burnin', type=int, help=h)
+    
+    args = parser.parse_args()
+    
+    # load the driver
+    kwargs = {'results_file':args.results_file, 'model_file':args.model}
+    driver = FittingDriver.from_directory(args.results_dir, **kwargs)
+    
+    if args.burnin is not None:
+        driver.results.burnin = args.burnin
+    
+    driver.set_fit_results()
+    driver.plot()
+    
+    if args.output is not None:
+        pfy.savefig(args.output)
+    pfy.show()
+    
+def compare_mcmc_fits():
+    """
+    Write a latex table comparing multiple mcmc fits
+    """
+    from pyRSD.rsdfit.analysis import bestfit
+    
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # arguments
+    h = 'the names of the files to load the fits from'
+    parser.add_argument('--files', required=True, nargs='+', type=str, help=h)
+    h = 'the names of each fit'
+    parser.add_argument('--names', required=True, nargs='+', type=str, help=h)
+    h = 'the output file name'
+    parser.add_argument('-o', '--output', type=str, help=h)
+    h = 'convenience option to only include the free parameters'
+    parser.add_argument('--free-only', action='store_true', help=h)
+    h = 'convenience option to only include the constrained parameters'
+    parser.add_argument('--constrained-only', action='store_true', help=h)
+    h = 'only include these parameters in the output table'
+    parser.add_argument('--params', nargs='*', help=h, type=str)
+    
+    args = parser.parse_args()
+    data = {}
+    for name, f in zip(args.names, args.files):
+        data[name] = bestfit.BestfitParameterSet.from_info(f)
+        
+    kwargs = {'free_only':args.free_only, 'constrained_only':args.constrained_only, 'params':args.params}
+    if args.output is None:
+        print bestfit.to_comparison_table(data, args.output, **kwargs)
+    else:
+        bestfit.to_comparison_table(data, args.output, **kwargs)
+    
     
     
     
