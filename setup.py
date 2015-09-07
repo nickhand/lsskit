@@ -11,6 +11,8 @@ setup(
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
+            'compare_mcmc_fits = lsskit.specksis.__main__:compare_mcmc_fits',
+            'plot_mcmc_bestfit = lsskit.specksis.__main__:plot_mcmc_bestfit',
             'write_covariance = lsskit.specksis.__main__:write_covariance',
             'write_analysis_file = lsskit.specksis.__main__:write_analysis_file',
             'compute_biases = lsskit.data.__main__:compute_biases',
