@@ -53,10 +53,12 @@ def write_analysis_file():
             raise ValueError("must specify exactly one key for each dimension")
         args.key[k] = args.key[k][0]
     try:
-        power = data.sel(**args.key).values
+        power = data.sel(**args.key)
+        if len(power) == 1:
+            power = power.values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
-        
+
     # now output
     kwargs = {}
     kwargs['subtract_shot_noise'] = args.subtract_shot_noise
@@ -74,6 +76,8 @@ def write_covariance():
     parser.formatter_class = argparse.RawTextHelpFormatter
     
     # required arguments
+    h = 'the mode, either `pkmu` or `poles`'
+    parser.add_argument('mode', choices=['pkmu', 'poles'], help=h)
     h = parse_tools.PowerSpectraParser.format_help()
     parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
@@ -82,6 +86,8 @@ def write_covariance():
     parser.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
     h = 'the output file name'
     parser.add_argument('-o', '--output', required=True, type=str, help=h)
+    h = 'the multipole numbers to compute'
+    parser.add_argument('-l', '--ell', nargs='*', type=int, help=h)
     
     # options
     h = "the minimum wavenumber to use"
@@ -106,7 +112,13 @@ def write_covariance():
     if args.kmin is not None: kwargs['kmin'] = args.kmin
     if args.kmax is not None: kwargs['kmax'] = args.kmax
     kwargs['force_diagonal'] = args.force_diagonal
-    _, _, _, C = tools.compute_pkmu_covariance(data, **kwargs)    
+    kwargs['return_extras'] = False
+    if args.mode == 'pkmu':
+        C = tools.compute_pkmu_covariance(data, **kwargs)    
+    elif args.mode == 'poles':
+        if args.ell is None:
+            raise ValueError("if `mode = poles`, then `ell` must be supplied")
+        C = tools.compute_pole_covariance(data, args.ell, **kwargs)
     
     # now output
     C = CovarianceMatrix(C, verify=False)
