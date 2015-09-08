@@ -117,8 +117,9 @@ def write_1d_plaintext(power, filename):
 def write_analysis_file(filename, data, columns, subtract_shot_noise=True, 
                         kmin=None, kmax=None):
     """
-    Write either a (set of) `PkResult`` or ``PkmuResult`` as a plaintext file,
-    with a format designed for easy analysis 
+    Write either a `PkResult``, ``PkmuResult``, or set of ``PkResult` objects
+    representing multipoles,  as a plaintext file, with a format designed 
+    for easy analysis 
     
     Notes
     -----
@@ -129,14 +130,14 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
     col1_1 col2_1 col3_1...
     ...
     
-    The difference between P(k,mu) and P(k) results can be obtained by checking
+    The difference between 1D and 2D results can be obtained by checking
     the size of the shape output on the first line
     
     Parameters
     ----------
     filename : str
         the desired name of the output file
-    data : nbodykit.PkResult, nbodykit.PkmuResult
+    data : nbodykit.PkResult, nbodykit.PkmuResult, SpectraSet
         the power instance to write
     columns : list of str
         list of strings specifying the names of the columns to write to file
@@ -149,31 +150,47 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
         the maximum wavenumber in `h/Mpc` to consider. can specify a value
         for each mu bin, otherwise same value used for all mu bins
     """
+    # if a spectra set was passed, concatenate the data
+    if not isinstance(data, (pkmuresult.PkmuResult, pkresult.PkResult)):
+        if 'ell' not in data.dims:
+            raise ValueError('SpectraSet passed but no `ell` dimension')
+        tostack = []
+        for ell in data['ell']:
+            x = data.sel(ell=ell).values
+            if subtract_shot_noise and ell == 0:
+                x.data['power'] -= get_Pshot(x)
+            tostack.append(x.data.copy())
+        data = np.vstack(tostack).T
+    # a PkmuResult or PkResult was passed
+    else:
+        if subtract_shot_noise: 
+            data.data['power'] -= get_Pshot(data)
+        data = data.data.copy()
+    
+    # get rid of the silly mask
+    data = data.data
+    
     # checks and balances
-    if 'error' not in data:
+    if 'error' not in data.dtype.names:
         raise RuntimeError("probably not a good idea to write a data file with no errors")
-    
-    # subtract shot noise?
-    Pshot = 0
-    if subtract_shot_noise: Pshot = get_Pshot(data)
-    
+    if not all(col in data.dtype.names for col in columns):
+        args = (str(columns), str(data.dtype.names))
+        raise RuntimeErrro("mismatch between desired columns %s and present columns %s" %args)
+
     # get the data
-    data = data.data.copy()
-    data = tools.get_valid_data(data, kmin=kmin, kmax=kmax)
+    data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
     shape = data.shape
-    data['power'] -= Pshot
     
     # now output
     with open(filename, 'w') as ff:
         if len(shape) > 1:
-            towrite = map(np.ravel, [data[col] for col in columns])
             ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
-            np.savetxt(ff, zip(*towrite))
+            np.savetxt(ff, data[columns].ravel(order='F'))
         else:
             ff.write("{:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
-            np.savetxt(ff, zip(*[data[col] for col in columns]))
+            np.savetxt(ff, data[columns])
             
 def read_analysis_file(filename):
     """
@@ -186,7 +203,7 @@ def read_analysis_file(filename):
     dtype = [(col, 'f8') for col in columns]
     toret = np.empty(shape, dtype=dtype)
     for i, col in enumerate(columns):
-        toret[col] = data[...,i].reshape(shape)
+        toret[col] = data[...,i].reshape(shape, order='F')
         
     return toret
             

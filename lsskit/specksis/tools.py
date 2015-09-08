@@ -47,7 +47,7 @@ def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf,
     kmin_[:] = kmin
     kmax_[:] = kmax
     
-    dims = power_list.coords.keys()
+    dims = list(power_list.dims)
     if 'ell' not in dims:
         raise ValueError("`ell` dimension must be present to compute pole covariance")
     dims.remove('ell')
@@ -55,42 +55,31 @@ def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf,
         raise ValueError("SpectraSet must have dimension `ell` plus one other dimension")
     other_dim = dims[0]
     
-    N = len(power_list)
+    N = len(power_list[other_dim])
     data, shapes = [], []
     for i, key in enumerate(power_list[other_dim]):
         
         poles = power_list.loc[{'ell':ells, other_dim:key}]
-
-        # get the valid entries and flatten so mus are stacked in order
-        this_data = []
-        for iell, ell in enumerate(ells):
-            p = poles.sel(ell=ell).values
+        
+        tostack = []
+        for p in poles:
+            p = p.values
             p.add_column('k_center', p.k_center)   
-            this_data.append(get_valid_data(p, kmin=kmin_[iell], kmax=kmax_[iell]))
-            if i == 0:
-                shapes.append(this_data[-1].shape[0])
-        this_data = np.concatenate(this_data)
+            tostack.append(p.data.copy())
+        this_data = np.vstack(tostack).T
+        this_data = trim_and_align_data(this_data, kmin=kmin_, kmax=kmax_)
         data.append(this_data)
         
     data = np.asarray(data)    
-    power = data['power']
     
-    def align_2d_data(arr, shapes):
-        N0 = arr.shape[0]
-        N = np.amax(shapes)
-        
-        out = np.ones((N0, N, len(shapes)))*np.nan
-        for j, x in enumerate(arr):
-            lower = 0
-            for i, shape in enumerate(shapes):
-                out[j, :shape, i] = x[lower : lower+shape]
-                lower += shape
-        return out
+    # concatenate all ells together and remove the NaNs
+    power = data['power'].reshape((N,-1), order='F')
+    power = power[np.isfinite(power)].reshape((N, -1))
     
     with warnings.catch_warnings():
-        mean_power = np.nanmean(align_2d_data(data['power'], shapes), axis=0)
-        k_center = np.nanmean(align_2d_data(data['k_center'], shapes), axis=0)
-        modes = np.nanmean(align_2d_data(data['modes'], shapes), axis=0)
+        mean_power = np.nanmean(data['power'], axis=0)
+        k_center = np.nanmean(data['k_center'], axis=0)
+        modes = np.nanmean(data['modes'], axis=0)
         
     C = np.cov(power, rowvar=False)
     if force_diagonal:
@@ -150,34 +139,20 @@ def compute_pkmu_covariance(power_list, kmin=-np.inf, kmax=np.inf,
         kmax_[:] = kmax
             
         # get the valid entries and flatten so mus are stacked in order
-        this_data = []
-        for imu in range(p.Nmu):
-            this_data.append(get_valid_data(p.Pk(imu), kmin=kmin_[imu], kmax=kmax_[imu]))
-            if i == 0:
-                shapes.append(this_data[-1].shape[0])
-        this_data = np.concatenate(this_data)
+        this_data = trim_and_align_data(p.data, kmin=kmin_, kmax=kmax_)
         data.append(this_data)
         
     data = np.asarray(data)    
-    power = data['power']
     
-    def align_2d_data(arr, shapes):
-        N0 = arr.shape[0]
-        N = np.amax(shapes)
-        
-        out = np.ones((N0, N, len(shapes)))*np.nan
-        for j, x in enumerate(arr):
-            lower = 0
-            for i, shape in enumerate(shapes):
-                out[j, :shape, i] = x[lower : lower+shape]
-                lower += shape
-        return out
-    
+    # concatenate all ells together and remove the NaNs
+    power = data['power'].reshape((N,-1), order='F')
+    power = power[np.isfinite(power)].reshape((N, -1))
+
     with warnings.catch_warnings():
-        mean_power = np.nanmean(align_2d_data(data['power'], shapes), axis=0)
-        k_center = np.nanmean(align_2d_data(data['k_center'], shapes), axis=0)
-        mu_center = np.nanmean(align_2d_data(data['mu_center'], shapes), axis=0)
-        modes = np.nanmean(align_2d_data(data['modes'], shapes), axis=0)
+        mean_power = np.nanmean(data['power'], axis=0)
+        k_center = np.nanmean(data['k_center'], axis=0)
+        mu_center = np.nanmean(data['mu_center'], axis=0)
+        modes = np.nanmean(data['modes'], axis=0)
         
     C = np.cov(power, rowvar=False)
     if force_diagonal:
@@ -189,7 +164,6 @@ def compute_pkmu_covariance(power_list, kmin=-np.inf, kmax=np.inf,
     else:
         return C
     
-
 def get_valid_data(data, kmin=None, kmax=None):
     """
     Return the valid data. First, any NaN entries are removed
@@ -219,7 +193,7 @@ def get_valid_data(data, kmin=None, kmax=None):
         columns = data.columns
         data = data.data
         shape = data.shape
-   
+       
     valid = np.ones(shape, dtype=bool)
     for col in columns:
         valid &= ~np.isnan(data[col])    
@@ -228,15 +202,71 @@ def get_valid_data(data, kmin=None, kmax=None):
     if kmax is not None:
         valid &= (data['k'] <= kmax)
     
-    # align multiple dimensions
+    # collapse across all dimensions  
+    if valid.ndim > 1:
+        valid = np.all(valid, axis=-1)
+    shape = list(data[columns[0]].shape)
+    shape[0] = valid.sum()
+    
+    # make the output
+    dtype = [(name, 'f8') for name in columns]
+    toret = np.empty(shape, dtype=dtype)
+    for col in columns:
+        toret[col] = data[col][valid,...]
+    return toret
+
+
+def trim_and_align_data(data, kmin=None, kmax=None):
+    """
+    Remove any `NaN` entries and trim the input structured array
+    to the specified k range. If the input array has multiple 
+    dimensions, the trimmed data will be filled with NaNs to align
+    it properly, in the case that the k ranges vary across
+    the second dimension.
+    
+    Parameters
+    ----------
+    data : numpy.ndarray
+        structured array holding the data to trim
+    kmin : float, array_like, optional
+        minimum wavenumber to trim by (inclusively), in h/Mpc
+    kmax : float, array_like, optional
+        maximum wavenumber to trim by (inclusively), in h/Mpc
+    
+    Returns
+    -------
+    toret : numpy.ndarray
+        structured array holding the trimmed data, which has been
+        possibly re-aligned by filling with NaNs
+    """        
+    columns = data.dtype.names
+    shape = data.shape
+    n = shape[-1] if data.ndim > 1 else 1
+    # check kmin/kmax range
+    if not np.isscalar(kmin) and len(kmin) != n:
+        raise ValueError("kmin has length %d, but should be of length %d" %(len(kmin), n))
+    if not np.isscalar(kmax) and len(kmax) != n:
+        raise ValueError("kmax has length %d, but should be of length %d" %(len(kmax), n))
+   
+    # initial selection based on NaN and k ranges
+    valid = np.ones(shape, dtype=bool)
+    for col in columns:
+        valid &= ~np.isnan(data[col])    
+    if kmin is not None:
+        valid &= (data['k'] >= kmin)
+    if kmax is not None:
+        valid &= (data['k'] <= kmax)
+    
+    # if multiple dimensions, align data by filling with NaNs
     if valid.ndim > 1:
         row_inds = np.arange(shape[0])
         min_idx = min([row_inds[valid[:,i]].min() for i in range(shape[1])])
         max_idx = max([row_inds[valid[:,i]].max() for i in range(shape[1])])
         nan_inds = np.zeros(shape, dtype=bool)
-        nan_inds[:,min_idx:max_idx] = True
+        nan_inds[min_idx:max_idx, :] = True
         nan_inds &= ~valid
-        valid[:,min_idx:max_idx] = True
+        valid = np.zeros(shape, dtype=bool)
+        valid[min_idx:max_idx, :] = True
         
     shape = list(shape)
     shape[0] = valid.sum(axis=0)
