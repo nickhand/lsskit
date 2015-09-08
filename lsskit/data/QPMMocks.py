@@ -140,8 +140,8 @@ class QPMMocks(PowerSpectraLoader):
             # form the filename and load the data
             d = os.path.join(self.root, space, 'poles')
             basename = '{ell}_qpm_%s_{box:04d}_0.6452%s.dat' %(tag, spacing)
-            coords = [['mono', 'quad', 'hexadec'], self.boxes]
-            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['ell', 'box']), self.dk)
+            coords = [self.boxes, ['mono', 'quad', 'hexadec']]
+            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['box', 'ell']), self.dk)
             
             P.coords['ell'] = [0, 2, 4]
             setattr(self, name, P)

@@ -18,7 +18,7 @@ class ChallengeMocks(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
-    def get_Pgal(self, spacing="dk005", scaled=False):
+    def get_Pgal(self, spacing="dk005", scaled=False, Nmu=5):
         """
         Return the total galaxy spectrum in redshift space
         
@@ -28,23 +28,50 @@ class ChallengeMocks(PowerSpectraLoader):
             the tag used to identify results with different k spacing, i.e. `dk005`
         scaled : bool, optional
             return the results that have/haven't been scaled by AP factors
+        Nmu : int, optional
+            the number of mu bins
         """
         tag = 'unscaled' if not scaled else 'scaled'
-        if spacing: spacing += "_"
-        name = '_Pgal_%s%s' %(spacing, tag)
+        if spacing: spacing = '_' + spacing
+        name = '_Pgal%s_%s_Nmu%d' %(spacing, tag, Nmu)
         try:
             return getattr(self, name)
         except AttributeError:
             
             # load the data from file
-            basename = 'pkmu_challenge_box{box}_%s_%sNmu5.dat' %(tag, spacing)
+            basename = 'pkmu_challenge_box{box}_%s%s_Nmu%d.dat' %(tag, spacing, Nmu)
             coords = [self.boxes]
-            Pgal = self.reindex(SpectraSet.from_files(self.root, basename, coords, ['box']), self.dk)
+            d = os.path.join(self.root, 'pkmu')
+            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)
             
             # add the errors
             Pgal.add_errors()
             setattr(self, name, Pgal)
             return Pgal
+            
+    #--------------------------------------------------------------------------
+    # multipoles data
+    #--------------------------------------------------------------------------
+    def get_poles(self, spacing="dk005", scaled=False):
+        """
+        Return the total galaxy spectrum multipoles in redshift space
+        """
+        tag = 'unscaled' if not scaled else 'scaled'
+        if spacing: spacing = '_'+spacing
+        name = '_poles%s_%s' %(spacing, tag)
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            
+            # load the data from file
+            basename = '{ell}_challenge_box{box}_%s%s.dat' %(tag, spacing)
+            coords = [self.boxes, ['mono', 'quad', 'hexadec']]
+            d = os.path.join(self.root, 'poles')
+            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['box', 'ell']), self.dk)
+            
+            P.coords['ell'] = [0, 2, 4]
+            setattr(self, name, P)
+            return P
     
     def get_box_stats(self):
         """
