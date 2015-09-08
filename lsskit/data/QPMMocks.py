@@ -44,7 +44,7 @@ class QPMMocks(PowerSpectraLoader):
             
             # form the filename
             basename = 'pkmu_qpm_%s_990mean_0.6452_%sNmu%d.dat' %(tag, spacing, Nmu)
-            filename = os.path.join(self.root, space, 'pkmu', basename)
+            filename = os.path.join(self.root, space, 'power', basename)
             
             # load the data and possibly re-index
             Pgal = io.load_data(filename)
@@ -82,7 +82,7 @@ class QPMMocks(PowerSpectraLoader):
         except AttributeError:
             
             # form the filename and load the data
-            d = os.path.join(self.root, space, 'pkmu')
+            d = os.path.join(self.root, space, 'power')
             basename = 'pkmu_qpm_%s_{box:04d}_0.6452_%sNmu%d.dat' %(tag, spacing, Nmu)
             coords = [self.boxes]
             Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)

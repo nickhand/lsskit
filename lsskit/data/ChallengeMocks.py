@@ -41,7 +41,7 @@ class ChallengeMocks(PowerSpectraLoader):
             # load the data from file
             basename = 'pkmu_challenge_box{box}_%s%s_Nmu%d.dat' %(tag, spacing, Nmu)
             coords = [self.boxes]
-            d = os.path.join(self.root, 'pkmu')
+            d = os.path.join(self.root, 'power')
             Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)
             
             # add the errors

@@ -43,22 +43,24 @@ class RunPBGalaxy(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
-    def get_Pgal(self, space='real', spacing=""):
+    def get_Pgal(self, space='real', spacing="", Nmu=5):
         """
         Return galaxy component spectra
         """
         if spacing: spacing = "_"+spacing
-        name = '_Pgal_%s%s' %(self.tag, spacing)
+        if space == 'real':
+            name = '_Pgal_%s%s' %(self.tag, spacing)
+        else:
+            name = '_Pgal_%s%s_Nmu%d' %(self.tag, spacing, Nmu)
         try:
             return getattr(self, name)
         except AttributeError:
             
-            d = os.path.join(self.root, 'galaxy', space)
+            d = os.path.join(self.root, 'galaxy', space, 'power')
             if space == 'real':
-                if spacing:
-                    basename = 'pk_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
+                basename = 'pk_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
             else:
-                basename = 'pkmu_{sample}_runPB_%s%s_Nmu5.dat' %(self.tag, spacing)
+                basename = 'pkmu_{sample}_runPB_%s%s_Nmu%d.dat' %(self.tag, spacing, Nmu)
                 
             # load the data from file
             coords = [self.a, self.spectra]
@@ -79,6 +81,28 @@ class RunPBGalaxy(PowerSpectraLoader):
                 raise ValueError("there appears to be no non-null entries -- something probably went wrong")
             setattr(self, name, Pgal)
             return Pgal
+            
+    def get_poles(self, space='redshift', spacing="dk005"):
+        """
+        Return galaxy component spectra multipoles
+        """
+        if spacing: spacing = "_"+spacing
+        name = '_poles_%s%s_%s' %(self.tag, spacing, space)
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'galaxy', space, 'poles')
+            basename = '{ell}_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
+                
+            # load the data from file
+            coords = [self.a, self.spectra, ['mono', 'quad', 'hexadec']]
+            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample', 'ell'], ignore_missing=True), self.dk)
+            P.coords['ell'] = [0, 2, 4]
+            if not P.notnull().sum():
+                raise ValueError("there appears to be no non-null entries -- something probably went wrong")
+            setattr(self, name, P)
+            return P
     
     def get_gal_x_matter(self, space='real'):
         """
@@ -88,7 +112,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             return getattr(self, '_Pgal_x_mm_'+space)
         except AttributeError:
             
-            d = os.path.join(self.root, 'galaxy', space)
+            d = os.path.join(self.root, 'galaxy', space, 'power')
             if space == 'real':
                 basename = 'pk_{sample}_x_matter_runPB_%s.dat' %self.tag
             else:
