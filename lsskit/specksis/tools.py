@@ -243,9 +243,9 @@ def trim_and_align_data(data, kmin=None, kmax=None):
     shape = data.shape
     n = shape[-1] if data.ndim > 1 else 1
     # check kmin/kmax range
-    if not np.isscalar(kmin) and len(kmin) != n:
+    if kmin is not None and not np.isscalar(kmin) and len(kmin) != n:
         raise ValueError("kmin has length %d, but should be of length %d" %(len(kmin), n))
-    if not np.isscalar(kmax) and len(kmax) != n:
+    if kmax is not None and not np.isscalar(kmax) and len(kmax) != n:
         raise ValueError("kmax has length %d, but should be of length %d" %(len(kmax), n))
    
     # initial selection based on NaN and k ranges

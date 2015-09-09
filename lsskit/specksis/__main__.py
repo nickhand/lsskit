@@ -54,7 +54,7 @@ def write_analysis_file():
         args.key[k] = args.key[k][0]
     try:
         power = data.sel(**args.key)
-        if len(power) == 1:
+        if power.size == 1:
             power = power.values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
