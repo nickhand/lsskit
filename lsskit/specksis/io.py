@@ -173,7 +173,7 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
         raise RuntimeError("probably not a good idea to write a data file with no errors")
     if not all(col in data.dtype.names for col in columns):
         args = (str(columns), str(data.dtype.names))
-        raise RuntimeErrro("mismatch between desired columns %s and present columns %s" %args)
+        raise RuntimeError("mismatch between desired columns %s and present columns %s" %args)
 
     # get the data
     data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
@@ -190,20 +190,188 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, data[columns])
             
+def write_power_analysis_file(filename, data, columns, subtract_shot_noise=True, 
+                                kmin=None, kmax=None):
+    """
+    Write either a `PkResult``, ``PkmuResult`` as a plaintext file, with a 
+    format designed for easy analysis 
+    
+    Notes
+    -----
+    The format is:
+    Nk [Nmu]
+    col1_name col2_name col3_name
+    col1_0 col2_0 col3_0...
+    col1_1 col2_1 col3_1...
+    ...
+    
+    The difference between 1D and 2D results can be obtained by checking
+    the size of the shape output on the first line
+    
+    Parameters
+    ----------
+    filename : str
+        the desired name of the output file
+    data : nbodykit.PkResult, nbodykit.PkmuResult
+        the power instance to write
+    columns : list of str
+        list of strings specifying the names of the columns to write to file
+    subtract_shot_noise : bool, optional
+        if `True`, subtract the shot noise before outputing to file. Default is `True`
+    kmin : float or array_like
+        the minimum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    kmax : float or array_like
+        the maximum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    """
+    if subtract_shot_noise: 
+        data.data['power'] -= get_Pshot(data)
+    data = data.data.copy()
+    
+    # get rid of the silly mask
+    data = data.data
+    
+    # checks and balances
+    if 'error' not in data.dtype.names:
+        raise RuntimeError("probably not a good idea to write a data file with no errors")
+    if not all(col in data.dtype.names for col in columns):
+        args = (str(columns), str(data.dtype.names))
+        raise RuntimeError("mismatch between desired columns %s and present columns %s" %args)
+
+    # get the data
+    data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
+    shape = data.shape
+    
+    # now output
+    with open(filename, 'w') as ff:
+        if len(shape) > 1:
+            ff.write("{:d} {:d}\n".format(*shape))
+            ff.write(" ".join(columns)+"\n")
+            np.savetxt(ff, data[columns].ravel(order='F'))
+        else:
+            ff.write("{:d}\n".format(*shape))
+            ff.write(" ".join(columns)+"\n")
+            np.savetxt(ff, data[columns])
+            
+
+def write_poles_analysis_file(filename, data, pkmu, columns, 
+                                subtract_shot_noise=True, kmin=None, kmax=None):
+    """
+    Write a set of ``PkResult` objects representing multipoles, as a plaintext 
+    file, with a format designed for easy analysis. The file also includes
+    the mu values and weights needed to compute the theoretical multipoles
+    properly
+    
+    Notes
+    -----
+    The format is:
+    Nk Nell
+    col1_name col2_name col3_name
+    col1_0 col2_0 col3_0...
+    col1_1 col2_1 col3_1...
+    ...
+    
+    Parameters
+    ----------
+    filename : str
+        the desired name of the output file
+    data : SpectraSet
+        the set of multipoles to write
+    pkmu : nbodykit.PkmuResult
+        the P(k,mu) instance which has the mu and weight values
+    columns : list of str
+        list of strings specifying the names of the columns to write to file
+    subtract_shot_noise : bool, optional
+        if `True`, subtract the shot noise before outputing to file. Default is `True`
+    kmin : float or array_like
+        the minimum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    kmax : float or array_like
+        the maximum wavenumber in `h/Mpc` to consider. can specify a value
+        for each mu bin, otherwise same value used for all mu bins
+    """
+    if 'ell' not in data.dims:
+        raise ValueError('SpectraSet passed but no `ell` dimension')
+    tostack = []
+    for ell in data['ell']:
+        x = data.sel(ell=ell).values
+        if subtract_shot_noise and ell == 0:
+            x.data['power'] -= get_Pshot(x)
+        tostack.append(x.data.copy())
+    data = np.vstack(tostack).T
+    
+    # get rid of the silly mask
+    data = data.data
+    
+    # checks and balances
+    if 'error' not in data.dtype.names:
+        raise RuntimeError("probably not a good idea to write a data file with no errors")
+    if not all(col in data.dtype.names for col in columns):
+        args = (str(columns), str(data.dtype.names))
+        raise RuntimeError("mismatch between desired columns %s and present columns %s" %args)
+
+    # get the data
+    data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
+    shape = data.shape
+    
+    # write out the multipoles
+    with open(filename, 'w') as ff:
+        ff.write("{:d} {:d}\n".format(*shape))
+        ff.write(" ".join(columns)+"\n")
+        np.savetxt(ff, data[columns].ravel(order='F'))
+        
+    # now do the weights
+    modes = pkmu['modes'].data
+    mu = np.nan_to_num(pkmu['mu'].data)
+    weights = modes/modes.sum(axis=-1)[:,None]
+    data = np.empty(weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
+    data['mu'] = mu; data['weights'] = weights; data['k'] = pkmu.index['k_center']
+    data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
+    
+    # write out the weights
+    with open(filename, 'a') as ff:
+        shape = data.shape
+        columns = ['mu', 'weights']
+        ff.write("{:d} {:d}\n".format(*shape))
+        ff.write(" ".join(columns)+"\n")
+        np.savetxt(ff, data[columns].ravel(order='F'))
+    
+    
 def read_analysis_file(filename):
     """
     Read an ``analysis file`` as output by ``write_analysis_file``
     """
-    with open(filename, 'r') as ff:
-        shape = tuple(map(int, ff.readline().split()))
-        columns = ff.readline().split()
-        data = np.loadtxt(ff)
+    # read the data first
+    lines = open(filename, 'r').readlines()
+    shape = tuple(map(int, lines[0].split()))
+    columns = lines[1].split()
+    N = np.prod(shape)
+    data = np.asarray([map(float, line.split()) for line in lines[2:N+2]])
+    
+    # return a structured array
     dtype = [(col, 'f8') for col in columns]
     toret = np.empty(shape, dtype=dtype)
     for i, col in enumerate(columns):
         toret[col] = data[...,i].reshape(shape, order='F')
-        
-    return toret
+    
+    # mu/weights?
+    extra = None
+    if len(lines) > N+2:
+        try:
+            shape = tuple(map(int, lines[N+2].split()))
+            columns = lines[N+3].split()
+            N2 = np.prod(shape)
+            data2 = np.asarray([map(float, line.split()) for line in lines[N+4:N+4+N2]])
+            
+            dtype = [(col, 'f8') for col in columns]
+            extra = np.empty(shape, dtype=dtype)
+            for i, col in enumerate(columns):
+                extra[col] = data2[...,i].reshape(shape, order='F')
+        except Exception as e:
+            raise RuntimeError("error parsing mu/weights: %s" %str(e))
+
+    return toret if extra is None else (toret, extra)
             
             
         

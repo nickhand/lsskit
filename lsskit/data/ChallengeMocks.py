@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet
+from lsskit.specksis import SpectraSet, tools
 import os
 
 class ChallengeMocks(PowerSpectraLoader):
@@ -52,10 +52,11 @@ class ChallengeMocks(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    def get_poles(self, spacing="dk005", scaled=False):
+    def get_poles(self, spacing="dk005", scaled=False, Nmu=100):
         """
         Return the total galaxy spectrum multipoles in redshift space
         """
+        _spacing = spacing
         tag = 'unscaled' if not scaled else 'scaled'
         if spacing: spacing = '_'+spacing
         name = '_poles%s_%s' %(spacing, tag)
@@ -64,14 +65,19 @@ class ChallengeMocks(PowerSpectraLoader):
         except AttributeError:
             
             # load the data from file
-            basename = '{ell}_challenge_box{box}_%s%s.dat' %(tag, spacing)
-            coords = [self.boxes, ['mono', 'quad', 'hexadec']]
+            basename = 'poles_challenge_box{box}_%s%s_Nmu%d.dat' %(tag, spacing, Nmu)
+            coords = [self.boxes]
             d = os.path.join(self.root, 'poles')
-            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['box', 'ell']), self.dk)
+            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            poles = self.reindex(SpectraSet.from_files(d, basename, coords, ['box'], columns=columns), self.dk)
             
-            P.coords['ell'] = [0, 2, 4]
-            setattr(self, name, P)
-            return P
+            # now convert
+            pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu)    
+            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            toret = tools.format_multipoles_set(poles, pkmu, ells)
+            
+            setattr(self, name, toret)
+            return toret
     
     def get_box_stats(self):
         """

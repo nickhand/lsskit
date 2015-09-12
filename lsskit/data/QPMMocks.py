@@ -95,11 +95,12 @@ class QPMMocks(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy multipoles data
     #--------------------------------------------------------------------------
-    def get_mean_poles(self, spacing="dk005", space='redshift', scaled=False,):
+    def get_mean_poles(self, spacing="dk005", space='redshift', scaled=False, Nmu=100):
         """
         Return the mean galaxy spectrum multipoles (mono, quad, hexadec) in 
         redshift space
         """
+        _spacing = spacing
         if space != 'redshift':
             raise NotImplementedError("only `redshift` space results exist for QPM mocks")
         tag = 'unscaled' if not scaled else 'scaled'
@@ -109,25 +110,28 @@ class QPMMocks(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
             data = []
-            poles = ['mono', 'quad', 'hexadec']
+
+            basename = 'poles_qpm_%s_990mean_0.6452%s_Nmu%s.dat' %(tag, spacing, Nmu)
+            filename = os.path.join(self.root, space, 'poles', basename)
+            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            poles = io.load_data(filename, columns)
+            if self.dk is not None:
+                poles = poles.reindex_k(self.dk, weights='modes', force=True)
             
-            for pole in poles:
-                basename = '%s_qpm_%s_990mean_0.6452%s.dat' %(pole, tag, spacing)
-                filename = os.path.join(self.root, space, 'poles', basename)
+            # now convert
+            pkmu = self.get_mean_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu, space=space)    
+            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            data = tools.format_multipoles(poles, pkmu, ells)
             
-                P = io.load_data(filename)
-                if self.dk is not None:
-                    P = P.reindex_k(self.dk, weights='modes', force=True)
-                data.append(P)
-                
             toret = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
             setattr(self, name, toret)
             return toret
     
-    def get_poles(self, spacing="dk005", space='redshift', scaled=False):
+    def get_poles(self, spacing="dk005", space='redshift', scaled=False, Nmu=100):
         """
         Return the galaxy multipoles in redshift space
         """
+        _spacing = spacing
         if space != 'redshift':
             raise NotImplementedError("only `redshift` space results exist for QPM mocks")
         tag = 'unscaled' if not scaled else 'scaled'
@@ -139,13 +143,18 @@ class QPMMocks(PowerSpectraLoader):
             
             # form the filename and load the data
             d = os.path.join(self.root, space, 'poles')
-            basename = '{ell}_qpm_%s_{box:04d}_0.6452%s.dat' %(tag, spacing)
-            coords = [self.boxes, ['mono', 'quad', 'hexadec']]
-            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['box', 'ell']), self.dk)
+            basename = 'poles_qpm_%s_{box:04d}_0.6452%s_Nmu%d.dat' %(tag, spacing, Nmu)
+            coords = [self.boxes]
+            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            poles = self.reindex(SpectraSet.from_files(d, basename, coords, ['box'], columns=columns), self.dk)
             
-            P.coords['ell'] = [0, 2, 4]
-            setattr(self, name, P)
-            return P
+            # now convert
+            pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu, space=space)    
+            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            toret = tools.format_multipoles_set(poles, pkmu, ells)
+            
+            setattr(self, name, toret)
+            return toret
     
     #--------------------------------------------------------------------------
     # covariances

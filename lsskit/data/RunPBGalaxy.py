@@ -107,7 +107,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             # now convert
             pkmu = self.get_Pgal(space=space, spacing=_spacing, Nmu=Nmu)    
             ells = {'mono':0, 'quad':2, 'hexadec':4}
-            toret = tools.format_multipoles(poles, pkmu, ells)
+            toret = tools.format_multipoles_set(poles, pkmu, ells)
             
             setattr(self, name, toret)
             return toret
