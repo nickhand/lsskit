@@ -114,7 +114,7 @@ def write_poles_analysis_file():
         args.key[k] = args.key[k][0]
     try:
         poles = data.sel(**args.key)
-        pkmu = pkmu.sel(**args.key)
+        pkmu = pkmu.sel(**args.key).values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
 
