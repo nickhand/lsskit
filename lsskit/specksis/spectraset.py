@@ -37,7 +37,7 @@ class SpectraSet(xray.DataArray):
         
  
     @classmethod
-    def from_files(cls, result_dir, basename, coords, dims=None, ignore_missing=False, **kwargs):
+    def from_files(cls, result_dir, basename, coords, dims=None, ignore_missing=False, columns=None, **kwargs):
         """
         Return a SpectraSet instance by loading data from all files in 
         ``result_dir`` with base ``basename``. The filename is formatting using 
@@ -72,7 +72,9 @@ class SpectraSet(xray.DataArray):
         data = np.empty(map(len, coords), dtype=object)
         for i, f in utils.enum_files(result_dir, basename, dims, coords, ignore_missing=ignore_missing):
             try:
-                data[i] = io.load_data(f)
+                kw = {}
+                if columns is not None: kw['columns'] = columns
+                data[i] = io.load_data(f, **kw)
             except Exception as e:
                 if ignore_missing:
                     data[i] = np.nan

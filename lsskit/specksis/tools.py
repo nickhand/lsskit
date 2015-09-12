@@ -8,6 +8,57 @@
 """
 from .. import numpy as np
 
+def format_multipoles(poles, pkmu, ells):
+    """
+    Format the input spectra set of multipoles, which includes multiple
+    multipoles within one `PkResult`, such that the multipole number
+    has its own dimension. Also add errors based on the specified
+    `P(k,mu)` results
+    """
+    from scipy.special import legendre
+    from nbodykit import pkresult
+    from . import SpectraSet
+
+    tags = ells.keys()
+    ells = ells.values()
+
+    all_data = []
+    for key in poles.ndindex():
+
+        this_pole = poles.sel(**key).values
+        this_pkmu = pkmu.sel(**key).values
+
+        meta = {k:getattr(this_pole, k) for k in this_pole._metadata}
+        meta['edges'] = this_pole.kedges
+        
+        # weight by modes
+        modes = this_pkmu['modes'].data
+        N_1d = modes.sum(axis=-1)
+        weights = modes / N_1d[:,None]
+
+        # avg mu
+        mu = np.nan_to_num(this_pkmu['mu'].data)
+
+        new_poles = []
+        for tag, ell in zip(tags, ells):
+            
+            # compute the variance
+            power = np.nan_to_num(this_pkmu['power'].data)
+            variance = (weights*((2*ell+1)*power*legendre(ell)(mu))**2).sum(axis=-1) / N_1d
+            
+            # make the new PkResult object
+            data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5]).T
+            pk = pkresult.PkResult.from_dict(data, ['k', 'power', 'error'], sum_only=['modes'], **meta)
+            new_poles.append(pk)
+            
+        all_data.append(new_poles)
+    all_data = np.reshape(all_data, poles.shape + (3,))
+    dims = poles.dims
+    coords = [poles.coords[dims[0]], poles.coords[dims[1]], ells]
+    return SpectraSet(all_data, coords, ['a', 'sample', 'ell'])
+        
+
+
 def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf, 
                             force_diagonal=False, return_extras=False):
     """

@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils
+from lsskit.specksis import SpectraSet, utils, tools
 import os
 
 class RunPBGalaxy(PowerSpectraLoader):
@@ -82,10 +82,11 @@ class RunPBGalaxy(PowerSpectraLoader):
             setattr(self, name, Pgal)
             return Pgal
             
-    def get_poles(self, space='redshift', spacing="dk005"):
+    def get_poles(self, space='redshift', spacing="dk005", Nmu=100):
         """
         Return galaxy component spectra multipoles
         """
+        _spacing = spacing
         if spacing: spacing = "_"+spacing
         name = '_poles_%s%s_%s' %(self.tag, spacing, space)
         try:
@@ -93,16 +94,23 @@ class RunPBGalaxy(PowerSpectraLoader):
         except AttributeError:
             
             d = os.path.join(self.root, 'galaxy', space, 'poles')
-            basename = '{ell}_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
+            basename = 'poles_{sample}_runPB_%s%s_Nmu%d.dat' %(self.tag, spacing, Nmu)
                 
             # load the data from file
-            coords = [self.a, self.spectra, ['mono', 'quad', 'hexadec']]
-            P = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample', 'ell'], ignore_missing=True), self.dk)
-            P.coords['ell'] = [0, 2, 4]
-            if not P.notnull().sum():
+            coords = [self.a, self.spectra]
+            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            poles = SpectraSet.from_files(d, basename, coords, ['a', 'sample'], ignore_missing=True, columns=columns)
+            poles = self.reindex(poles, self.dk)
+            if not poles.notnull().sum():
                 raise ValueError("there appears to be no non-null entries -- something probably went wrong")
-            setattr(self, name, P)
-            return P
+            
+            # now convert
+            pkmu = self.get_Pgal(space=space, spacing=_spacing, Nmu=Nmu)    
+            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            toret = tools.format_multipoles(poles, pkmu, ells)
+            
+            setattr(self, name, toret)
+            return toret
     
     def get_gal_x_matter(self, space='real'):
         """

@@ -27,22 +27,20 @@ def get_Pshot(power):
 #------------------------------------------------------------------------------
 # readers
 #------------------------------------------------------------------------------
-def read_1d_data(filename):
+def read_1d_data(filename, columns=['k', 'power', 'modes']):
     """
     Read a `PkResult` from a file with the format used by ``nbodykit::power.py``
     """
     d, meta = files.ReadPower1DPlainText(filename)
     
     # try to extract the columns from the first line of the file
-    columns = open(filename, 'r').readline()
-    if columns[0] == '#':
-        columns = columns.split()[1:]
-    else:
-        columns = ['k', 'power', 'modes']
+    cols = open(filename, 'r').readline()
+    if cols[0] == '#':
+        columns = cols.split()[1:]
     pk = pkresult.PkResult.from_dict(d, columns, sum_only=['modes'], **meta)
     return pk
    
-def read_2d_data(filename):
+def read_2d_data(filename, columns=None):
     """
     Read a `PkmuResult` from a file with the format used by ``nbodykit::power.py``
     """
@@ -50,7 +48,7 @@ def read_2d_data(filename):
     pkmu = pkmuresult.PkmuResult.from_dict(d, sum_only=['modes'], **meta)
     return pkmu
   
-def load_data(filename):
+def load_data(filename, columns=['k', 'power', 'modes']):
     """
     Load either a ``PkmuResult`` or ``PkResult`` from file, assuming that the
     file has the format used by ``nbodykit::power.py``
@@ -58,7 +56,7 @@ def load_data(filename):
     readers = [read_1d_data, read_2d_data]
     for reader in readers:
         try:
-            return reader(filename)
+            return reader(filename, columns)
         except Exception as e:
             continue
     else:
