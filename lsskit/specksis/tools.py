@@ -36,8 +36,8 @@ def format_multipoles(this_pole, this_pkmu, ells):
     for tag, ell in zip(tags, ells):
         
         # compute the variance
-        power = np.nan_to_num(this_pkmu['power'].data)
-        variance = (weights*((2*ell+1)*power*legendre(ell)(mu))**2).sum(axis=-1) / N_1d
+        power = this_pkmu['power'].data
+        variance = 2 * np.nansum( weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
         
         # make the new PkResult object
         data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5]).T
@@ -141,7 +141,10 @@ def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf,
     with warnings.catch_warnings():
         mean_power = np.nanmean(data['power'], axis=0)
         k_center = np.nanmean(data['k_center'], axis=0)
-        modes = np.nanmean(data['modes'], axis=0)
+        if 'modes' in data.dtype.names:
+            modes = np.nanmean(data['modes'], axis=0)
+        else:
+            modes = None
         
     C = np.cov(power, rowvar=False)
     if force_diagonal:
@@ -214,7 +217,10 @@ def compute_pkmu_covariance(power_list, kmin=-np.inf, kmax=np.inf,
         mean_power = np.nanmean(data['power'], axis=0)
         k_center = np.nanmean(data['k_center'], axis=0)
         mu_center = np.nanmean(data['mu_center'], axis=0)
-        modes = np.nanmean(data['modes'], axis=0)
+        if 'modes' in data.dtype.names:
+            modes = np.nanmean(data['modes'], axis=0)
+        else:
+            modes = None
         
     C = np.cov(power, rowvar=False)
     if force_diagonal:
