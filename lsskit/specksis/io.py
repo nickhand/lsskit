@@ -322,7 +322,7 @@ def write_poles_analysis_file(filename, data, pkmu, columns,
         np.savetxt(ff, data[columns].ravel(order='F'))
         
     # now do the weights
-    modes = pkmu['modes'].data
+    modes = np.nan_to_num(pkmu['modes'].data)
     mu = np.nan_to_num(pkmu['mu'].data)
     weights = modes/modes.sum(axis=-1)[:,None]
     data = np.empty(weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])

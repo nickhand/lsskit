@@ -39,7 +39,7 @@ def gaussian_pole_covariance(pkmu, ells, kmin=-np.inf, kmax=np.inf):
     kmax_[:] = kmax
     
     # weight by modes
-    modes = pkmu['modes'].data
+    modes = np.nan_to_num(pkmu['modes'].data)
     N_1d = modes.sum(axis=-1)
     weights = modes / N_1d[:,None]
 
@@ -83,7 +83,7 @@ def format_multipoles(this_pole, this_pkmu, ells):
     meta['edges'] = this_pole.kedges
     
     # weight by modes
-    modes = this_pkmu['modes'].data
+    modes = np.nan_to_num(this_pkmu['modes'].data)
     N_1d = modes.sum(axis=-1)
     weights = modes / N_1d[:,None]
 
