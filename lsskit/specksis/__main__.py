@@ -125,6 +125,53 @@ def write_poles_analysis_file():
     kwargs['kmax'] = args.kmax
     io.write_poles_analysis_file(args.output, poles, pkmu, args.cols, **kwargs)
 
+def write_gaussian_pole_covariance():
+    """
+    Write out the gaussian multipoles covariance matrix
+    """
+    from pyRSD.rsdfit.data import CovarianceMatrix
+    
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    
+    # required arguments
+    h = parse_tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the data format to use, either `pickle` or `plaintext`'
+    parser.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
+    h = 'the output file name'
+    parser.add_argument('-o', '--output', required=True, type=str, help=h)
+    h = 'the multipole numbers to compute'
+    parser.add_argument('-l', '--ell', nargs='*', required=True, type=int, help=h)
+    
+    # options
+    h = "the minimum wavenumber to use"
+    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
+    h = "the maximum wavenumber to use"
+    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
+        
+    # parse
+    args = parser.parse_args()
+    if args.kmin is not None and len(args.kmin) == 1:
+        args.kmin = args.kmin[0]
+    if args.kmax is not None and len(args.kmax) == 1:
+        args.kmax = args.kmax[0]
+    
+    # get the data from the parent data and function
+    data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    
+    # compute the covariance matrix
+    C = tools.gaussian_pole_covariance(data, args.ell, kmin=args.kmin, kmax=args.kmax)
+    
+    # now output
+    C = CovarianceMatrix(C, verify=False)
+    if args.format == 'pickle':
+        C.to_pickle(args.output)
+    else:
+        C.to_plaintext(args.output)
+
 def write_covariance():
     """
     Write out a power spectrum covariance matrix

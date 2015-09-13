@@ -120,7 +120,7 @@ class QPMMocks(PowerSpectraLoader):
             
             # now convert
             pkmu = self.get_mean_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu, space=space)    
-            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             data = tools.format_multipoles(poles, pkmu, ells)
             
             toret = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
@@ -150,7 +150,7 @@ class QPMMocks(PowerSpectraLoader):
             
             # now convert
             pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu, space=space)    
-            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             toret = tools.format_multipoles_set(poles, pkmu, ells)
             
             setattr(self, name, toret)

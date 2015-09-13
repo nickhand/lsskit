@@ -14,6 +14,7 @@ setup(
             'compute_multipoles = lsskit.specksis.__main__:compute_multipoles',
             'compare_mcmc_fits = lsskit.specksis.__main__:compare_mcmc_fits',
             'plot_mcmc_bestfit = lsskit.specksis.__main__:plot_mcmc_bestfit',
+            'write_gaussian_pole_covariance = lsskit.specksis.__main__:write_gaussian_pole_covariance',
             'write_covariance = lsskit.specksis.__main__:write_covariance',
             'write_power_analysis_file = lsskit.specksis.__main__:write_power_analysis_file',
             'write_poles_analysis_file = lsskit.specksis.__main__:write_poles_analysis_file',

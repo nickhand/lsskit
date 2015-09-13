@@ -8,6 +8,65 @@
 """
 from .. import numpy as np
 
+def gaussian_pole_covariance(pkmu, ells, kmin=-np.inf, kmax=np.inf):
+    """
+    Compute the gaussian covariance between a set of multipoles,
+    using the P(k,mu) measurement that the multipoles were estimated
+    from
+    
+    Parameters
+    ----------
+    pkmu : nbodykit.PkmuResult
+        the P(k,mu) measurement to estimate the covariance from
+    ells : list
+        the list of multipole numbers
+    kmin : float, array_like
+        the minimum wavenumber to include
+    kmax : float, array_like
+        the maximum wavenumber to include
+    """
+    from scipy.special import legendre
+    
+    Nk = pkmu.Nk
+    Nell = len(ells)
+    
+    # get the kmin/kmax as arrays
+    if kmin is None: kmin = -np.inf
+    if kmax is None: kmax = np.inf
+    kmin_ = np.empty(Nell)
+    kmax_ = np.empty(Nell)
+    kmin_[:] = kmin
+    kmax_[:] = kmax
+    
+    # weight by modes
+    modes = pkmu['modes'].data
+    N_1d = modes.sum(axis=-1)
+    weights = modes / N_1d[:,None]
+
+    # avg mu
+    mu = np.nan_to_num(pkmu['mu'].data)
+    
+    # power
+    power = pkmu['power'].data
+    
+    # make the covariance matrix of size (Nk*Nell, Nk*Nell)
+    C = np.zeros((Nell, Nk, Nell, Nk))
+    for i in range(Nell):
+        ell = ells[i]
+        for j in range(i, Nell):
+            ell_prime = ells[j]
+            
+            factor = (2*ell+1)*(2*ell_prime+1)*legendre(ell)(mu)*legendre(ell_prime)(mu)
+            cov = 2 * np.nansum( weights*factor*power**2, axis=-1) / N_1d
+            C[i,:,j,:] = np.diag(cov)
+            if i != j:
+                C[j,:,i,:] = C[i,:,j,:]
+    C = C.reshape((Nk*Nell, Nk*Nell))        
+          
+    # apply bounds and return
+    inds = np.concatenate([(pkmu.k_center >= kmin_[i])&(pkmu.k_center <= kmax_[i]) for i in range(Nell)])
+    return C[inds,:][:,inds]
+            
 def format_multipoles(this_pole, this_pkmu, ells):
     """
     Format the input spectra of multipoles, which includes multiple
@@ -18,8 +77,7 @@ def format_multipoles(this_pole, this_pkmu, ells):
     from scipy.special import legendre
     from nbodykit import pkresult
 
-    tags = ells.keys()
-    ells = ells.values()
+    tags, ells = zip(*ells)
 
     meta = {k:getattr(this_pole, k) for k in this_pole._metadata}
     meta['edges'] = this_pole.kedges
@@ -64,12 +122,21 @@ def format_multipoles_set(poles, pkmu, ells):
         new_poles = format_multipoles(this_pole, this_pkmu, ells)
         all_data.append(new_poles)
         
+    tags, ells = zip(*ells)
     all_data = np.reshape(all_data, poles.shape + (3,))
-    coords = [poles.coords[dim] for dim in poles.dims] + [ells.values()]
+    coords = [poles.coords[dim] for dim in poles.dims] + [ells]
     return SpectraSet(all_data, coords, poles.dims+('ell',))
         
 
 
+def remove_pole_off_diags(C, i, j, shapes):
+    inds = np.concatenate([[0], shapes.cumsum()])
+    sl_i = slice(inds[i], inds[i+1])
+    sl_j = slice(inds[j], inds[j+1])
+    C[sl_i, sl_j] = np.diag(np.diag(C[sl_i, sl_j]))
+    if i != j:
+        C[sl_j, sl_i] = C[sl_i, sl_j]
+    
 def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf, 
                             force_diagonal=False, return_extras=False):
     """
@@ -132,7 +199,9 @@ def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf,
         this_data = trim_and_align_data(this_data, kmin=kmin_, kmax=kmax_)
         data.append(this_data)
         
-    data = np.asarray(data)    
+    # this has shape (N, Nk, Nell)
+    data = np.asarray(data) 
+    shapes = np.isfinite(data[0,...]['power']).sum(axis=0)   
     
     # concatenate all ells together and remove the NaNs
     power = data['power'].reshape((N,-1), order='F')
@@ -148,8 +217,9 @@ def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf,
         
     C = np.cov(power, rowvar=False)
     if force_diagonal:
-        diags = np.diag(C)
-        C = np.diag(diags)
+        for i in range(len(ells)):
+            for j in range(i, len(ells)):
+                remove_pole_off_diags(C, i, j, shapes)
     if return_extras: 
         extras = {'mean_power':mean_power, 'modes' : modes}
         return C, k_center, extras

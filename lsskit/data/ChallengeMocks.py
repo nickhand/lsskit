@@ -73,7 +73,7 @@ class ChallengeMocks(PowerSpectraLoader):
             
             # now convert
             pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu)    
-            ells = {'mono':0, 'quad':2, 'hexadec':4}
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             toret = tools.format_multipoles_set(poles, pkmu, ells)
             
             setattr(self, name, toret)
