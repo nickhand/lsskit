@@ -60,7 +60,7 @@ def parse_args(desc, dims, coords):
     parser = ap.ArgumentParser(description=desc)
                             
     h = 'the name of the PBS job file to run. This file should take one' + \
-        'command line argument specfying the input `run_rsdfit.py` config parameter file'
+        'command line argument `command` which is the rsdfit command to run'
     parser.add_argument('job_file', type=str, help=h)
     h = 'the name of the file specifying the main `run_rsdfit.py` parameters'
     parser.add_argument('-p', '--config', required=True, type=param_file, help=h)

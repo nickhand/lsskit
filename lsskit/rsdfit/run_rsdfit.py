@@ -18,7 +18,6 @@ def main():
     """
     Run as a console script
     """
-    
     desc = "run rsdfit with the parameters specified on the command line"
     parser = argparse.ArgumentParser(description=desc)
 
