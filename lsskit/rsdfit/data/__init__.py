@@ -182,7 +182,7 @@ class PoleDataParams(DataParams):
     """
     Data params for multipoles measurements of ell = 0, 2, 4
     """
-    statistics = ['ell_0', 'ell_2', 'ell_4']
+    statistics = ['pole_0', 'pole_2', 'pole_4']
     mode = 'poles'
     
     
