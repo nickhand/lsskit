@@ -96,7 +96,6 @@ def qsub_samples(args, dims, coords):
             
     # submit the jobs
     for sample in itertools.product(*samples):
-        print sample
         kwargs = {}
         for i, dim in enumerate(dims):
             name = '%s_%s' %(dim, sample[i])
