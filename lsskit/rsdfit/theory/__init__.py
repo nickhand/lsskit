@@ -31,10 +31,7 @@ class ModelParams(AttrDict):
 class TheoryParams(object):
     """
     A base class to store the most general version of fitting parameters for the RSD model
-    """
-    _name = None
-    options = []
-    
+    """    
     def __init__(self):
         cosmo        = ['sigma8_z', 'f', 'alpha_perp', 'alpha_par']
         biases       = ['b1_cA', 'b1_cB', 'b1_sA', 'b1_sB']
@@ -91,6 +88,9 @@ class TheoryParams(object):
         
         # model parameters
         self.__dict__['model'] = ModelParams()
+        
+        self.__dict__['_name'] = None
+        self.__dict__['options'] = []
     
     @property
     def name(self):

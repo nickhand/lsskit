@@ -19,9 +19,7 @@ class BaseTheoryParams(TheoryParams):
     -----
     * both 1-halo amplitude params `f1h_cBs` and `f1h_sBsB` are varying
     * no SO corrections, so `f_so` and `sigma_so` are set to 0
-    """
-    _name = 'base'
-    
+    """    
     def __init__(self):
         super(BaseTheoryParams, self).__init__()
         
@@ -60,5 +58,7 @@ class BaseTheoryParams(TheoryParams):
         self.gamma_b1sB.vary = True
         self.f1h_sBsB.vary = True
         self.f1h_cBs.vary = True   
+        
+        self.__dict__['_name'] = 'base'
  
     
