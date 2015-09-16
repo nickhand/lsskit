@@ -13,7 +13,12 @@ import subprocess
 from lsskit.rsdfit import DriverParams, BaseTheoryParams, \
                             PkmuDataParams, PoleDataParams
 
+
 def main():
+    """
+    Run as a console script
+    """
+    
     desc = "run rsdfit with the parameters specified on the command line"
     parser = argparse.ArgumentParser(description=desc)
 
@@ -30,18 +35,24 @@ def main():
     parser.add_argument('--command', type=str, default='rsdfit', help=h)
 
     ns, other = parser.parse_known_args()
+    run_rsdfit(run=True, rsdfit_options=other, **vars(ns))
+
+def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfit_options=[]):
+    """
+    Run rsdfit with the parameters specified on the command line
+    """
     
     # initialize the parameter objects
-    driver = DriverParams.from_file(ns.config, ignore=['theory', 'model', 'data'])
-    theory = BaseTheoryParams.from_file(ns.config, ignore=['driver', 'data'])
-    if ns.mode == 'pkmu':
-        data = PkmuDataParams.from_file(ns.config, ignore=['theory', 'model', 'driver'])
+    driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
+    theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
+    if mode == 'pkmu':
+        data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
     else:
-        data = PoleDataParams.from_file(ns.config, ignore=['theory', 'model', 'driver'])
+        data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
 
     # apply any options to the theory model
-    if ns.options is not None:
-        theory.apply_options(*ns.options)
+    if options is not None:
+        theory.apply_options(*options)
 
     # write the temporary param file
     with tempfile.NamedTemporaryFile(delete=False) as ff:
@@ -55,16 +66,20 @@ def main():
     output_dir = os.path.join(driver.output, "_".join(tags))
 
     # the options to pass to rsdfit
-    call_signature = ns.command.split() + ['run', '-o', output_dir, '-p', param_file] + other
-    try:
-        ret = subprocess.call(call_signature)
-        if ret:
-            raise RuntimeError
-    except:
-        raise RuntimeError("error calling command: %s" %" ".join(call_signature))
-    finally:
-        if os.path.exists(param_file):
-            os.remove(param_file)
+    call_signature = command.split() + ['run', '-o', output_dir, '-p', param_file] + rsdfit_options
+    if run:
+        try:
+            ret = subprocess.call(call_signature)
+            if ret:
+                raise RuntimeError
+        except:
+            raise RuntimeError("error calling command: %s" %" ".join(call_signature))
+        finally:
+            if os.path.exists(param_file):
+                os.remove(param_file)
+    else:
+        print call_signature
+        return " ".join(map(str, call_signature))
             
             
 if __name__ == '__main__':

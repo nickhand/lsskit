@@ -12,3 +12,4 @@ class AttrDict(dict):
 from .theory.base import BaseTheoryParams
 from .data import PkmuDataParams, PoleDataParams
 from .driver import DriverParams
+from .run_rsdfit import run_rsdfit

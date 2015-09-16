@@ -66,6 +66,9 @@ def parse_args(desc, dims, coords):
     parser.add_argument('-p', '--config', required=True, type=param_file, help=h)
     h = 'the name of the file specifying the selection parameters'
     parser.add_argument('-s', '--select', required=True, type=extra_iter_values, help=h)
+    h = 'the path of python script that will call `run_rsdfit`, and store the ' + \
+        'run command in a variable called `command`; it should use the `param_file` variable'
+    parser.add_argument('--setup', required=True, type=str, help=h)
     
     # add the samples
     for i, (dim, vals) in enumerate(zip(dims, coords)):
@@ -109,9 +112,17 @@ def qsub_samples(args, dims, coords):
             valid = {k:v for k,v in kwargs.iteritems() if k in all_kwargs}
             ff.write(formatter.format(args.config, **valid))
         
-        v_value = 'param_file=%s' %fname
-        ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
-        time.sleep(1)
+        # call the python script that takes the `param_file` variable
+        call = {'param_file' : fname}
+        execfile(args.setup, globals(), call)
+        if 'command' not in call:
+            raise RuntimeError("python setup script for run_rsdfit should define the `command` variable")
+        
+        command = call['command']
+        print command
+        #v_value = 'command=%s' %command
+        #ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
+        #time.sleep(1)
 
     
         
