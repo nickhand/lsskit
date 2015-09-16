@@ -65,6 +65,20 @@ class DriverParams(object):
         self._fitter = val
         
     @property
+    def output(self):
+        """
+        The output directory will the run directory will live
+        """
+        try:
+            return self._output
+        except:
+            return '.'
+    
+    @output.setter
+    def output(self, val):
+        self._output = val
+        
+    @property
     def burnin(self):
         """
         The number of steps to consider ``burnin``; defaults to 0

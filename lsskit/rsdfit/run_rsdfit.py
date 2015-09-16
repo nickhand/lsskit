@@ -26,9 +26,6 @@ def main():
     h = 'additional theory parameter options to impose'
     parser.add_argument('--options', type=str, nargs='*', help=h)
 
-    h = 'the name of the directory where the run directory will live'
-    parser.add_argument('-o', '--output', type=str, default='.', help=h)
-
     h = 'the name of the python command to run; default is just `rsdfit`'
     parser.add_argument('--command', type=str, default='rsdfit', help=h)
 
@@ -55,7 +52,7 @@ def main():
     
     # get the output name
     tags = [x.name for x in [driver, theory, data] if x.name]
-    output_dir = os.path.join(ns.output, "_".join(tags))
+    output_dir = os.path.join(driver.output, "_".join(tags))
 
     # the options to pass to rsdfit
     call_signature = ns.command.split() + ['run', '-o', output_dir, '-p', param_file] + other
