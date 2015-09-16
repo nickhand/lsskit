@@ -22,7 +22,7 @@ class DataParams(object):
             v = getattr(self, k, None)
             toret.append("data.%s = %s" %(k,repr(v)))
         return "\n".join(toret)
-        x
+        
     def update(self, filename, ignore=[]):
         """
         Update the parameters from file with the synax `data.param_name`
