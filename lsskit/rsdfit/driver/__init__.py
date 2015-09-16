@@ -5,7 +5,7 @@ class DriverParams(object):
     Class to hold and manipulate the driver parameters required for fitting
     """
     valid_params = ['fitter', 'init_from', 'start_chain', 'burnin', 'test_convergence', 'epsilon']
-
+    
     def __iter__(self):
         """
         Iterate over the valid parameters
@@ -39,17 +39,16 @@ class DriverParams(object):
         toret.update(filename, **kwargs)
         return toret
         
-    def to_file(self, filename, mode='w'):
+    def to_file(self, ff):
         """
-        Write out all valid parameters to the specified file
+        Write out all valid parameters to the specified file object
         """
-        with open(filename, mode=mode) as ff:
-            ff.write("#{0}\n# driver params\n#{0}\n".format("-"*78))
-            for name in self:
-                if not hasattr(self, name):
-                    raise ValueError('please specify `%s` attribute before writing to file' %name)
-                par = getattr(self, name)
-                ff.write("driver.%s = %s\n" %(name, repr(par)))
+        ff.write("#{0}\n# driver params\n#{0}\n".format("-"*78))
+        for name in self:
+            if not hasattr(self, name):
+                raise ValueError('please specify `%s` attribute before writing to file' %name)
+            par = getattr(self, name)
+            ff.write("driver.%s = %s\n" %(name, repr(par)))
                         
     @property
     def fitter(self):
@@ -106,6 +105,20 @@ class DriverParams(object):
     @epsilon.setter
     def epsilon(self, val):
         self._epsilon = val
+        
+    @property
+    def name(self):
+        """
+        The identifying name for this parameter set
+        """
+        try:
+            return self._name
+        except:
+            return ''
+    
+    @name.setter
+    def name(self, val):
+        self._name = val
         
     @property
     def start_chain(self):

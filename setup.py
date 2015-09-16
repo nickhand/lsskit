@@ -28,7 +28,8 @@ setup(
             'fit_gp = lsskit.speckmod.__main__:fit_gaussian_process',
             'speckmod_compare = lsskit.speckmod.__main__:compare',
             'speckmod_add_param = lsskit.speckmod.__main__:add_bestfit_param',
-            'fit_spline_table = lsskit.speckmod.__main__:fit_spline_table'
+            'fit_spline_table = lsskit.speckmod.__main__:fit_spline_table',
+            'run_rsdfit = lsskit.rsdfit.run_rsdfit:main'
         ]
     },
 )

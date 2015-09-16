@@ -7,7 +7,8 @@ class DataParams(object):
     """
     statistics = None    
     valid_params = ['statistics', 'fitting_range', 'data_file', 'usedata', 'columns',
-                    'covariance', 'covariance_rescaling', 'covariance_Nmocks', 'rescale_inverse_covariance']
+                    'covariance', 'covariance_rescaling', 'covariance_Nmocks', 
+                    'rescale_inverse_covariance', 'mode']
     
     def __iter__(self):
         """
@@ -42,17 +43,16 @@ class DataParams(object):
         toret.update(filename, **kwargs)
         return toret
         
-    def to_file(self, filename, mode='w'):
+    def to_file(self, ff):
         """
-        Write out all valid parameters to the specified file
+        Write out all valid parameters to the specified file object
         """
-        with open(filename, mode=mode) as ff:
-            ff.write("#{0}\n# data params\n#{0}\n".format("-"*78))
-            for name in self:
-                if not hasattr(self, name):
-                    raise ValueError('please specify `%s` attribute before writing to file' %name)
-                par = getattr(self, name)
-                ff.write("data.%s = %s\n" %(name, repr(par)))
+        ff.write("#{0}\n# data params\n#{0}\n".format("-"*78))
+        for name in self:
+            if not hasattr(self, name):
+                raise ValueError('please specify `%s` attribute before writing to file' %name)
+            par = getattr(self, name)
+            ff.write("data.%s = %s\n" %(name, repr(par)))
                         
     @property
     def size(self):
@@ -71,11 +71,15 @@ class DataParams(object):
             return self._rescale_inverse_covariance
         except:
             return False
-            
+    
+    @rescale_inverse_covariance.setter
+    def rescale_inverse_covariance(self, val):
+        self._rescale_inverse_covariance = val
+    
     @property
     def covariance_Nmocks(self):
         """
-        the number of mocks to use when rescaling the inverse covariance matrix
+        The number of mocks to use when rescaling the inverse covariance matrix
         """
         try:
             return self._covariance_Nmocks
@@ -83,7 +87,11 @@ class DataParams(object):
             if self.rescale_inverse_covariance:
                 raise AttributeError("please specify `covariance_Nmocks` since `rescale_inverse_covariance` is `True`")
             return 0
-            
+    
+    @covariance_Nmocks.setter
+    def covariance_Nmocks(self, val):
+        self._covariance_Nmocks = val
+    
     @property
     def covariance_rescaling(self):
         """
@@ -93,6 +101,10 @@ class DataParams(object):
             return self._covariance_rescaling
         except:
             return 1.0
+            
+    @covariance_rescaling.setter
+    def covariance_rescaling(self, val):
+        self._covariance_rescaling = val
     
     @property
     def columns(self):
@@ -150,18 +162,30 @@ class DataParams(object):
     def fitting_range(self):
         return zip(self.kmin, self.kmax)
         
+    @property
+    def name(self):
+        try:
+            s = "kmax%.1f" %self.kmax[0]
+            return s.replace('.', '')
+        except:
+            return ''
+        
         
 class PkmuDataParams(DataParams):
     """
     Data params for P(k,mu) measurement with 5 mu bins
     """
     statistics = ['pkmu_0.1', 'pkmu_0.3', 'pkmu_0.5', 'pkmu_0.7', 'pkmu_0.9']
+    mode = 'pkmu'
     
 class PoleDataParams(DataParams):
     """
     Data params for multipoles measurements of ell = 0, 2, 4
     """
     statistics = ['ell_0', 'ell_2', 'ell_4']
+    mode = 'poles'
+    
+    
     
             
     

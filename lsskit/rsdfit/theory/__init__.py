@@ -140,33 +140,34 @@ class TheoryParams(object):
         """
         return len(self.free_names)
     
-    def to_file(self, filename, mode='w'):
+    def to_file(self, ff):
+        """
+        Write out all valid parameters to the specified file object
+        """
         # a few checks
         if self.model.z is None:
             raise ValueError("probably shouldn't write to file if `model.z` is `None`")
         if self.model.cosmo_filename is None:
             raise ValueError("probably shouldn't write to file if `model.cosmo_filename` is `None`")
-            
-        with open(filename, mode=mode) as ff:
-            
-            # free params
-            ff.write("#{0}\n# free params\n#{0}\n".format("-"*78))
-            for name in self.free_names:
-                par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, repr(par)))
-            ff.write("\n#{0}\n# constrained params\n#{0}\n".format("-"*78))
-            # constrained params
-            for name in self.constrained_names:
-                par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, repr(par)))
-            ff.write("\n#{0}\n# fixed params\n#{0}\n".format("-"*78))
-            # fixed params
-            for name in self.fixed_names:
-                par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, repr(par)))
-            # model params
-            ff.write("\n#{0}\n# model params\n#{0}\n".format("-"*78))
-            ff.write(str(self.model))
+
+        # free params
+        ff.write("#{0}\n# free params\n#{0}\n".format("-"*78))
+        for name in self.free_names:
+            par = getattr(self, name)
+            ff.write("theory.%s = %s\n" %(name, repr(par)))
+        ff.write("\n#{0}\n# constrained params\n#{0}\n".format("-"*78))
+        # constrained params
+        for name in self.constrained_names:
+            par = getattr(self, name)
+            ff.write("theory.%s = %s\n" %(name, repr(par)))
+        ff.write("\n#{0}\n# fixed params\n#{0}\n".format("-"*78))
+        # fixed params
+        for name in self.fixed_names:
+            par = getattr(self, name)
+            ff.write("theory.%s = %s\n" %(name, repr(par)))
+        # model params
+        ff.write("\n#{0}\n# model params\n#{0}\n".format("-"*78))
+        ff.write(str(self.model))
             
     def __iter__(self):
         """
