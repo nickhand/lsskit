@@ -86,7 +86,7 @@ class DriverParams(object):
         try:
             return self._model_file
         except:
-            raise AttributeError('please set `model_file`')
+            raise None
     
     @model_file.setter
     def model_file(self, val):
