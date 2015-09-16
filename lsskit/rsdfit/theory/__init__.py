@@ -1,8 +1,4 @@
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-        
+from .. import AttrDict
         
 class ModelParams(AttrDict):
     
@@ -157,17 +153,17 @@ class TheoryParams(object):
             ff.write("#{0}\n# free params\n#{0}\n".format("-"*78))
             for name in self.free_names:
                 par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, str(par)))
+                ff.write("theory.%s = %s\n" %(name, repr(par)))
             ff.write("\n#{0}\n# constrained params\n#{0}\n".format("-"*78))
             # constrained params
             for name in self.constrained_names:
                 par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, str(par)))
+                ff.write("theory.%s = %s\n" %(name, repr(par)))
             ff.write("\n#{0}\n# fixed params\n#{0}\n".format("-"*78))
             # fixed params
             for name in self.fixed_names:
                 par = getattr(self, name)
-                ff.write("theory.%s = %s\n" %(name, str(par)))
+                ff.write("theory.%s = %s\n" %(name, repr(par)))
             # model params
             ff.write("\n#{0}\n# model params\n#{0}\n".format("-"*78))
             ff.write(str(self.model))
@@ -226,20 +222,23 @@ class TheoryParams(object):
         else:
             object.__setattr__(self, key, value)
         
-    def update(self, filename):
+    def update(self, filename, ignore=[]):
         """
         Update the parameters from file with the synax `theory.param_name`
         """
-        execfile(filename, {'theory':self, 'model': self.model})
+        ns = {'theory':self, 'model': self.model}
+        for name in ignore:
+            ns[name] = AttrDict()
+        execfile(filename, ns)
         
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, **kwargs):
         """
         Return an instance of the class, adfter updating the parameters
         from the specified file
         """
         toret = cls()
-        toret.update(filename)
+        toret.update(filename, **kwargs)
         return toret
         
     def apply_options(self, *args):
@@ -252,7 +251,5 @@ class TheoryParams(object):
                 raise ValueError("cannot find function `%s` to apply option" %name)
             globals()[name](self)
             
-                
-from .base import BaseTheoryParams
 from .options import *
         
