@@ -63,6 +63,11 @@ def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfi
     # get the output name
     tags = [x.name for x in [driver, theory, data] if x.name]
     output_dir = os.path.join(driver.output, "_".join(tags))
+    
+    # add the model?
+    if driver.model_file is not None:
+        if all(x not in rsdfit_options for x in ['-m', '--model']):
+            rsdfit_options += ['-m', driver.model_file]
 
     # the options to pass to rsdfit
     call_signature = command.split() + ['run', '-o', output_dir, '-p', param_file] + rsdfit_options

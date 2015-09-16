@@ -79,6 +79,20 @@ class DriverParams(object):
         self._output = val
         
     @property
+    def model_file(self):
+        """
+        The name of the file holding the model
+        """
+        try:
+            return self._model_file
+        except:
+            raise AttributeError('please set `model_file`')
+    
+    @model_file.setter
+    def model_file(self, val):
+        self._model_file = val
+        
+    @property
     def burnin(self):
         """
         The number of steps to consider ``burnin``; defaults to 0
