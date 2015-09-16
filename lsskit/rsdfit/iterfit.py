@@ -109,9 +109,9 @@ def qsub_samples(args, dims, coords):
             fname = ff.name
             valid = {k:v for k,v in kwargs.iteritems() if k in all_kwargs}
             ff.write(formatter.format(args.config, **valid))
-        print fname
-        #v_value = 'param_file=%s' %fname
-        #ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
+        
+        v_value = 'param_file=%s' %fname
+        ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
         time.sleep(1)
 
     
