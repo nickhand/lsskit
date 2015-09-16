@@ -60,7 +60,7 @@ class TheoryParams(object):
         self.Nsat_mult  = AttrDict(vary=False, fiducial=2.400, prior='normal', mu=2.4, sigma=0.1, min=2.)
 
         # sigmas
-        self.sigma_c  = AttrDict(vary=False, fiducial=1., prior='uniform', lower=0., upper=2.)
+        self.sigma_c  = AttrDict(vary=False, fiducial=1., prior='uniform', lower=0., upper=3.)
         self.sigma_s  = AttrDict(vary=False, fiducial=4.0, prior='uniform', lower=2., upper=10.)
         self.sigma_sA = AttrDict(vary=False, fiducial=3.5)
         self.sigma_sB = AttrDict(vary=False, fiducial=5)
