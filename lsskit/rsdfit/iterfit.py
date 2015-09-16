@@ -83,7 +83,6 @@ def qsub_samples(args, dims, coords):
     sample(s). This could submit several job at once, but will 
     wait 1 second in between doing so.  
     """
-    import subprocess
     import time
     import itertools
     
@@ -120,7 +119,7 @@ def qsub_samples(args, dims, coords):
         
         command = call['command']
         v_value = 'command=%s' %command
-        ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
+        ret = os.system("qsub -v '%s' %s" %(v_value, args.job_file))
         time.sleep(1)
 
     
