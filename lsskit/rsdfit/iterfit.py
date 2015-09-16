@@ -119,10 +119,9 @@ def qsub_samples(args, dims, coords):
             raise RuntimeError("python setup script for run_rsdfit should define the `command` variable")
         
         command = call['command']
-        print command
-        #v_value = 'command=%s' %command
-        #ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
-        #time.sleep(1)
+        v_value = 'command=%s' %command
+        ret = subprocess.call(['qsub', '-v', v_value, args.job_file])
+        time.sleep(1)
 
     
         

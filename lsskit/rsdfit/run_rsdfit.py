@@ -77,7 +77,6 @@ def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfi
             if os.path.exists(param_file):
                 os.remove(param_file)
     else:
-        print call_signature
         return " ".join(map(str, call_signature))
             
             
