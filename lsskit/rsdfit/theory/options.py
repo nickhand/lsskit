@@ -11,7 +11,7 @@ def use_mu6_corr(params):
     """
     Use the mu6 corrections
     """
-    params.model.use_mu6_corrections = True
+    params.model.use_mu_corrections = True
     params.model.max_mu = 6
     params.options.append('mu6corr')
 
