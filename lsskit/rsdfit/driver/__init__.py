@@ -160,6 +160,10 @@ class DriverParams(object):
     
     @start_chain.setter
     def start_chain(self, val):
+        if val is None:
+            self._start_chain = val
+            return
+        
         import os
         if not os.path.exists(val):
             raise RuntimeError("cannot set `start_chain` to `%s`: no such file" %val)
