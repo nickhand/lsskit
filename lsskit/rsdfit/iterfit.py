@@ -69,6 +69,8 @@ def parse_args(desc, dims, coords):
     h = 'the path of python script that will call `run_rsdfit`, and store the ' + \
         'run command in a variable called `command`; it should use the `param_file` variable'
     parser.add_argument('--setup', required=True, type=str, help=h)
+    h = 'just call the command using os.system, instead of submitting a qsub job'
+    parser.add_argument('--call', action='store_true', help=h)
     
     # add the samples
     for i, (dim, vals) in enumerate(zip(dims, coords)):
@@ -118,9 +120,12 @@ def qsub_samples(args, dims, coords):
             raise RuntimeError("python setup script for run_rsdfit should define the `command` variable")
         
         command = call['command']
-        v_value = 'command=%s' %command
-        ret = os.system("qsub -v '%s' %s" %(v_value, args.job_file))
-        time.sleep(1)
+        if not args.call:
+            v_value = 'command=%s' %command
+            ret = os.system("qsub -v '%s' %s" %(v_value, args.job_file))
+            time.sleep(1)
+        else:
+            os.system(command)
 
     
         
