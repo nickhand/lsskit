@@ -43,24 +43,27 @@ class RunPBGalaxy(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
-    def get_Pgal(self, space='real', spacing="", Nmu=5):
+    def get_Pgal(self, space='real', spacing="", Nmu=5, collisions=False):
         """
         Return galaxy component spectra
         """
+        # format the name options
         if spacing: spacing = "_"+spacing
+        colls_tag = "" if not collisions else "_collisions"
         if space == 'real':
-            name = '_Pgal_%s%s' %(self.tag, spacing)
+            name = '_Pgal_%s%s%s' %(self.tag, spacing, colls_tag)
         else:
-            name = '_Pgal_%s%s_Nmu%d' %(self.tag, spacing, Nmu)
+            name = '_Pgal_%s%s_Nmu%d%s' %(self.tag, spacing, Nmu, colls_tag)
+        
         try:
             return getattr(self, name)
         except AttributeError:
             
             d = os.path.join(self.root, 'galaxy', space, 'power')
             if space == 'real':
-                basename = 'pk_{sample}_runPB_%s%s.dat' %(self.tag, spacing)
+                basename = 'pk_{sample}%s_runPB_%s%s.dat' %(colls_tag, self.tag, spacing)
             else:
-                basename = 'pkmu_{sample}_runPB_%s%s_Nmu%d.dat' %(self.tag, spacing, Nmu)
+                basename = 'pkmu_{sample}%s_runPB_%s%s_Nmu%d.dat' %(colls_tag, self.tag, spacing, Nmu)
                 
             # load the data from file
             coords = [self.a, self.spectra]
@@ -70,7 +73,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             Pgal.add_errors()
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
             for x in crosses:
-                
+
                 this_cross = Pgal.sel(a='0.6452', sample=x)
                 if this_cross.isnull(): continue
                 this_cross = this_cross.values
@@ -82,19 +85,20 @@ class RunPBGalaxy(PowerSpectraLoader):
             setattr(self, name, Pgal)
             return Pgal
             
-    def get_poles(self, space='redshift', spacing="dk005", Nmu=100):
+    def get_poles(self, space='redshift', spacing="dk005", Nmu=100, collisions=False):
         """
         Return galaxy component spectra multipoles
         """
         _spacing = spacing
         if spacing: spacing = "_"+spacing
-        name = '_poles_%s%s_%s' %(self.tag, spacing, space)
+        colls_tag = "" if not collisions else "_collisions"
+        name = '_poles_%s%s_%s%s' %(self.tag, spacing, space, colls_tag)
         try:
             return getattr(self, name)
         except AttributeError:
             
             d = os.path.join(self.root, 'galaxy', space, 'poles')
-            basename = 'poles_{sample}_runPB_%s%s_Nmu%d.dat' %(self.tag, spacing, Nmu)
+            basename = 'poles_{sample}%s_runPB_%s%s_Nmu%d.dat' %(colls_tag, self.tag, spacing, Nmu)
                 
             # load the data from file
             coords = [self.a, self.spectra]
