@@ -259,17 +259,17 @@ def write_power_analysis_file(filename, data, columns, subtract_shot_noise=True,
     if weights is not None:
         modes = np.nan_to_num(weights['modes'].data)
         mu = weights['mu'].data
-        mu_weights = modes/modes.sum(axis=-1)[:,None]
-        data = np.empty(mu_weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
-        data['mu'] = mu; data['weights'] = mu_weights; data['k'] = weights.index['k_center']
+        k = weights['k'].data
+        data = np.empty(modes.shape, dtype=[('k', 'f8'), ('mu', 'f8'), ('modes', 'f8')])
+        data['k'] = k; data['mu'] = mu; data['modes'] = modes
         data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
     
         # write out the weights
         base, ext = os.path.splitext(filename)
         weight_filename = "%s_weights%s" %(base, ext)
-        with open(weight_filename, 'a') as ff:
+        with open(weight_filename, 'w') as ff:
             shape = data.shape
-            columns = ['k', 'mu', 'weights']
+            columns = ['k', 'mu', 'modes']
             ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, data[columns].ravel(order='F'))
@@ -345,17 +345,17 @@ def write_poles_analysis_file(filename, data, columns, weights=None,
     if weights is not None:
         modes = np.nan_to_num(weights['modes'].data)
         mu = weights['mu'].data
-        mu_weights = modes/modes.sum(axis=-1)[:,None]
-        data = np.empty(mu_weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
-        data['mu'] = mu; data['weights'] = mu_weights; data['k'] = weights.index['k_center']
+        k = weights['k'].data
+        data = np.empty(modes.shape, dtype=[('k', 'f8'), ('mu', 'f8'), ('modes', 'f8')])
+        data['k'] = k; data['mu'] = mu; data['modes'] = modes
         data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
     
         # write out the weights
         base, ext = os.path.splitext(filename)
         weight_filename = "%s_weights%s" %(base, ext)
-        with open(weight_filename, 'a') as ff:
+        with open(weight_filename, 'w') as ff:
             shape = data.shape
-            columns = ['k', 'mu', 'weights']
+            columns = ['k', 'mu', 'modes']
             ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, data[columns].ravel(order='F'))
