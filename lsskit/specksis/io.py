@@ -9,6 +9,7 @@
 from nbodykit import files, pkresult, pkmuresult, plugins
 from . import tools
 from .. import numpy as np
+import os
 
 
 def get_Pshot(power):
@@ -191,7 +192,7 @@ def write_analysis_file(filename, data, columns, subtract_shot_noise=True,
             np.savetxt(ff, data[columns])
             
 def write_power_analysis_file(filename, data, columns, subtract_shot_noise=True, 
-                                kmin=None, kmax=None):
+                                weights=None, kmin=None, kmax=None):
     """
     Write either a `PkResult``, ``PkmuResult`` as a plaintext file, with a 
     format designed for easy analysis 
@@ -254,8 +255,27 @@ def write_power_analysis_file(filename, data, columns, subtract_shot_noise=True,
             ff.write(" ".join(columns)+"\n")
             np.savetxt(ff, data[columns])
             
+    # now do the weights
+    if weights is not None:
+        modes = np.nan_to_num(weights['modes'].data)
+        mu = weights['mu'].data
+        mu_weights = modes/modes.sum(axis=-1)[:,None]
+        data = np.empty(mu_weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
+        data['mu'] = mu; data['weights'] = mu_weights; data['k'] = weights.index['k_center']
+        data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
+    
+        # write out the weights
+        base, ext = os.path.splitext(filename)
+        weight_filename = "%s_weights%s" %(base, ext)
+        with open(weight_filename, 'a') as ff:
+            shape = data.shape
+            columns = ['k', 'mu', 'weights']
+            ff.write("{:d} {:d}\n".format(*shape))
+            ff.write(" ".join(columns)+"\n")
+            np.savetxt(ff, data[columns].ravel(order='F'))
+            
 
-def write_poles_analysis_file(filename, data, pkmu, columns, 
+def write_poles_analysis_file(filename, data, columns, weights=None,
                                 subtract_shot_noise=True, kmin=None, kmax=None):
     """
     Write a set of ``PkResult` objects representing multipoles, as a plaintext 
@@ -278,7 +298,7 @@ def write_poles_analysis_file(filename, data, pkmu, columns,
         the desired name of the output file
     data : SpectraSet
         the set of multipoles to write
-    pkmu : nbodykit.PkmuResult
+    weights : nbodykit.PkmuResult, optional
         the P(k,mu) instance which has the mu and weight values
     columns : list of str
         list of strings specifying the names of the columns to write to file
@@ -322,20 +342,23 @@ def write_poles_analysis_file(filename, data, pkmu, columns,
         np.savetxt(ff, data[columns].ravel(order='F'))
         
     # now do the weights
-    modes = np.nan_to_num(pkmu['modes'].data)
-    mu = np.nan_to_num(pkmu['mu'].data)
-    weights = modes/modes.sum(axis=-1)[:,None]
-    data = np.empty(weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
-    data['mu'] = mu; data['weights'] = weights; data['k'] = pkmu.index['k_center']
-    data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
+    if weights is not None:
+        modes = np.nan_to_num(weights['modes'].data)
+        mu = weights['mu'].data
+        mu_weights = modes/modes.sum(axis=-1)[:,None]
+        data = np.empty(mu_weights.shape, dtype=[('k', 'f8'), ('weights', 'f8'), ('mu', 'f8')])
+        data['mu'] = mu; data['weights'] = mu_weights; data['k'] = weights.index['k_center']
+        data = tools.trim_and_align_data(data, kmin=kmin, kmax=kmax)
     
-    # write out the weights
-    with open(filename, 'a') as ff:
-        shape = data.shape
-        columns = ['mu', 'weights']
-        ff.write("{:d} {:d}\n".format(*shape))
-        ff.write(" ".join(columns)+"\n")
-        np.savetxt(ff, data[columns].ravel(order='F'))
+        # write out the weights
+        base, ext = os.path.splitext(filename)
+        weight_filename = "%s_weights%s" %(base, ext)
+        with open(weight_filename, 'a') as ff:
+            shape = data.shape
+            columns = ['k', 'mu', 'weights']
+            ff.write("{:d} {:d}\n".format(*shape))
+            ff.write(" ".join(columns)+"\n")
+            np.savetxt(ff, data[columns].ravel(order='F'))
     
     
 def read_analysis_file(filename):
@@ -354,24 +377,24 @@ def read_analysis_file(filename):
     toret = np.empty(shape, dtype=dtype)
     for i, col in enumerate(columns):
         toret[col] = data[...,i].reshape(shape, order='F')
+    return toret
     
-    # mu/weights?
-    extra = None
-    if len(lines) > N+2:
-        try:
-            shape = tuple(map(int, lines[N+2].split()))
-            columns = lines[N+3].split()
-            N2 = np.prod(shape)
-            data2 = np.asarray([map(float, line.split()) for line in lines[N+4:N+4+N2]])
-            
-            dtype = [(col, 'f8') for col in columns]
-            extra = np.empty(shape, dtype=dtype)
-            for i, col in enumerate(columns):
-                extra[col] = data2[...,i].reshape(shape, order='F')
-        except Exception as e:
-            raise RuntimeError("error parsing mu/weights: %s" %str(e))
+def read_analysis_weight_file(filename):
+    """
+    Read the weight file
+    """
+    with open(filename, 'r') as ff:
+        shape = tuple(map(int, ff.readline().split()))
+        columns = ff.readline().split()
+        N = np.prod(shape)
+        data = np.loadtxt(ff)
 
-    return toret if extra is None else (toret, extra)
+        dtype = [(col, 'f8') for col in columns]
+        weights = np.empty(shape, dtype=dtype)
+        for i, col in enumerate(columns):
+            weights[col] = data[...,i].reshape(shape, order='F')
+
+    return weights
             
             
         

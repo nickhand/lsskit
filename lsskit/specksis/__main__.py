@@ -22,6 +22,8 @@ def write_power_analysis_file():
     parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('--weights', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = "the data keys to slice the data on; specified as `a = '0.6452'`"
     parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the data columns to write to the file'
@@ -46,6 +48,8 @@ def write_power_analysis_file():
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    if args.weights is not None:
+        weights = getattr(args.data, args.weights['name'])(**args.weights['kwargs'])
     
     # now slice
     for k in args.key:
@@ -56,6 +60,7 @@ def write_power_analysis_file():
         power = data.sel(**args.key)
         if power.size == 1:
             power = power.values
+        if args.weights is not None: weights = weights.sel(**args.key).values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
 
@@ -64,7 +69,7 @@ def write_power_analysis_file():
     kwargs['subtract_shot_noise'] = args.subtract_shot_noise
     kwargs['kmin'] = args.kmin
     kwargs['kmax'] = args.kmax
-    io.write_power_analysis_file(args.output, power, args.cols, **kwargs)
+    io.write_power_analysis_file(args.output, power, args.cols, weights=weights, **kwargs)
     
     
 def write_poles_analysis_file():
@@ -80,7 +85,7 @@ def write_poles_analysis_file():
     h = parse_tools.PowerSpectraCallable.format_help()
     parser.add_argument('poles_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('pkmu_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    parser.add_argument('--weights', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = "the data keys to slice the data on; specified as `a = '0.6452'`"
     parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the data columns to write to the file'
@@ -105,7 +110,8 @@ def write_poles_analysis_file():
     
     # get the data from the parent data and function
     data = getattr(args.data, args.poles_callable['name'])(**args.poles_callable['kwargs'])
-    pkmu = getattr(args.data, args.pkmu_callable['name'])(**args.pkmu_callable['kwargs'])
+    if args.weights is not None:
+        weights = getattr(args.data, args.weights['name'])(**args.weights['kwargs'])
     
     # now slice
     for k in args.key:
@@ -114,7 +120,7 @@ def write_poles_analysis_file():
         args.key[k] = args.key[k][0]
     try:
         poles = data.sel(**args.key)
-        pkmu = pkmu.sel(**args.key).values
+        if args.weights is not None: weights = weights.sel(**args.key).values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
 
@@ -123,7 +129,7 @@ def write_poles_analysis_file():
     kwargs['subtract_shot_noise'] = args.subtract_shot_noise
     kwargs['kmin'] = args.kmin
     kwargs['kmax'] = args.kmax
-    io.write_poles_analysis_file(args.output, poles, pkmu, args.cols, **kwargs)
+    io.write_poles_analysis_file(args.output, poles, args.cols, weights=weights, **kwargs)
 
 def write_gaussian_pole_covariance():
     """
