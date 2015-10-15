@@ -8,65 +8,54 @@
 """
 from .. import numpy as np
 
-def gaussian_pole_covariance(pkmu, ells, kmin=-np.inf, kmax=np.inf):
+def flat_and_nonnull(arr):
     """
-    Compute the gaussian covariance between a set of multipoles,
-    using the P(k,mu) measurement that the multipoles were estimated
-    from
-    
-    Parameters
-    ----------
-    pkmu : nbodykit.PkmuResult
-        the P(k,mu) measurement to estimate the covariance from
-    ells : list
-        the list of multipole numbers
-    kmin : float, array_like
-        the minimum wavenumber to include
-    kmax : float, array_like
-        the maximum wavenumber to include
+    Flatten the input array using `Fortran` format 
+    (i.e., col #1 then col #2, etc), and remove 
+    any NaNs along the way
     """
-    from scipy.special import legendre
-    
-    Nk = pkmu.Nk
-    Nell = len(ells)
-    
-    # get the kmin/kmax as arrays
-    if kmin is None: kmin = -np.inf
-    if kmax is None: kmax = np.inf
-    kmin_ = np.empty(Nell)
-    kmax_ = np.empty(Nell)
-    kmin_[:] = kmin
-    kmax_[:] = kmax
-    
-    # weight by modes
-    modes = np.nan_to_num(pkmu['modes'].data)
-    N_1d = modes.sum(axis=-1)
-    weights = modes / N_1d[:,None]
+    flat = arr.ravel(order='F')
+    return flat[np.isfinite(flat)]
 
-    # avg mu
-    mu = np.nan_to_num(pkmu['mu'].data)
+def stack_multipoles(pole_set, ells=None):
+    """
+    Given a SpectraSet with an `ell` dimension, stack those individual
+    P(k) results into a 2D array where the second dimension is the 
+    original `ell` dimension. 
     
-    # power
-    power = pkmu['power'].data
+    Notes
+    -----
+    Additional dimensions in `pole_set` are preserved, as the higher
+    order dimensions, where the first two are ('k', 'ell')
     
-    # make the covariance matrix of size (Nk*Nell, Nk*Nell)
-    C = np.zeros((Nell, Nk, Nell, Nk))
-    for i in range(Nell):
-        ell = ells[i]
-        for j in range(i, Nell):
-            ell_prime = ells[j]
-            
-            factor = (2*ell+1)*(2*ell_prime+1)*legendre(ell)(mu)*legendre(ell_prime)(mu)
-            cov = 2 * np.nansum( weights*factor*power**2, axis=-1) / N_1d
-            C[i,:,j,:] = np.diag(cov)
-            if i != j:
-                C[j,:,i,:] = C[i,:,j,:]
-    C = C.reshape((Nk*Nell, Nk*Nell))        
-          
-    # apply bounds and return
-    inds = np.concatenate([(pkmu.k_center >= kmin_[i])&(pkmu.k_center <= kmax_[i]) for i in range(Nell)])
-    return C[inds,:][:,inds]
-            
+    Returns
+    -------
+    toret : np.ndarray
+        a structured array holding the newly stacked data
+    """
+    # the dimension to loop over
+    if ells is None: ells = pole_set['ell'].values
+    dims = list(pole_set.dims)
+    dims.remove('ell')
+
+    def stack_one(poles):
+        tostack = []
+        for ell in ells:
+            p = poles.sel(ell=int(ell)).values
+            tostack.append(p.data.data)
+        return np.vstack(tostack).T
+
+    if len(dims):
+        other_dim = dims[0]
+        toret = []
+        for i in pole_set[other_dim]:
+            poles = pole_set.sel(**{other_dim:i})
+            toret.append(stack_one(poles))
+        toret = np.asarray(toret)
+        return np.rollaxis(toret, 0, toret.ndim)
+    else:
+        return stack_one(pole_set)
+             
 def format_multipoles(this_pole, this_pkmu, ells):
     """
     Format the input spectra of multipoles, which includes multiple
@@ -98,8 +87,8 @@ def format_multipoles(this_pole, this_pkmu, ells):
         variance = 2 * np.nansum( weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
         
         # make the new PkResult object
-        data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5]).T
-        pk = pkresult.PkResult.from_dict(data, ['k', 'power', 'error'], sum_only=['modes'], **meta)
+        data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5, this_pole['modes']]).T
+        pk = pkresult.PkResult.from_dict(data, ['k', 'power', 'error', 'modes'], sum_only=['modes'], **meta)
         new_poles.append(pk)
             
     return new_poles
@@ -126,193 +115,22 @@ def format_multipoles_set(poles, pkmu, ells):
     all_data = np.reshape(all_data, poles.shape + (3,))
     coords = [poles.coords[dim] for dim in poles.dims] + [ells]
     return SpectraSet(all_data, coords, poles.dims+('ell',))
-        
-
-
-def remove_pole_off_diags(C, i, j, shapes):
-    inds = np.concatenate([[0], shapes.cumsum()])
-    sl_i = slice(inds[i], inds[i+1])
-    sl_j = slice(inds[j], inds[j+1])
-    C[sl_i, sl_j] = np.diag(np.diag(C[sl_i, sl_j]))
-    if i != j:
-        C[sl_j, sl_i] = C[sl_i, sl_j]
     
-def compute_pole_covariance(power_list, ells, kmin=-np.inf, kmax=np.inf, 
-                            force_diagonal=False, return_extras=False):
+    
+def get_valid_data(k_cen, power, kmin=-np.inf, kmax=np.inf):
     """
-    Compute the covariance matrix of multipole measurements, optionally 
-    returning the center k and mu bins, and the mean power
+    Return the valid data, removing any `null` entries and
+    those elements out of the specified k-range. 
+    
+    Notes
+    -----
+    If data is multi-dimensional, data must be valid across
+    all higher dimensions
     
     Parameters
     ----------
-    power_list : SpectraSet
-        a set of PkResult objects to compute the covariance from
-    ells : list of integers
-        list of multipoles numbers identifying the multipoles to concatenate
-    kmin : float or array_like (`-numpy.inf`)
-        the minimum wavenumber in `h/Mpc` to consider. can specify a value
-        for each mu bin, otherwise same value used for all mu bins
-    kmax : float or array_like, (`numpy.inf`)
-        the maximum wavenumber in `h/Mpc` to consider. can specify a value
-        for each mu bin, otherwise same value used for all mu bins
-    force_diagonal : bool, optional (`False`)
-        If `True`, set off-diagonal elements to zero before returning
-    return_extras : bool, optional (`False`)
-        If `True`, also return the center of the k/mu bins, and the mean power
-    
-    Returns
-    -------
-    covar : array_like
-        the covariance matrix
-    
-    """
-    import warnings
-    
-    # get the kmin/kmax as arrays
-    if kmin is None: kmin = -np.inf
-    if kmax is None: kmax = np.inf
-    kmin_ = np.empty(len(ells))
-    kmax_ = np.empty(len(ells))
-    kmin_[:] = kmin
-    kmax_[:] = kmax
-    
-    dims = list(power_list.dims)
-    if 'ell' not in dims:
-        raise ValueError("`ell` dimension must be present to compute pole covariance")
-    dims.remove('ell')
-    if len(dims) != 1:
-        raise ValueError("SpectraSet must have dimension `ell` plus one other dimension")
-    other_dim = dims[0]
-    
-    N = len(power_list[other_dim])
-    data, shapes = [], []
-    for i, key in enumerate(power_list[other_dim]):
-        
-        poles = power_list.loc[{'ell':ells, other_dim:key}]
-        
-        tostack = []
-        for p in poles:
-            p = p.values
-            p.add_column('k_center', p.k_center)   
-            tostack.append(p.data.copy())
-        this_data = np.vstack(tostack).T
-        this_data = trim_and_align_data(this_data, kmin=kmin_, kmax=kmax_)
-        data.append(this_data)
-        
-    # this has shape (N, Nk, Nell)
-    data = np.asarray(data) 
-    shapes = np.isfinite(data[0,...]['power']).sum(axis=0)   
-    
-    # concatenate all ells together and remove the NaNs
-    power = data['power'].reshape((N,-1), order='F')
-    power = power[np.isfinite(power)].reshape((N, -1))
-    
-    with warnings.catch_warnings():
-        mean_power = np.nanmean(data['power'], axis=0)
-        k_center = np.nanmean(data['k_center'], axis=0)
-        if 'modes' in data.dtype.names:
-            modes = np.nanmean(data['modes'], axis=0)
-        else:
-            modes = None
-        
-    C = np.cov(power, rowvar=False)
-    if force_diagonal:
-        for i in range(len(ells)):
-            for j in range(i, len(ells)):
-                remove_pole_off_diags(C, i, j, shapes)
-    if return_extras: 
-        extras = {'mean_power':mean_power, 'modes' : modes}
-        return C, k_center, extras
-    else:
-        return C
-
-
-def compute_pkmu_covariance(power_list, kmin=-np.inf, kmax=np.inf, 
-                            force_diagonal=False, return_extras=False):
-    """
-    Compute the covariance matrix of P(k,mu) measurements, optionally returning the 
-    center k and mu bins, and the mean power
-    
-    Parameters
-    ----------
-    data : SpectraSet
-        a set of PkmuResult objects to compute the covariance from
-    kmin : float or array_like (`-numpy.inf`)
-        the minimum wavenumber in `h/Mpc` to consider. can specify a value
-        for each mu bin, otherwise same value used for all mu bins
-    kmax : float or array_like, (`numpy.inf`)
-        the maximum wavenumber in `h/Mpc` to consider. can specify a value
-        for each mu bin, otherwise same value used for all mu bins
-    force_diagonal : bool, optional (`False`)
-        If `True`, set off-diagonal elements to zero before returning
-    return_extras : bool, optional (`False`)
-        If `True`, also return the center of the k/mu bins, and the mean power
-    
-    Returns
-    -------
-    covar : array_like
-        the covariance matrix
-    
-    """
-    import warnings
-    
-    if kmin is None: kmin = -np.inf
-    if kmax is None: kmax = np.inf
-    
-    N = len(power_list)
-    data, shapes = [], []
-    for i, p in enumerate(power_list):
-        p = p.values
-        
-        p.add_column('k_center', p.index['k_center'])
-        p.add_column('mu_center', p.index['mu_center'])
-        
-        # get the kmin/kmax as arrays
-        kmin_ = np.empty(p.Nmu)
-        kmax_ = np.empty(p.Nmu)
-        kmin_[:] = kmin
-        kmax_[:] = kmax
-            
-        # get the valid entries and flatten so mus are stacked in order
-        this_data = trim_and_align_data(p.data, kmin=kmin_, kmax=kmax_)
-        data.append(this_data)
-        
-    data = np.asarray(data)    
-    
-    # concatenate all ells together and remove the NaNs
-    power = data['power'].reshape((N,-1), order='F')
-    power = power[np.isfinite(power)].reshape((N, -1))
-
-    with warnings.catch_warnings():
-        mean_power = np.nanmean(data['power'], axis=0)
-        k_center = np.nanmean(data['k_center'], axis=0)
-        mu_center = np.nanmean(data['mu_center'], axis=0)
-        if 'modes' in data.dtype.names:
-            modes = np.nanmean(data['modes'], axis=0)
-        else:
-            modes = None
-        
-    C = np.cov(power, rowvar=False)
-    if force_diagonal:
-        diags = np.diag(C)
-        C = np.diag(diags)
-    if return_extras: 
-        extras = {'mean_power':mean_power, 'modes' : modes}
-        return C, (k_center, mu_center), extras
-    else:
-        return C
-    
-def get_valid_data(data, kmin=None, kmax=None):
-    """
-    Return the valid data. First, any NaN entries are removed
-    and if ``kmin`` or ``kmax`` are not ``None``, then the 
-    ``k`` column in ``data`` is used to trim the valid range.
-    
-    Parameters
-    ----------
-    data : PkmuResult or PkResult
-        The power data instance holding the `k`, `power`, and
-        optionally, the `error` data columns
+    power : np.ndarray, PkmuResult, or PkResult
+        the power data
     kmin : float, optional
         minimum wavenumber to trim by (inclusively), in h/Mpc
     kmax : float, optional
@@ -320,105 +138,26 @@ def get_valid_data(data, kmin=None, kmax=None):
     
     Returns
     -------
-    toret : dict
-        dictionary holding the trimmed data arrays, with keys
-        ``k``, ``power``, and optionally, ``error`` and ``mu``.
+    toret : np.ndarray
+        array holding the trimmed data
     """
-    if hasattr(data, 'dtype') and hasattr(data.dtype, 'names'):
-        columns = data.dtype.names
-        shape = np.shape(data)
-    else:
-        columns = data.columns
-        data = data.data
-        shape = data.shape
+    from nbodykit import pkresult, pkmuresult
+    if isinstance(power, (pkmuresult.PkmuResult, pkresult.PkResult)):
+        power = power.data.data
        
-    valid = np.ones(shape, dtype=bool)
-    for col in columns:
-        valid &= ~np.isnan(data[col])    
-    if kmin is not None:
-        valid &= (data['k'] >= kmin)
-    if kmax is not None:
-        valid &= (data['k'] <= kmax)
+    # not null entries
+    not_null = ~isnull(power, broadcast=True)    
     
-    # collapse across all dimensions  
-    if valid.ndim > 1:
-        valid = np.all(valid, axis=-1)
-    shape = list(data[columns[0]].shape)
-    shape[0] = valid.sum()
+    # the valid k entries
+    N = np.shape(power)[-1] if np.ndim(power) > 1 else 1
+    in_range = valid_k(k_cen, N, kmin=kmin, kmax=kmax)
     
-    # make the output
-    dtype = [(name, 'f8') for name in columns]
-    toret = np.empty(shape, dtype=dtype)
-    for col in columns:
-        toret[col] = data[col][valid,...]
-    return toret
+    if np.ndim(power) > 1:
+        idx = np.all((not_null)&(in_range), axis=-1)
+    else:
+        idx = (not_null)&(in_range)
+    return power[idx,...]
 
-
-def trim_and_align_data(data, kmin=None, kmax=None):
-    """
-    Remove any `NaN` entries and trim the input structured array
-    to the specified k range. If the input array has multiple 
-    dimensions, the trimmed data will be filled with NaNs to align
-    it properly, in the case that the k ranges vary across
-    the second dimension.
-    
-    Parameters
-    ----------
-    data : numpy.ndarray
-        structured array holding the data to trim
-    kmin : float, array_like, optional
-        minimum wavenumber to trim by (inclusively), in h/Mpc
-    kmax : float, array_like, optional
-        maximum wavenumber to trim by (inclusively), in h/Mpc
-    
-    Returns
-    -------
-    toret : numpy.ndarray
-        structured array holding the trimmed data, which has been
-        possibly re-aligned by filling with NaNs
-    """        
-    columns = data.dtype.names
-    shape = data.shape
-    n = shape[-1] if data.ndim > 1 else 1
-    # check kmin/kmax range
-    if kmin is not None and not np.isscalar(kmin) and len(kmin) != n:
-        raise ValueError("kmin has length %d, but should be of length %d" %(len(kmin), n))
-    if kmax is not None and not np.isscalar(kmax) and len(kmax) != n:
-        raise ValueError("kmax has length %d, but should be of length %d" %(len(kmax), n))
-   
-    # initial selection based on NaN and k ranges
-    valid = np.ones(shape, dtype=bool)
-    for col in columns:
-        valid &= ~np.isnan(data[col])    
-    if kmin is not None:
-        valid &= (data['k'] >= kmin)
-    if kmax is not None:
-        valid &= (data['k'] <= kmax)
-    
-    # if multiple dimensions, align data by filling with NaNs
-    if valid.ndim > 1:
-        row_inds = np.arange(shape[0])
-        min_idx = min([row_inds[valid[:,i]].min() for i in range(shape[1])])
-        max_idx = max([row_inds[valid[:,i]].max() for i in range(shape[1])])
-        nan_inds = np.zeros(shape, dtype=bool)
-        nan_inds[min_idx:max_idx, :] = True
-        nan_inds &= ~valid
-        valid = np.zeros(shape, dtype=bool)
-        valid[min_idx:max_idx, :] = True
-        
-    shape = list(shape)
-    shape[0] = valid.sum(axis=0)
-    if valid.ndim > 1:
-        shape[0] = shape[0][0]
-        
-    # make the output
-    dtype = [(name, 'f8') for name in columns]
-    toret = np.empty(shape, dtype=dtype)
-    for col in columns:
-        if valid.ndim > 1:
-            data[col][nan_inds] = np.nan
-        toret[col] = data[col][valid].reshape(shape)
-    return toret
 
 def get_Pshot(power):
     """
@@ -432,3 +171,226 @@ def get_Pshot(power):
         return power.Lx*power.Ly*power.Lz / power.N1
     else:
         raise ValueError("cannot compute shot noise")
+        
+def trim_zeros_indices(filt):
+    """
+    Return the indices (first, last) specifying
+    the indices to trim leading or trailing zeros
+    """
+    first = 0
+    for i in filt:
+        if i != 0.:
+            break
+        else:
+            first = first + 1
+    last = len(filt)
+    for i in filt[::-1]:
+        if i != 0.:
+            break
+        else:
+            last = last - 1
+    return first, last
+
+def trim_and_align_data(coords, arr, kmin=-np.inf, kmax=np.inf, k_axes=[0]):
+    """
+    Remove null and out-of-range entries from the input array, using
+    ``k_cen`` as the k-coordinates to determine out-of-range values. 
+    
+    Notes
+    -----
+    *   If the input array has multiple dimensions, the trimmed data will 
+        be `aligned` by filling with NaNs along the second dimension in 
+        order to have a proper shape, in the case that the k ranges vary 
+        across the second dimension.
+    *   The function assumes the first two dimensions of `arr` has 
+        shape ``(len(coords[0]), len(coords[1]))``, with higher dimensions
+        are allowed
+    
+    Parameters
+    ----------
+    coords : list
+        list of 1D arrays specifying the coordinates for the data array
+    arr : numpy.ndarray
+        array (possibly structured) holding the data to trim
+    kmin : float, array_like, optional
+        minimum wavenumber to trim by (inclusively), in h/Mpc
+    kmax : float, array_like, optional
+        maximum wavenumber to trim by (inclusively), in h/Mpc
+    
+    Returns
+    -------
+    coords : list
+        list of new coordinates, broadcasted to the shape of data,
+        with nans for missing data
+    toret : numpy.ndarray
+        array holding the trimmed data, which has been
+        possibly re-aligned by filling with NaNs
+    """ 
+    k_cen = coords[0]
+    
+    # not null entries
+    null = isnull(arr, broadcast=True)    
+    
+    # the valid k entries
+    N = np.shape(arr)[1] if np.ndim(arr) > 1 else 1
+    out_of_range = ~valid_k(k_cen, N, kmin=kmin, kmax=kmax)
+    
+    # remove any leading or trailing NaNs
+    nan_idx = np.logical_or(null.T, out_of_range.T).T
+    cnts = (~nan_idx).astype(int)
+    if np.ndim(cnts) > 1: 
+        axes = tuple(range(1, np.ndim(cnts)))
+        cnts = np.sum(cnts, axis=axes)
+    first, last = trim_zeros_indices(cnts)
+    
+    # do the cases of structured array or normal array
+    copy = arr.copy()    
+    if is_structured(arr):        
+        copy[nan_idx] = tuple([np.nan]*len(copy.dtype))
+    else:
+        copy[nan_idx] = np.nan
+    
+    key = [slice(None)]*np.ndim(copy)
+    for axis in k_axes:
+        key[axis] = slice(first, last)
+    toret = copy[key]
+            
+    # broadcast coords to (Nk, N)
+    new_coords = np.meshgrid(*coords, indexing='ij')
+    
+    # remove any higher order dimensions
+    for axis in reversed(range(2, np.ndim(arr))):
+        nan_idx = np.take(nan_idx, 0, axis=axis)
+    
+    # trim and align
+    for i in range(len(new_coords)):
+        new_coords[i][nan_idx] = np.nan
+        new_coords[i] = new_coords[i][first:last]
+    return new_coords, toret
+
+def limit_array(lim, N):
+    """
+    Convenience function to return array of limits
+    """
+    toret = np.empty(N)
+    toret[:] = lim
+    return toret
+
+def valid_k(k_cen, N, kmin=-np.inf, kmax=np.inf):
+    """
+    Return an array of indices specifying which array
+    elements are within the specified minimum and maximum
+    k range
+    
+    Parameters
+    ----------
+    k_cen : (Nk,)
+        a 1D aray specifying the center values of the k coordinates
+    N : int
+        the size of the second axis
+    kmin : {float, array_like}
+        a float specifying the minimum k value, or an array of size ``N``
+    kmax : {float, array_like}
+        a float specifying the maximum k value, or an array of size ``N``
+        
+    Returns
+    -------
+    idx : array_like
+        a boolean array of size (Nk, N) specifying the valid elements
+    """
+    # the k limits as arrays
+    kmin = limit_array(kmin, N)
+    kmax = limit_array(kmax, N)
+    
+    # broadcast and return
+    return np.squeeze((k_cen[:,None] >= kmin)&(k_cen[:,None] <= kmax))
+
+def isnull(arr, broadcast=False):
+    """
+    Return a boolean array specifying the null entries of the
+    input array `arr`, which uses ``pandas.isnull`` to perform
+    this test
+    
+    Notes
+    -----
+    The input array can be either a normal np.ndarray or a
+    structured array. If ``broadcast = True`` and the input
+    array is a structured array, return a single mask, broadcasted
+    across all fields
+    
+    Parameters
+    ----------
+    arr : np.ndarray
+        the input array to test for null entries, which can 
+        be a structured array
+    broadcast : bool, optional (`False`)
+        if ``True``, return a mask where each element is considered
+        null if any of the structured array fields are null
+    """
+    import pandas as pd
+    
+    # structured array
+    if is_structured(arr):
+        
+        # the return stuctured array
+        dtype = zip(arr.dtype.names, [np.dtype('bool')]*len(arr.dtype))
+        toret = np.empty(arr.shape, dtype=dtype)
+        
+        # loop over each field
+        for name in arr.dtype.names:
+            toret[name] = pd.isnull(arr[name])
+        
+        # null if any entries are null?
+        if broadcast:
+            toret = toret.view(bool).reshape(toret.shape + (-1,))
+            toret = np.any(toret, axis=-1)
+    else:
+        toret = pd.isnull(arr)
+    return toret
+            
+def is_structured(arr):
+    """
+    Test if the input array is a structured array
+    by testing for `dtype.names`
+    """
+    if not isinstance(arr, np.ndarray):
+        return False
+    return arr.dtype.names is not None
+    
+def mean_structured(arr, weights=None, axis=0):
+    """
+    Take the mean of each field of the input recarray ``arr``, 
+    optionally weighting by ``weights``, across the 
+    specified axis
+    
+    Notes
+    -----
+    This will use `numpy.nansum` to take the weighted average, thus
+    treating any `np.nan` elements as missing data. If the input
+    array has only `np.nan` values across the sum axis, thus
+    elements will be set to `np.nan` in the return array
+    """
+    if not is_structured(arr):
+        raise ValueError("calling ``mean_structured`` on an array that is not structured")
+    
+    # roll desired axis to front
+    if axis != 0: arr = np.rollaxis(arr, axis)
+        
+    # make the weights if we need to, and check
+    if weights is None:
+        weights = np.ones(arr.shape)
+    if weights.shape != arr.shape:
+        args = (str(arr.shape), str(weights.shape))
+        raise ValueError("weights array should have shape %s, not %s" %args)
+        
+    norm = np.nansum(weights, axis=0)
+    toret = np.empty(arr.shape[1:], dtype=arr.dtype)
+    
+    for name in arr.dtype.names:
+        toret[name] = np.nansum(arr[name]*weights, axis=0)
+        toret[name] /= np.nansum(arr[name]*0.+weights, axis=0)
+        
+        missing = np.all(np.isnan(arr[name]), axis=0)
+        toret[name][missing] = np.nan
+        
+    return toret
