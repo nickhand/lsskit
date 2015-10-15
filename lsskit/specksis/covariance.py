@@ -207,6 +207,7 @@ def _covariance_from_data(coords, arr, kmin, kmax):
     """
     # trim and align
     new_coords, arr = tools.trim_and_align_data(coords, arr, kmin=kmin, kmax=kmax)
+    sizes = np.isfinite(new_coords[0]).sum(axis=0)
     new_coords = map(tools.flat_and_nonnull, new_coords)
     mean_arr = tools.mean_structured(arr, axis=-1) # last axis is diff realizations
     
@@ -223,7 +224,7 @@ def _covariance_from_data(coords, arr, kmin, kmax):
 
     # covariance matrix and optionally, force diagonal
     C = np.cov(power, rowvar=False)
-    return C, new_coords, {'mean_power':mean_power, 'modes':modes}
+    return C, new_coords, sizes, {'mean_power':mean_power, 'modes':modes}
 
 
 def compute_pole_covariance(pole_set, 
@@ -273,14 +274,14 @@ def compute_pole_covariance(pole_set,
      
     # get the coordinates from the first box
     pole_0 = pole_set[0, 0].values
-    coords = [pole_0.k_center, np.asarray(ells)]
+    coords = [pole_0.k_center, np.asarray(ells, dtype=float)]
     
     # do the work
-    C, new_coords, x = _covariance_from_data(coords, arr, kmin, kmax)
+    C, new_coords, sizes, x = _covariance_from_data(coords, arr, kmin, kmax)
     if force_diagonal:
         for i in range(len(ells)):
             for j in range(i, len(ells)):
-                remove_pole_off_diags(C, i, j, shapes)
+                remove_pole_off_diags(C, i, j, sizes)
     
     # return
     return (C, new_coords, x) if extras else C
@@ -331,7 +332,7 @@ def compute_pkmu_covariance(pkmu_set,
     coords = [pkmu_0.k_center, pkmu_0.mu_center]
     
     # do the work
-    C, new_coords, x = _covariance_from_data(coords, arr, kmin, kmax)
+    C, new_coords, sizes, x = _covariance_from_data(coords, arr, kmin, kmax)
     if force_diagonal:
         diags = np.diag(C)
         C = np.diag(diags)
