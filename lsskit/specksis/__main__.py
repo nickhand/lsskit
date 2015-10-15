@@ -7,23 +7,29 @@
     __desc__   : analysis functions to be installed as console scripts
 """
 import argparse
+from .. import numpy as np
 from ..data import parse_tools
-from ..specksis import io, tools
+from ..specksis import io, tools, covariance
 
-def write_power_analysis_file():
+
+#------------------------------------------------------------------------------
+# writing analysis/grid files
+#------------------------------------------------------------------------------
+def write_analysis_file():
     """
-    Write a power spectrum to file as an analysis script
+    Write a P(k,mu), P(k) or multipoles spectrum as an 'analysis' 
+    plaintext file
     """
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
     
     # required arguments
+    h = 'the kind of analysis file to write, either `power` or `poles`'
+    parser.add_argument('kind', choices=['power', 'poles'], help=h)
     h = parse_tools.PowerSpectraParser.format_help()
     parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('--weights', type=parse_tools.PowerSpectraCallable.data, help=h)
     h = "the data keys to slice the data on; specified as `a = '0.6452'`"
     parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the data columns to write to the file'
@@ -35,21 +41,19 @@ def write_power_analysis_file():
     h = 'whether to subtract the shot noise from the power before writing; default = False'
     parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
     h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
+    parser.add_argument('--kmin', nargs='+', type=float, default=[-np.inf], help=h)
     h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
+    parser.add_argument('--kmax', nargs='+', type=float, default=[np.inf], help=h)
     
     # parse
     args = parser.parse_args()
-    if args.kmin is not None and len(args.kmin) == 1:
+    if len(args.kmin) == 1:
         args.kmin = args.kmin[0]
-    if args.kmax is not None and len(args.kmax) == 1:
+    if len(args.kmax) == 1:
         args.kmax = args.kmax[0]
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
-    if args.weights is not None:
-        weights = getattr(args.data, args.weights['name'])(**args.weights['kwargs'])
     
     # now slice
     for k in args.key:
@@ -58,9 +62,7 @@ def write_power_analysis_file():
         args.key[k] = args.key[k][0]
     try:
         power = data.sel(**args.key)
-        if power.size == 1:
-            power = power.values
-        if args.weights is not None: weights = weights.sel(**args.key).values
+        if power.size == 1: power = power.values
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
 
@@ -69,73 +71,13 @@ def write_power_analysis_file():
     kwargs['subtract_shot_noise'] = args.subtract_shot_noise
     kwargs['kmin'] = args.kmin
     kwargs['kmax'] = args.kmax
-    io.write_power_analysis_file(args.output, power, args.cols, weights=weights, **kwargs)
-    
-    
-def write_poles_analysis_file():
-    """
-    Write multipoles to file as an analysis script
-    """
-    parser = argparse.ArgumentParser()
-    parser.formatter_class = argparse.RawTextHelpFormatter
-    
-    # required arguments
-    h = parse_tools.PowerSpectraParser.format_help()
-    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('poles_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('--weights', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
-    parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
-    h = 'the data columns to write to the file'
-    parser.add_argument('--cols', required=True, nargs='+', type=str)
-    h = 'the output file name'
-    parser.add_argument('-o', '--output', required=True, type=str, help=h)
-    
-    # options
-    h = 'whether to subtract the shot noise from the power before writing; default = False'
-    parser.add_argument('--subtract_shot_noise', action='store_true', default=False, help=h)
-    h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
-    h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
-    
-    # parse
-    args = parser.parse_args()
-    if args.kmin is not None and len(args.kmin) == 1:
-        args.kmin = args.kmin[0]
-    if args.kmax is not None and len(args.kmax) == 1:
-        args.kmax = args.kmax[0]
-    
-    # get the data from the parent data and function
-    data = getattr(args.data, args.poles_callable['name'])(**args.poles_callable['kwargs'])
-    if args.weights is not None:
-        weights = getattr(args.data, args.weights['name'])(**args.weights['kwargs'])
-    
-    # now slice
-    for k in args.key:
-        if len(args.key[k]) != 1:
-            raise ValueError("must specify exactly one key for each dimension")
-        args.key[k] = args.key[k][0]
-    try:
-        poles = data.sel(**args.key)
-        if args.weights is not None: weights = weights.sel(**args.key).values
-    except Exception as e:
-        raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
+    io.write_analysis_file(args.kind, args.output, power, args.cols, **kwargs)
 
-    # now output
-    kwargs = {}
-    kwargs['subtract_shot_noise'] = args.subtract_shot_noise
-    kwargs['kmin'] = args.kmin
-    kwargs['kmax'] = args.kmax
-    io.write_poles_analysis_file(args.output, poles, args.cols, weights=weights, **kwargs)
-
-def write_gaussian_pole_covariance():
+def write_analysis_grid():
     """
-    Write out the gaussian multipoles covariance matrix
+    Write a P(k,mu) grid for analysis purposes
     """
-    from pyRSD.rsdfit.data import CovarianceMatrix
+    from pyRSD.rsd import PkmuGrid
     
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
@@ -145,44 +87,39 @@ def write_gaussian_pole_covariance():
     parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = 'the data format to use, either `pickle` or `plaintext`'
-    parser.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
+    h = "the (optional) data keys to slice the data on; specified as `a = '0.6452'`"
+    parser.add_argument('--key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the output file name'
     parser.add_argument('-o', '--output', required=True, type=str, help=h)
-    h = 'the multipole numbers to compute'
-    parser.add_argument('-l', '--ell', nargs='*', required=True, type=int, help=h)
-    
-    # options
-    h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
-    h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
-        
-    # parse
     args = parser.parse_args()
-    if args.kmin is not None and len(args.kmin) == 1:
-        args.kmin = args.kmin[0]
-    if args.kmax is not None and len(args.kmax) == 1:
-        args.kmax = args.kmax[0]
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
     
-    # compute the covariance matrix
-    C = tools.gaussian_pole_covariance(data, args.ell, kmin=args.kmin, kmax=args.kmax)
+    # now slice
+    if args.key is not None:
+        for k in args.key:
+            if len(args.key[k]) != 1:
+                raise ValueError("must specify exactly one key for each dimension")
+            args.key[k] = args.key[k][0]
+        try:
+            data = data.sel(**args.key)
+        except Exception as e:
+            raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
     
-    # now output
-    C = CovarianceMatrix(C, verify=False)
-    if args.format == 'pickle':
-        C.to_pickle(args.output)
-    else:
-        C.to_plaintext(args.output)
+    # now make the grid and save to plaintext file
+    grid = PkmuGrid.from_pkmuresult(data.values)
+    grid.to_plaintext(args.output)
 
+
+#------------------------------------------------------------------------------
+# writing covariance matrices
+#------------------------------------------------------------------------------
 def write_covariance():
     """
-    Write out a power spectrum covariance matrix
+    Write out a P(k,mu) or multipoles covariance matrix
     """
-    from pyRSD.rsdfit.data import CovarianceMatrix
+    from pyRSD.rsdfit.data import PkmuCovarianceMatrix, PoleCovarianceMatrix
     
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
@@ -199,38 +136,95 @@ def write_covariance():
     h = 'the output file name'
     parser.add_argument('-o', '--output', required=True, type=str, help=h)
     h = 'the multipole numbers to compute'
-    parser.add_argument('-l', '--ell', nargs='*', type=int, help=h)
+    parser.add_argument('--ells', nargs='*', type=int, help=h)
     
     # options
     h = "the minimum wavenumber to use"
-    parser.add_argument('--kmin', nargs='+', type=float, default=None, help=h)
+    parser.add_argument('--kmin', nargs='+', type=float, default=[-np.inf], help=h)
     h = "the maximum wavenumber to use"
-    parser.add_argument('--kmax', nargs='+', type=float, default=None, help=h)
+    parser.add_argument('--kmax', nargs='+', type=float, default=[np.inf], help=h)
     h = "set off-diagonal elements to zero"
     parser.add_argument('--force_diagonal', action='store_true', help=h)
         
     # parse
     args = parser.parse_args()
-    if args.kmin is not None and len(args.kmin) == 1:
-        args.kmin = args.kmin[0]
-    if args.kmax is not None and len(args.kmax) == 1:
-        args.kmax = args.kmax[0]
+    if len(args.kmin) == 1: args.kmin = args.kmin[0]
+    if len(args.kmax) == 1: args.kmax = args.kmax[0]
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
     
     # compute the covariance matrix
     kwargs = {}
-    if args.kmin is not None: kwargs['kmin'] = args.kmin
-    if args.kmax is not None: kwargs['kmax'] = args.kmax
+    kwargs['kmin'] = args.kmin
+    kwargs['kmax'] = args.kmax
     kwargs['force_diagonal'] = args.force_diagonal
-    kwargs['return_extras'] = False
+    
     if args.mode == 'pkmu':
-        C = tools.compute_pkmu_covariance(data, **kwargs)    
+        C = PkmuCovarianceMatrix.from_spectra_set(data, **kwargs)    
     elif args.mode == 'poles':
-        if args.ell is None:
-            raise ValueError("if `mode = poles`, then `ell` must be supplied")
-        C = tools.compute_pole_covariance(data, args.ell, **kwargs)
+        if args.ells is not None: kwargs['ells'] = args.ells
+        C = PoleCovarianceMatrix.from_spectra_set(data, **kwargs)
+    
+    # now output
+    if args.format == 'pickle':
+        C.to_pickle(args.output)
+    else:
+        C.to_plaintext(args.output)
+        
+def write_data_gaussian_covariance():
+    """
+    Write out the gaussian covariance matrix from data measurements, 
+    for either P(k,mu) or multipoles
+    """
+    from pyRSD.rsdfit.data import CovarianceMatrix
+    
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    subparsers = parser.add_subparsers(dest='subparser_name')
+    
+    # pkmu parser
+    pkmu_parser = subparsers.add_parser('pkmu')
+    h = parse_tools.PowerSpectraParser.format_help()
+    pkmu_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    pkmu_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the mu bin edges'
+    pkmu_parser.add_argument('mu_edges', nargs='+', type=float, help=h)
+    
+    # poles parser
+    pole_parser = subparsers.add_parser('poles')
+    h = parse_tools.PowerSpectraParser.format_help()
+    pole_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    pole_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the multipole numbers'
+    pole_parser.add_argument('ells', nargs='+', type=int, help=h)
+
+    # options
+    for p in [pkmu_parser, pole_parser]:
+        h = 'the data format to use, either `pickle` or `plaintext`'
+        p.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
+        h = 'the output file name'
+        p.add_argument('-o', '--output', required=True, type=str, help=h)
+        h = "the minimum wavenumber to use"
+        p.add_argument('--kmin', nargs='+', type=float, default=[-np.inf], help=h)
+        h = "the maximum wavenumber to use"
+        p.add_argument('--kmax', nargs='+', type=float, default=[np.inf], help=h)
+        
+    # parse
+    args = parser.parse_args()
+    if len(args.kmin) == 1: args.kmin = args.kmin[0]
+    if len(args.kmax) == 1: args.kmax = args.kmax[0]
+    
+    # get the data from the parent data and function
+    data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    
+    # compute the covariance matrix
+    if args.subparser_name == 'pkmu':
+        C = covariance.data_pkmu_gausscov(data, args.mu_edges, kmin=args.kmin, kmax=args.kmax)
+    else:
+        C = covariance.data_pole_gausscov(data, args.ells, kmin=args.kmin, kmax=args.kmax)
     
     # now output
     C = CovarianceMatrix(C, verify=False)
@@ -239,6 +233,78 @@ def write_covariance():
     else:
         C.to_plaintext(args.output)
         
+def write_model_gaussian_covariance():
+    """
+    Write out the gaussian covariance matrix using a best-fit model, 
+    for either P(k,mu) or multipoles
+    """
+    from pyRSD.rsdfit.data import CovarianceMatrix
+    import cPickle
+    
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    subparsers = parser.add_subparsers(dest='subparser_name')
+    
+    # pkmu parser
+    pkmu_parser = subparsers.add_parser('pkmu')
+    h = 'the name of the file holding the pickled model'
+    pkmu_parser.add_argument('model', type=str, help=h)
+    h = parse_tools.PowerSpectraParser.format_help()
+    pkmu_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    pkmu_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the mu bin edges'
+    pkmu_parser.add_argument('mu_edges', nargs='+', type=float, help=h)
+    
+    # poles parser
+    pole_parser = subparsers.add_parser('poles')
+    h = 'the name of the file holding the pickled model'
+    pole_parser.add_argument('model', type=str, help=h)
+    h = parse_tools.PowerSpectraParser.format_help()
+    pole_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    pole_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the multipole numbers'
+    pole_parser.add_argument('ells', nargs='+', type=int, help=h)
+
+    # options
+    for p in [pkmu_parser, pole_parser]:
+        h = 'the data format to use, either `pickle` or `plaintext`'
+        p.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
+        h = 'the output file name'
+        p.add_argument('-o', '--output', required=True, type=str, help=h)
+        h = "the minimum wavenumber to use"
+        p.add_argument('--kmin', nargs='+', type=float, default=[-np.inf], help=h)
+        h = "the maximum wavenumber to use"
+        p.add_argument('--kmax', nargs='+', type=float, default=[np.inf], help=h)
+        
+    # parse
+    args = parser.parse_args()
+    if len(args.kmin) == 1: args.kmin = args.kmin[0]
+    if len(args.kmax) == 1: args.kmax = args.kmax[0]
+    
+    # get the data from the parent data and function
+    data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    
+    # model
+    model = cPickle.load(open(args.model, 'r'))
+    
+    # compute the covariance matrix
+    if args.subparser_name == 'pkmu':
+        C = covariance.model_pkmu_gausscov(model, data, args.mu_edges, kmin=args.kmin, kmax=args.kmax)
+    else:
+        C = covariance.model_pole_gausscov(model, data, args.ells, kmin=args.kmin, kmax=args.kmax)
+    
+    # now output
+    C = CovarianceMatrix(C, verify=False)
+    if args.format == 'pickle':
+        C.to_pickle(args.output)
+    else:
+        C.to_plaintext(args.output)
+
+#------------------------------------------------------------------------------
+# MCMC helper scripts
+#------------------------------------------------------------------------------        
 def plot_mcmc_bestfit():
     """
     Load a mcmc bestfit and plot it
