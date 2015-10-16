@@ -8,7 +8,7 @@ class DataParams(object):
     statistics = None    
     valid_params = ['statistics', 'fitting_range', 'data_file', 'usedata', 'columns',
                     'covariance', 'covariance_rescaling', 'covariance_Nmocks', 
-                    'rescale_inverse_covariance', 'mode', 'weight_file', 'mu_edges']
+                    'rescale_inverse_covariance', 'mode', 'mu_edges', 'ells', 'grid_file']
     
     def __iter__(self):
         """
@@ -62,32 +62,37 @@ class DataParams(object):
         return len(self.usedata)
         
     @property
-    def weight_file(self):
+    def grid_file(self):
         """
-        The name of the file holding weights
+        The name of the file holding the grid
         """
-        try:
-            return self._weight_file
-        except:
-            return None
-    
-    @weight_file.setter
-    def weight_file(self, val):
-        self._weight_file = val
+        return getattr(self, '_grid_file', None)
+        
+    @grid_file.setter
+    def grid_file(self, val):
+        self._grid_file = val
         
     @property
     def mu_edges(self):
         """
         The mu edges
         """
-        try:
-            return self._mu_edges
-        except:
-            return None
+        return getattr(self, '_mu_edges', None)
     
     @mu_edges.setter
     def mu_edges(self, val):
         self._mu_edges = val
+        
+    @property
+    def ells(self):
+        """
+        The multipole numbers to compute
+        """
+        return getattr(self, '_ells', None)
+    
+    @ells.setter
+    def ells(self, val):
+        self._ells = val
         
     @property
     def rescale_inverse_covariance(self):
@@ -203,6 +208,7 @@ class PkmuDataParams(DataParams):
     Data params for P(k,mu) measurement with 5 mu bins
     """
     statistics = ['pkmu_0.1', 'pkmu_0.3', 'pkmu_0.5', 'pkmu_0.7', 'pkmu_0.9']
+    mu_edges = np.linspace(0., 1., 6)
     mode = 'pkmu'
     
 class PoleDataParams(DataParams):
@@ -211,6 +217,7 @@ class PoleDataParams(DataParams):
     """
     statistics = ['pole_0', 'pole_2', 'pole_4']
     mode = 'poles'
+    ells = np.array([0, 2, 4], dtype=float)
     
     
     
