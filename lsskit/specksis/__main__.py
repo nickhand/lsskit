@@ -177,7 +177,7 @@ def write_data_gaussian_covariance():
     Write out the gaussian covariance matrix from data measurements, 
     for either P(k,mu) or multipoles
     """
-    from pyRSD.rsdfit.data import CovarianceMatrix
+    from pyRSD.rsdfit.data import PkmuCovarianceMatrix, PoleCovarianceMatrix
     
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
@@ -189,8 +189,10 @@ def write_data_gaussian_covariance():
     pkmu_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     pkmu_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
+    pkmu_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the mu bin edges'
-    pkmu_parser.add_argument('mu_edges', nargs='+', type=float, help=h)
+    pkmu_parser.add_argument('mu_edges', type=str, help=h)
     
     # poles parser
     pole_parser = subparsers.add_parser('poles')
@@ -198,8 +200,10 @@ def write_data_gaussian_covariance():
     pole_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     pole_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
+    pole_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the multipole numbers'
-    pole_parser.add_argument('ells', nargs='+', type=int, help=h)
+    pole_parser.add_argument('ells', type=str, help=h)
 
     # options
     for p in [pkmu_parser, pole_parser]:
@@ -220,88 +224,33 @@ def write_data_gaussian_covariance():
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
     
+    # now slice
+    for k in args.key:
+        if len(args.key[k]) != 1:
+            raise ValueError("must specify exactly one key for each dimension")
+        args.key[k] = args.key[k][0]
+    try:
+        data = data.sel(**args.key)
+        if data.size == 1: data = data.values
+    except Exception as e:
+        raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
+    
     # compute the covariance matrix
     if args.subparser_name == 'pkmu':
-        C = covariance.data_pkmu_gausscov(data, args.mu_edges, kmin=args.kmin, kmax=args.kmax)
+        mu_edges = np.array(eval(args.mu_edges))
+        C, coords = covariance.data_pkmu_gausscov(data, mu_edges, kmin=args.kmin, kmax=args.kmax)
+        C = PkmuCovarianceMatrix(C, coords[0], coords[1])
     else:
-        C = covariance.data_pole_gausscov(data, args.ells, kmin=args.kmin, kmax=args.kmax)
+        ells = np.array(eval(args.ells), dtype=float)
+        C, coords = covariance.data_pole_gausscov(data, ells, kmin=args.kmin, kmax=args.kmax)
+        C = PoleCovarianceMatrix(C, coords[0], coords[1])
     
     # now output
-    C = CovarianceMatrix(C, verify=False)
     if args.format == 'pickle':
         C.to_pickle(args.output)
     else:
         C.to_plaintext(args.output)
         
-def write_model_gaussian_covariance():
-    """
-    Write out the gaussian covariance matrix using a best-fit model, 
-    for either P(k,mu) or multipoles
-    """
-    from pyRSD.rsdfit.data import CovarianceMatrix
-    import cPickle
-    
-    parser = argparse.ArgumentParser()
-    parser.formatter_class = argparse.RawTextHelpFormatter
-    subparsers = parser.add_subparsers(dest='subparser_name')
-    
-    # pkmu parser
-    pkmu_parser = subparsers.add_parser('pkmu')
-    h = 'the name of the file holding the pickled model'
-    pkmu_parser.add_argument('model', type=str, help=h)
-    h = parse_tools.PowerSpectraParser.format_help()
-    pkmu_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    pkmu_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = 'the mu bin edges'
-    pkmu_parser.add_argument('mu_edges', nargs='+', type=float, help=h)
-    
-    # poles parser
-    pole_parser = subparsers.add_parser('poles')
-    h = 'the name of the file holding the pickled model'
-    pole_parser.add_argument('model', type=str, help=h)
-    h = parse_tools.PowerSpectraParser.format_help()
-    pole_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    pole_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = 'the multipole numbers'
-    pole_parser.add_argument('ells', nargs='+', type=int, help=h)
-
-    # options
-    for p in [pkmu_parser, pole_parser]:
-        h = 'the data format to use, either `pickle` or `plaintext`'
-        p.add_argument('--format', choices=['pickle', 'plaintext'], default='plaintext', help=h)
-        h = 'the output file name'
-        p.add_argument('-o', '--output', required=True, type=str, help=h)
-        h = "the minimum wavenumber to use"
-        p.add_argument('--kmin', nargs='+', type=float, default=[-np.inf], help=h)
-        h = "the maximum wavenumber to use"
-        p.add_argument('--kmax', nargs='+', type=float, default=[np.inf], help=h)
-        
-    # parse
-    args = parser.parse_args()
-    if len(args.kmin) == 1: args.kmin = args.kmin[0]
-    if len(args.kmax) == 1: args.kmax = args.kmax[0]
-    
-    # get the data from the parent data and function
-    data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
-    
-    # model
-    model = cPickle.load(open(args.model, 'r'))
-    
-    # compute the covariance matrix
-    if args.subparser_name == 'pkmu':
-        C = covariance.model_pkmu_gausscov(model, data, args.mu_edges, kmin=args.kmin, kmax=args.kmax)
-    else:
-        C = covariance.model_pole_gausscov(model, data, args.ells, kmin=args.kmin, kmax=args.kmax)
-    
-    # now output
-    C = CovarianceMatrix(C, verify=False)
-    if args.format == 'pickle':
-        C.to_pickle(args.output)
-    else:
-        C.to_plaintext(args.output)
-
 #------------------------------------------------------------------------------
 # MCMC helper scripts
 #------------------------------------------------------------------------------        

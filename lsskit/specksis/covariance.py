@@ -32,7 +32,9 @@ def _return_covariance(kind, grid, **kwargs):
         transfer = PkmuTransfer(grid, kwargs['mu_edges'], kmin=kmin, kmax=kmax, power=power)
     else:
         raise ValueError("`kind` must be `pole` or `pkmu`")
-    return transfer.to_covariance(components=kwargs['components'])
+    
+    coords = transfer.coords_flat
+    return transfer.to_covariance(components=kwargs['components']), coords
 
 #------------------------------------------------------------------------------
 # gaussian covariance from data measurements
