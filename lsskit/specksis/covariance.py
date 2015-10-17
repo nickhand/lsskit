@@ -29,7 +29,7 @@ def _return_covariance(kind, grid, **kwargs):
     if kind == 'pole':
         transfer = PolesTransfer(grid, kwargs['ells'], kmin=kmin, kmax=kmax, power=power)
     elif kind == 'pkmu':
-        transfer = PkmuTransfer(grid, kwargs['mu_edges'], kmin=kmin, kmax=kmax, power=power)
+        transfer = PkmuTransfer(grid, kwargs['mu_bounds'], kmin=kmin, kmax=kmax, power=power)
     else:
         raise ValueError("`kind` must be `pole` or `pkmu`")
     
@@ -39,7 +39,7 @@ def _return_covariance(kind, grid, **kwargs):
 #------------------------------------------------------------------------------
 # gaussian covariance from data measurements
 #------------------------------------------------------------------------------
-def data_pkmu_gausscov(pkmu, mu_edges, kmin=-np.inf, kmax=np.inf, components=False):
+def data_pkmu_gausscov(pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf, components=False):
     """
     Compute the gaussian covariance for a set of P(k,mu) measurements
     
@@ -47,8 +47,9 @@ def data_pkmu_gausscov(pkmu, mu_edges, kmin=-np.inf, kmax=np.inf, components=Fal
     ----------
     pkmu : nbodykit.PkmuResult
         the mean P(k,mu) measurement, on the finely-binned grid
-    mu_edges : array_like, (bin,)
-        the desired multipole numbers
+    mu_bounds : array_like
+        a list of tuples specifying (lower, upper) for each desired
+        mu bin, i.e., [(0., 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0)]
     kmin : {float, array_like}, optional
         minimum wavenumber to trim by (inclusively), in h/Mpc
     kmax : {float, array_like}, optional
@@ -72,7 +73,7 @@ def data_pkmu_gausscov(pkmu, mu_edges, kmin=-np.inf, kmax=np.inf, components=Fal
     grid = PkmuGrid.from_structured([pkmu.k_center, pkmu.mu_center], data)
     
     # return the Gaussian covariance components
-    kw = {'mu_edges':mu_edges, 'kmin':kmin, 'kmax':kmax, 'power':data['power'], 'components':components}
+    kw = {'mu_bounds':mu_bounds, 'kmin':kmin, 'kmax':kmax, 'power':data['power'], 'components':components}
     return _return_covariance('pkmu', grid, **kw)
     
 def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
@@ -115,7 +116,7 @@ def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
 #------------------------------------------------------------------------------
 # gaussian covariance from best-fit model
 #------------------------------------------------------------------------------
-def model_pkmu_gausscov(model, pkmu, mu_edges, kmin=-np.inf, kmax=np.inf):
+def model_pkmu_gausscov(model, pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf):
     """
     Compute the P(k,mu) gaussian covariance using a best-fit model to 
     evaluate P(k,mu) on a grid
@@ -127,8 +128,9 @@ def model_pkmu_gausscov(model, pkmu, mu_edges, kmin=-np.inf, kmax=np.inf):
     pkmu : nbodykit.PkmuResult
         the power instance holding the mean P(k,mu) result, which defines the
         (k,mu) grid over from which binning effects are accounted for
-    mu_edges : array_like
-        the list of the edges of the mu bins
+    mu_bounds : array_like
+        a list of tuples specifying (lower, upper) for each desired
+        mu bin, i.e., [(0., 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0)]
     kmin : {float, array_like}, optional
         the minimum wavenumber to include
     kmax : {float, array_like}, optional
@@ -137,7 +139,7 @@ def model_pkmu_gausscov(model, pkmu, mu_edges, kmin=-np.inf, kmax=np.inf):
     Returns
     -------
     C : array_like
-        the covariance matrix defined for the mu bins specified by `mu_edges`
+        the covariance matrix defined for the mu bins specified by `mu_bounds`
     """    
     # make the (k,mu) grid
     k = pkmu['k'].data
@@ -154,7 +156,7 @@ def model_pkmu_gausscov(model, pkmu, mu_edges, kmin=-np.inf, kmax=np.inf):
     kmin, kmax = _limits_from_model(kmin, kmax, model)
     
     # initialize the grid transfer and return the covariance
-    transfer = PkmuTransfer(grid, mu_edges, kmin=kmin, kmax=kmax, power=power)
+    transfer = PkmuTransfer(grid, mu_bounds, kmin=kmin, kmax=kmax, power=power)
     return transfer.to_covariance(components=False)
     
 def model_pole_gausscov(model, pkmu, ells, kmin=-np.inf, kmax=np.inf):
