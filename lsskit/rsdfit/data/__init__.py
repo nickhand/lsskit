@@ -8,7 +8,7 @@ class DataParams(object):
     statistics = None    
     valid_params = ['statistics', 'fitting_range', 'data_file', 'usedata', 'columns',
                     'covariance', 'covariance_rescaling', 'covariance_Nmocks', 
-                    'rescale_inverse_covariance', 'mode', 'mu_edges', 'ells', 'grid_file']
+                    'rescale_inverse_covariance', 'mode', 'mu_bounds', 'ells', 'grid_file']
     
     def __iter__(self):
         """
@@ -73,15 +73,15 @@ class DataParams(object):
         self._grid_file = val
         
     @property
-    def mu_edges(self):
+    def mu_bounds(self):
         """
-        The mu edges
+        The mu bin bounds
         """
-        return getattr(self, '_mu_edges', None)
+        return getattr(self, '_mu_bounds', None)
     
-    @mu_edges.setter
-    def mu_edges(self, val):
-        self._mu_edges = val
+    @mu_bounds.setter
+    def mu_bounds(self, val):
+        self._mu_bounds = val
         
     @property
     def ells(self):
@@ -208,7 +208,7 @@ class PkmuDataParams(DataParams):
     Data params for P(k,mu) measurement with 5 mu bins
     """
     statistics = ['pkmu_0.1', 'pkmu_0.3', 'pkmu_0.5', 'pkmu_0.7', 'pkmu_0.9']
-    mu_edges = np.linspace(0., 1., 6)
+    mu_bounds = [(0., 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0)]
     mode = 'pkmu'
     
 class PoleDataParams(DataParams):
