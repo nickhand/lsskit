@@ -217,7 +217,7 @@ class PoleDataParams(DataParams):
     """
     statistics = ['pole_0', 'pole_2', 'pole_4']
     mode = 'poles'
-    ells = np.array([0, 2, 4], dtype=float)
+    ells = [0, 2, 4]
     
     
     
