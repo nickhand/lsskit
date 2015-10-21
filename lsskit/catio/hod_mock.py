@@ -588,12 +588,10 @@ class HODMock(mock_catalog.MockCatalog):
         
         # all galaxies and satellites only
         bins1, pdf1, dM1 = _utils.compute_pdf(mass_all, log=True)
-        bins2, pdf2, dM2 = _utils.compute_pdf(mass_sat, log=True)
-
+    
         # plot
         ax = pfy.gca()
-        pfy.bar(bins1[:-1], pdf1, width=dM1, bottom=pdf1*0., color=ax.color_list[0], alpha=0.5, grid='y', label='all galaxies')
-        pfy.bar(bins2[:-1], pdf2, width=dM2, bottom=pdf2*0., color=ax.color_list[1], alpha=0.5, grid='y', label='satellites')
+        pfy.bar(bins1[:-1], pdf1, width=dM1, bottom=pdf1*0., color=ax.next_color, alpha=0.5, grid='y')
 
         # make it look nice
         pfy.plt.subplots_adjust(bottom=0.15)
