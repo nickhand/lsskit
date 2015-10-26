@@ -8,7 +8,8 @@ class DataParams(object):
     statistics = None    
     valid_params = ['statistics', 'fitting_range', 'data_file', 'usedata', 'columns',
                     'covariance', 'covariance_rescaling', 'covariance_Nmocks', 
-                    'rescale_inverse_covariance', 'mode', 'mu_bounds', 'ells', 'grid_file']
+                    'rescale_inverse_covariance', 'mode', 'mu_bounds', 'ells', 
+                    'grid_file', 'window_file']
     
     def __iter__(self):
         """
@@ -71,6 +72,17 @@ class DataParams(object):
     @grid_file.setter
     def grid_file(self, val):
         self._grid_file = val
+        
+    @property
+    def window_file(self):
+        """
+        The name of the file holding the window function
+        """
+        return getattr(self, '_window_file', None)
+        
+    @window_file.setter
+    def window_file(self, val):
+        self._window_file = val
         
     @property
     def mu_bounds(self):
