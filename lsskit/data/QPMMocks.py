@@ -1,6 +1,6 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, io, tools
+from lsskit.specksis import SpectraSet, io, covariance, tools
 import os
 
 class QPMMocks(PowerSpectraLoader):
@@ -173,8 +173,8 @@ class QPMMocks(PowerSpectraLoader):
             return the results that have/haven't been scaled by AP factors
         """
         Pgal = self.get_Pgal(spacing=spacing, space=space, scaled=scaled, Nmu=Nmu)
-        kwargs['return_extras'] = False
-        return tools.compute_pkmu_covariance(Pgal, **kwargs)
+        kwargs['extras'] = False
+        return covariance.compute_pkmu_covariance(Pgal, **kwargs)
         
         
     def get_pole_covariance(self, spacing="dk005", space='redshift', scaled=False, **kwargs):
@@ -191,6 +191,6 @@ class QPMMocks(PowerSpectraLoader):
             return the results that have/haven't been scaled by AP factors
         """
         poles = self.get_poles(spacing=spacing, space=space, scaled=scaled)
-        kwargs['return_extras'] = False
-        return tools.compute_pole_covariance(poles, [0, 2, 4], **kwargs)
+        kwargs['extras'] = False
+        return covariance.compute_pole_covariance(poles, [0, 2, 4], **kwargs)
             

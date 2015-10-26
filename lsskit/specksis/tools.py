@@ -84,7 +84,7 @@ def format_multipoles(this_pole, this_pkmu, ells):
         
         # compute the variance
         power = this_pkmu['power'].data
-        variance = 2 * np.nansum( weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
+        variance = 2 * np.nansum(weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
         
         # make the new PkResult object
         data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5, this_pole['modes']]).T
