@@ -53,7 +53,8 @@ class PowerSpectraLoader:
             
         return cls.classes[name](root_dir, **kwargs)
             
-builtins = ['RunPBHalo', 'RunPBGalaxy', 'TeppeiSims', 'ChallengeMocks', 'QPMMocks', 'CutskyQPMMocks']
+builtins = ['RunPBHalo', 'RunPBGalaxy', 'TeppeiSims', 'ChallengeMocks', 'QPMMocks', 
+            'CutskyQPMMocks', 'CutskyChallengeMocks']
 for plugin in builtins:
     filename = lsskit.path.join(lsskit.path.dirname(__file__), plugin + '.py')
     globals().update(lsskit.load(filename))

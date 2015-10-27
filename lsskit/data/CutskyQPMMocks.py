@@ -1,7 +1,8 @@
+import os
+
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, covariance, utils
-import os
 
 def to_pkresult(filename):
     """
@@ -84,7 +85,7 @@ class CutskyQPMMocks(PowerSpectraLoader):
         
             # form the filename and load the data
             basename = 'bianchips_qpmdr12_TSC_{box:04d}.dat'
-            coords = [range(1, 1001, 1)]
+            coords = [self.boxes]
             dims = ['box']
             ells = [0, 2, 4]
 
