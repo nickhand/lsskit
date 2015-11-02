@@ -4,13 +4,13 @@ from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, covariance, utils
 
-def to_pkresult(filename):
+def to_pkresult(filename, skiprows=31):
     """
     Return a list of `PkResult` objects for each multipole in
     the input data file
     """
     from nbodykit import pkresult
-    data = np.loadtxt(filename, skiprows=31, comments=None)
+    data = np.loadtxt(filename, skiprows=skiprows, comments=None)
     
     # make the edges
     dk = 0.005
@@ -53,9 +53,9 @@ class CutskyQPMMocks(PowerSpectraLoader):
         except AttributeError:
         
             # read in the data
-            basename = 'bianchips_qpmdr12_TSC_964mean.dat'
+            basename = 'bianchips_qpmdr12_TSC_1000mean.dat'
             f = os.path.join(self.root, basename)
-            data = to_pkresult(f)
+            data = to_pkresult(f, skiprows=0)
             
             coords = [[0, 2, 4]]
             dims = ['ell']

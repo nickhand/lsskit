@@ -2,8 +2,30 @@ import os
 
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.data.CutskyQPMMocks import to_pkresult
 from lsskit.specksis import SpectraSet, utils
+
+def to_pkresult(filename, skiprows=31):
+    """
+    Return a list of `PkResult` objects for each multipole in
+    the input data file
+    """
+    from nbodykit import pkresult
+    data = np.loadtxt(filename, skiprows=skiprows, comments=None)
+    
+    # make the edges
+    dk = 0.005
+    lower = data[:,0]-dk/2.
+    upper = data[:,0]+dk/2.
+    edges = np.array(zip(lower, upper))
+    edges = np.concatenate([edges.ravel()[::2], [edges[-1,-1]]])
+
+    toret = []
+    for i, ell in enumerate([0, 2, 4]):
+    
+        d = data[:,[1, 2+i, -1]]
+        pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], sum_only=['modes'], edges=edges)
+        toret.append(pk)
+    return toret
 
 class CutskyChallengeMocks(PowerSpectraLoader):
     name = "CutskyChallengeMocks"
@@ -33,7 +55,7 @@ class CutskyChallengeMocks(PowerSpectraLoader):
             d = os.path.join(self.root, 'data')
             basename = 'bianchips_cutsky_TSC_0.7_84mean.dat'
             f = os.path.join(d, basename)
-            data = to_pkresult(f)
+            data = to_pkresult(f, skiprows=0)
             
             coords = [[0, 2, 4]]
             dims = ['ell']
