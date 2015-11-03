@@ -18,7 +18,8 @@ class ModelParams(AttrDict):
                 'use_mu_corrections' : False,
                 'max_mu' : 4,
                 'interpolate' : True,
-                'use_so_correction' : False}
+                'use_so_correction' : False, 
+                'enhance_wiggles' : False}
                 
     def __init__(self, *args, **kwargs):
         for name in self.defaults:
