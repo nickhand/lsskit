@@ -77,9 +77,9 @@ def parse_args(desc, dims, coords):
         h = 'the #%d sample dimension' %i
         parser.add_argument('--%s' %dim, nargs='+', choices=['all']+vals, help=h, required=True)
     
-    return parser.parse_args()
+    return parser.parse_known_args()
 
-def qsub_samples(args, dims, coords):
+def qsub_samples(args, dims, coords, rsdfit_options=[]):
     """
     Submit the job script specified on the command line for the desired 
     sample(s). This could submit several job at once, but will 
@@ -114,7 +114,7 @@ def qsub_samples(args, dims, coords):
             ff.write(formatter.format(args.config, **valid))
         
         # call the python script that takes the `param_file` variable
-        call = {'param_file' : fname}
+        call = {'param_file' : fname, 'rsdfit_options' : rsdfit_options}
         execfile(args.setup, globals(), call)
         if 'command' not in call:
             raise RuntimeError("python setup script for run_rsdfit should define the `command` variable")
