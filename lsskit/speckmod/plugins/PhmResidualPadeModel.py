@@ -1,5 +1,6 @@
 from lsskit.speckmod.plugins import ModelInput
 import lmfit
+from pyRSD.rsd import halo_zeldovich
 
 class PhmResidualPadeModel(lmfit.Model, ModelInput):
 
@@ -10,21 +11,26 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
     def __init__(self, dict):
         
         ModelInput.__init__(self, dict)
-        super(PhmResidualPadeModel, self).__init__(self.__call__, 
-                                            independent_vars=['k'])
-        if self.fit_R:
-            self.param_names += ['R']
-    
+        super(PhmResidualPadeModel, self).__init__(self.__call__, independent_vars=['k'])
+        if self.fit_R: self.param_names += ['R']
+        if self.add_wiggles: self.param_names += ['W0']
+        
     @classmethod
     def register(cls):
         h = cls.add_parser(cls.name, usage=cls.name)
         h.add_argument("-fit_R", help="whether or not to fit R parameter", action='store_true')
+        h.add_argument("-add_wiggles", help="whether to add wiggles to Zeldovich power", action='store_true')
         h.set_defaults(klass=cls)
         
     def R_dm(self, s8_z):
         return 26. * (s8_z/0.8)**0.15
     
     def __call__(self, k, **kwargs):
+        
+        cosmo = kwargs['cosmo']
+        z = kwargs['z']
+        if not hasattr(self, '_Phz'):
+            self._Phz = halo_zeldovich.HaloZeldovichP00(cosmo, 0., cosmo.sigma8(), enhance_wiggles=True)
         
         # get the parameters
         A0 = kwargs['A0']
@@ -40,7 +46,14 @@ class PhmResidualPadeModel(lmfit.Model, ModelInput):
 
         # now return
         F = 1. - 1./(1. + (k*R)**2)
-        return A0 * (1 + (k*R1)**2) / (1. + (k*R1h)**2 + (k*R2h)**4) * F
+        toret = A0 * (1 + (k*R1)**2) / (1. + (k*R1h)**2 + (k*R2h)**4) * F
+        if self.add_wiggles:
+            self._Phz.z = z
+            self._Phz.sigma8_z = cosmo.Sigma8_z(z)    
+            self._Phz.enhance_wiggles = True
+            toret += kwargs['W0'] * self._Phz.wiggles_plus(k)
+        return toret
+        
         
 class PhmResidualAllPadeModel(lmfit.Model, ModelInput):
 

@@ -155,9 +155,10 @@ class PhmResidualRunPBData(ModelInput, RunPBModelData):
         b1 = self.biases.sel(a=key['a'], mass=key['mass']).values.tolist()
         
         # get the valid entries and subtract b1*Pzel
-        d = tools.get_valid_data(p.values, kmin=self.kmin, kmax=self.kmax)
+        p = p.values
+        d = tools.get_valid_data(p.k_center, p.data, kmin=self.kmin, kmax=self.kmax)
         z = 1./float(key['a']) - 1.
-        self.Pzel.SetRedshift(z)
+        self.Pzel.SetSigma8AtZ(self.cosmo.Sigma8_z(z))
         d['power'] -= b1*self.Pzel(d['k'])
                 
         return self._make_dataframe(d)
