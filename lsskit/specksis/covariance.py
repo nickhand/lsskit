@@ -69,7 +69,7 @@ def data_pkmu_gausscov(pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf, components=Fa
             the number of modes
     """           
     # initialize the grid transfer
-    data = pkmu.data.data
+    data = pkmu.data.data.copy()
     grid = PkmuGrid.from_structured([pkmu.k_center, pkmu.mu_center], data)
     
     # return the Gaussian covariance components
@@ -106,7 +106,7 @@ def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
             the number of modes
     """    
     # initialize the grid transfer
-    data = pkmu.data.data
+    data = pkmu.data.data.copy()
     grid = PkmuGrid.from_structured([pkmu.k_center, pkmu.mu_center], data)
     
     # return the Gaussian covariance components
@@ -222,9 +222,9 @@ def _covariance_from_data(coords, arr, kmin, kmax):
 
     # take the mean for extra info
     modes = None
-    mean_power = np.nanmean(arr['power'], axis=0)
+    mean_power = np.nanmean(arr['power'], axis=-1)
     if 'modes' in arr.dtype.names:
-        modes = np.nanmean(arr['modes'], axis=0)
+        modes = np.nanmean(arr['modes'], axis=-1)
 
     # covariance matrix and optionally, force diagonal
     C = np.cov(power, rowvar=False)
