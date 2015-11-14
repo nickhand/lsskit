@@ -4,6 +4,12 @@ from lsskit import numpy as np
 from pyRSD import data as sim_data
 import os
 
+def make_kedges(data):
+    kedges = np.empty(len(k)+1)
+    dk = 0.5*np.diff(k)
+    kedges[0], kedges[-1] = k[0]-dk[0], k[-1]+dk[-1]
+    kedges[1:-1] = k[1:]-dk
+    return kedges
 
 def load_data(data, space, **meta):
     """
@@ -14,10 +20,7 @@ def load_data(data, space, **meta):
     
     # make the edges
     k = data[:,0]
-    kedges = np.empty(len(k)+1)
-    dk = 0.5*np.diff(k)
-    kedges[0], kedges[-1] = k[0]-dk[0], k[-1]+dk[-1]
-    kedges[1:-1] = k[1:]-dk
+    kedges = make_kedges(data)
     factor = 1./12**0.5
     
     if space == 'redshift':
@@ -160,6 +163,126 @@ class TeppeiSims(PowerSpectraLoader):
             return lam
 
 
+    def get_P01(self):
+        """
+        Return the dark matter P01[mu^2] correlator in real-space
+        """
+        try:
+            return self._P01
+        except AttributeError:
+
+            d = os.path.join(self.root, 'dark_matter')
+            redshifts = ['z007', 'z005', 'z004']
+            meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
+            basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binaaQ'
+                
+            data = np.empty(len(redshifts), dtype=object)
+            for i in range(len(redshifts)):
+                filename = os.path.join(d, basename.format(z=redshifts[i]))
+                
+                if os.path.exists(filename):
+                
+                    # load the data
+                    d = np.loadtxt(filename)
+                    kedges = make_kedges(d)
+                    
+                    # make the PkResult
+                    data_dict = {}
+                    data_dict['power'] = data[:,-2]*2*data[:,0]
+                    data_dict['error'] = data[:,-1]*2*data[:,0]
+                    data_dict['k'] = data[:,0]
+                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                else:
+                    data[i] = np.nan
+                    
+            toret = SpectraSet(data, coords=[self.z], dims=['z'])
+            self._P01 = toret
+            return toret
+            
+    def get_P11(self, mu):
+        """
+        Return the dark matter P11[mu^2] or P11[mu^4] correlator in real-space
+        """
+        name = '_P11_%s' %mu
+        if mu not in ['mu2', 'mu4']:
+            raise ValueError('`mu` must be one of [`mu2`, `mu4`]')
+            
+        try:
+            return getattr(self, name)
+        except AttributeError:
+
+            d = os.path.join(self.root, 'dark_matter')
+            redshifts = ['z007', 'z005', 'z004']
+            meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
+            basename = 'pkmu_chi_11_m_m_{z}_1-3_02-13binaaQ'
+                
+            if mu == 'mu2':
+                cols = [-4, -2]
+            else:
+                cols = [-3, -2]
+            
+            data = np.empty(len(redshifts), dtype=object)
+            for i in range(len(redshifts)):
+                filename = os.path.join(d, basename.format(z=redshifts[i]))
+                
+                if os.path.exists(filename):
+                
+                    # load the data
+                    d = np.loadtxt(filename)
+                    kedges = make_kedges(d)
+                    
+                    # make the PkResult
+                    data_dict = {}
+                    data_dict['power'] = data[:,cols[0]]*data[:,0]**2
+                    data_dict['error'] = data[:,cols[1]]*data[:,0]**2
+                    data_dict['k'] = data[:,0]
+                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                else:
+                    data[i] = np.nan
+                    
+            toret = SpectraSet(data, coords=[self.z], dims=['z'])
+            setattr(self, name, toret)
+            return toret
+            
+    def get_Pdv(self, mu):
+        """
+        Return the dark matter Pdv cross-spectrum in real-space
+        """
+        try:
+            return self._Pdv
+        except AttributeError:
+
+            d = os.path.join(self.root, 'dark_matter')
+            redshifts = ['z007', 'z005', 'z004']
+            meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
+            basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binvvQ'
+
+            data = np.empty(len(redshifts), dtype=object)
+            for i in range(len(redshifts)):
+                filename = os.path.join(d, basename.format(z=redshifts[i]))
+                
+                if os.path.exists(filename):
+                
+                    # load the data
+                    d = np.loadtxt(filename)
+                    kedges = make_kedges(d)
+                    
+                    # make the PkResult
+                    data_dict = {}
+                    data_dict['power'] = data[:,-2]*(-data[:,0])
+                    data_dict['error'] = data[:,-1]*(-data[:,0])
+                    data_dict['k'] = data[:,0]
+                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                else:
+                    data[i] = np.nan
+                    
+            toret = SpectraSet(data, coords=[self.z], dims=['z'])
+            self._Pdv = toret
+            return toret
+    
+    #--------------------------------------------------------------------------
+    # galaxy spectra
+    #--------------------------------------------------------------------------
     def get_Pgal(self, space='real'):
         """
         Return galaxy component spectra
