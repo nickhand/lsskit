@@ -3,8 +3,11 @@ from lsskit.specksis import SpectraSet, HaloSpectraSet
 from lsskit import numpy as np
 from pyRSD import data as sim_data
 import os
+from nbodykit import pkresult, pkmuresult
 
 def make_kedges(data):
+    
+    k = data[:,0]
     kedges = np.empty(len(k)+1)
     dk = 0.5*np.diff(k)
     kedges[0], kedges[-1] = k[0]-dk[0], k[-1]+dk[-1]
@@ -16,8 +19,6 @@ def load_data(data, space, **meta):
     Load the data, saved in columns to an ASCII file, into either
     a ``PkmuResult`` or ``PkResult`` object
     """
-    from nbodykit import pkresult, pkmuresult
-    
     # make the edges
     k = data[:,0]
     kedges = make_kedges(data)
@@ -163,121 +164,155 @@ class TeppeiSims(PowerSpectraLoader):
             return lam
 
 
-    def get_P01(self):
+    #--------------------------------------------------------------------------
+    # DM correlators
+    #--------------------------------------------------------------------------
+    def get_P01(self, smooth=False):
         """
         Return the dark matter P01[mu^2] correlator in real-space
         """
+        tag = '_smooth' if smooth else ''
+        name = '_P01%s' %tag
         try:
-            return self._P01
+            return getattr(self, name)
         except AttributeError:
-
-            d = os.path.join(self.root, 'dark_matter')
+            
             redshifts = ['z007', 'z005', 'z004']
             meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
-            basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binaaQ'
+            if smooth:
+                from pyRSD.data import P01_mu2_z_0_000, P01_mu2_z_0_509, P01_mu2_z_0_989
+                smooth_data = [P01_mu2_z_0_000(), P01_mu2_z_0_509(), P01_mu2_z_0_989()]
+            else:
+                d = os.path.join(self.root, 'dark_matter')
+                basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binaaQ'
                 
             data = np.empty(len(redshifts), dtype=object)
+            
             for i in range(len(redshifts)):
-                filename = os.path.join(d, basename.format(z=redshifts[i]))
-                
-                if os.path.exists(filename):
-                
-                    # load the data
-                    d = np.loadtxt(filename)
-                    kedges = make_kedges(d)
-                    
-                    # make the PkResult
-                    data_dict = {}
-                    data_dict['power'] = data[:,-2]*2*data[:,0]
-                    data_dict['error'] = data[:,-1]*2*data[:,0]
-                    data_dict['k'] = data[:,0]
-                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                if not smooth:
+                    filename = os.path.join(d, basename.format(z=redshifts[i]))
+                    if os.path.exists(filename):
+                        x = np.loadtxt(filename)
+                    else:
+                        data[i] = np.nan
+                        continue
                 else:
-                    data[i] = np.nan
+                    x = smooth_data[i]
+                kedges = make_kedges(x)
                     
+                data_dict = {}
+                data_dict['k'] = x[:,0]
+                if not smooth:
+                    data_dict['power'] = x[:,-2]*2*x[:,0]
+                    data_dict['error'] = x[:,-1]*2*x[:,0]
+                else:
+                    data_dict['power'] = x[:,1]                
+                data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+
             toret = SpectraSet(data, coords=[self.z], dims=['z'])
-            self._P01 = toret
+            setattr(self, name, toret)
             return toret
             
-    def get_P11(self, mu):
+    def get_P11(self, mu, smooth=False):
         """
         Return the dark matter P11[mu^2] or P11[mu^4] correlator in real-space
         """
-        name = '_P11_%s' %mu
+        tag = '_smooth' if smooth else ''
+        name = '_P11_%s%s' %(mu, smooth)
         if mu not in ['mu2', 'mu4']:
             raise ValueError('`mu` must be one of [`mu2`, `mu4`]')
             
         try:
             return getattr(self, name)
         except AttributeError:
-
-            d = os.path.join(self.root, 'dark_matter')
+            
             redshifts = ['z007', 'z005', 'z004']
             meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
-            basename = 'pkmu_chi_11_m_m_{z}_1-3_02-13binaaQ'
+            if smooth:
+                if mu == 'mu2':
+                    from pyRSD.data import P11_mu2_z_0_000, P11_mu2_z_0_509, P11_mu2_z_0_989
+                    smooth_data = [P11_mu2_z_0_000(), P11_mu2_z_0_509(), P11_mu2_z_0_989()]
+                else:
+                    from pyRSD.data import P11_mu4_z_0_000, P11_mu4_z_0_509, P11_mu4_z_0_989
+                    smooth_data = [P11_mu4_z_0_000(), P11_mu4_z_0_509(), P11_mu4_z_0_989()]
+            else:
+                d = os.path.join(self.root, 'dark_matter')
+                basename = 'pkmu_chi_11_m_m_{z}_1-3_02-13binaaQ'
                 
             if mu == 'mu2':
                 cols = [-4, -2]
             else:
-                cols = [-3, -2]
+                cols = [-3, -1]
             
             data = np.empty(len(redshifts), dtype=object)
             for i in range(len(redshifts)):
-                filename = os.path.join(d, basename.format(z=redshifts[i]))
-                
-                if os.path.exists(filename):
-                
-                    # load the data
-                    d = np.loadtxt(filename)
-                    kedges = make_kedges(d)
-                    
-                    # make the PkResult
-                    data_dict = {}
-                    data_dict['power'] = data[:,cols[0]]*data[:,0]**2
-                    data_dict['error'] = data[:,cols[1]]*data[:,0]**2
-                    data_dict['k'] = data[:,0]
-                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                if not smooth:
+                    filename = os.path.join(d, basename.format(z=redshifts[i]))
+                    if os.path.exists(filename):
+                        x = np.loadtxt(filename)
+                    else:
+                        data[i] = np.nan
+                        continue
                 else:
-                    data[i] = np.nan
+                    x = smooth_data[i]
+                kedges = make_kedges(x)
+                    
+                data_dict = {}
+                data_dict['k'] = x[:,0]
+                if not smooth:
+                    data_dict['power'] = x[:,cols[0]]*x[:,0]**2
+                    data_dict['error'] = x[:,cols[1]]*x[:,0]**2
+                else:
+                    data_dict['power'] = x[:,1]                
+                data[i] = pkresult.PkResult(kedges, data_dict, **meta)
                     
             toret = SpectraSet(data, coords=[self.z], dims=['z'])
             setattr(self, name, toret)
             return toret
             
-    def get_Pdv(self, mu):
+    def get_Pdv(self, smooth=False):
         """
         Return the dark matter Pdv cross-spectrum in real-space
         """
+        tag = '_smooth' if smooth else ''
+        name = '_P11%s' %smooth
         try:
-            return self._Pdv
+            return getattr(self, name)
         except AttributeError:
-
-            d = os.path.join(self.root, 'dark_matter')
+            
             redshifts = ['z007', 'z005', 'z004']
             meta = {'box_size' : 1600., 'N1':np.inf, 'N2':np.inf}
-            basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binvvQ'
+            if smooth:
+                from pyRSD.data import Pdv_mu0_z_0_000, Pdv_mu0_z_0_509, Pdv_mu0_z_0_989
+                smooth_data = [Pdv_mu0_z_0_000(), Pdv_mu0_z_0_509(), Pdv_mu0_z_0_989()]
+            else:
+                d = os.path.join(self.root, 'dark_matter')
+                basename = 'pkmu_chi_01_m_m_{z}_1-3_02-13binvvQ'
 
             data = np.empty(len(redshifts), dtype=object)
             for i in range(len(redshifts)):
-                filename = os.path.join(d, basename.format(z=redshifts[i]))
-                
-                if os.path.exists(filename):
-                
-                    # load the data
-                    d = np.loadtxt(filename)
-                    kedges = make_kedges(d)
-                    
-                    # make the PkResult
-                    data_dict = {}
-                    data_dict['power'] = data[:,-2]*(-data[:,0])
-                    data_dict['error'] = data[:,-1]*(-data[:,0])
-                    data_dict['k'] = data[:,0]
-                    data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                if not smooth:
+                    filename = os.path.join(d, basename.format(z=redshifts[i]))
+                    if os.path.exists(filename):
+                        x = np.loadtxt(filename)
+                    else:
+                        data[i] = np.nan
+                        continue
                 else:
-                    data[i] = np.nan
+                    x = smooth_data[i]
+                kedges = make_kedges(x)
                     
+                data_dict = {}
+                data_dict['k'] = x[:,0]
+                if not smooth:
+                    data_dict['power'] = x[:,-2]*(-x[:,0])
+                    data_dict['error'] = x[:,-1]*(-x[:,0])
+                else:
+                    data_dict['power'] = x[:,1]                
+                data[i] = pkresult.PkResult(kedges, data_dict, **meta)
+                                    
             toret = SpectraSet(data, coords=[self.z], dims=['z'])
-            self._Pdv = toret
+            setattr(self, name, toret)
             return toret
     
     #--------------------------------------------------------------------------
