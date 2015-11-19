@@ -306,7 +306,7 @@ class TeppeiSims(PowerSpectraLoader):
                 data_dict['k'] = x[:,0]
                 if not smooth:
                     data_dict['power'] = x[:,-2]*(-x[:,0])
-                    data_dict['error'] = x[:,-1]*(-x[:,0])
+                    data_dict['error'] = x[:,-1]*(x[:,0])
                 else:
                     data_dict['power'] = x[:,1]                
                 data[i] = pkresult.PkResult(kedges, data_dict, **meta)
