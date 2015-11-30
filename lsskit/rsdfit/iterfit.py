@@ -163,7 +163,7 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
             if mode == 'pbs':
                 ret = os.system("qsub -v '%s' %s" %(command_str, args.job_file))
             else:
-                ret = os.system("sbatch --export=%s %s" %(command_str, args.job_file))
+                ret = os.system("sbatch --export='%s %s'" %(command_str, args.job_file))
             time.sleep(1)
         # just run the command
         else:
