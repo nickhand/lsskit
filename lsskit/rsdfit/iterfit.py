@@ -41,7 +41,9 @@ def extra_iter_values(s):
   
 def parse_args(desc, dims, coords):
     """
-    Parse the command line arguments and return the namespace
+    Parse the command line arguments and return the namespace. 
+    Extra options valid for ``rsdfit`` can be passed here, 
+    and will be treated as ``unknown`` arguments
     
     Parameters
     ----------
@@ -59,17 +61,17 @@ def parse_args(desc, dims, coords):
     """
     parser = ap.ArgumentParser(description=desc)
                             
-    h = 'the name of the PBS job file to run. This file should take one' + \
+    h = 'the name of the batch job script to run. This file should take one' + \
         'command line argument `command` which is the rsdfit command to run'
     parser.add_argument('job_file', type=str, help=h)
-    h = 'the name of the file specifying the main `run_rsdfit.py` parameters'
+    h = 'the name of the file specifying the template file for configuration parameters'
     parser.add_argument('-p', '--config', required=True, type=param_file, help=h)
     h = 'the name of the file specifying the selection parameters'
     parser.add_argument('-s', '--select', required=True, type=extra_iter_values, help=h)
     h = 'the path of python script that will call `run_rsdfit`, and store the ' + \
         'run command in a variable called `command`; it should use the `param_file` variable'
     parser.add_argument('--setup', required=True, type=str, help=h)
-    h = 'just call the command using os.system, instead of submitting a qsub job'
+    h = 'just call the command using os.system, instead of submitting a batch job'
     parser.add_argument('--call', action='store_true', help=h)
     
     # add the samples
@@ -79,18 +81,46 @@ def parse_args(desc, dims, coords):
     
     return parser.parse_known_args()
 
-def qsub_samples(args, dims, coords, rsdfit_options=[]):
+def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
     """
     Submit the job script specified on the command line for the desired 
     sample(s). This could submit several job at once, but will 
-    wait 1 second in between doing so.  
+    wait 1 second in between doing so.
+    
+    This executes the script specified by ``args.setup``, which calls
+    ``run_rsdfit`` and defines the ``rsdfit`` command which will be
+    passed to the job script as the ``command`` environment variable
+    
+    Notes
+    -----
+    *   given the input template config file, each job will string format
+        the template file using the dictionary of values stored
+        in the select file, i.e. for `box_A` iteration, it reads the
+        ``box_A`` dict from the select file and string formats using
+        those key/value pairs
+    *   this creates a temporary file that is not deleted 
+    
+    Parameters
+    ----------
+    args : argparse.Namespace
+        a namespace holding the parsed arguments from ``parse_args``
+    dims : list
+        the list of dimension names to iterate over, i.e, ``['box', 'kmax']``
+    coords : list
+        the list of iteration values for each dimension, i.e., ``[['A', 'B'], ['02', '03']]``
+    rsdfit_options : list, optional
+        a list of optional keywords that will be passed to the ``rsdfit`` script
     """
     import time
     import itertools
     
-    # initialize a string formatter
+    if mode not in ['pbs', 'sbatch']:
+        raise ValueError("``mode`` must be `pbs` or `sbatch`")
+    
+    # initialize a special string formatter
     formatter = string.Formatter()
     
+    # determine the samples we want to run
     samples = []
     for i, dim in enumerate(dims):
         val = getattr(args, dim)
@@ -98,8 +128,10 @@ def qsub_samples(args, dims, coords, rsdfit_options=[]):
             val = coords[i]
         samples.append(val)
             
-    # submit the jobs
+    # loop over each sample iteration
     for sample in itertools.product(*samples):
+        
+        # grab the kwargs to format for each dimension
         kwargs = {}
         for i, dim in enumerate(dims):
             name = '%s_%s' %(dim, sample[i])
@@ -107,6 +139,7 @@ def qsub_samples(args, dims, coords, rsdfit_options=[]):
                 kwargs.update(args.select[name])
         formatter.parse = lambda l: my_string_parse(formatter, l, kwargs.keys())
     
+        # write out the formatted config file for this iteration
         all_kwargs = [kw for _, kw, _, _ in args.config._formatter_parser() if kw]
         with tempfile.NamedTemporaryFile(delete=False) as ff:
             fname = ff.name
@@ -114,16 +147,25 @@ def qsub_samples(args, dims, coords, rsdfit_options=[]):
             ff.write(formatter.format(args.config, **valid))
         
         # call the python script that takes the `param_file` variable
+        # this should call run_rsdfit and set the corresponding return
+        # value to the variable ``command``
         call = {'param_file' : fname, 'rsdfit_options' : rsdfit_options}
         execfile(args.setup, globals(), call)
         if 'command' not in call:
             raise RuntimeError("python setup script for run_rsdfit should define the `command` variable")
         
         command = call['command']
+        
+        # submit a job, using qsub or sbatch
         if not args.call:
-            v_value = 'command=%s' %command
-            ret = os.system("qsub -v '%s' %s" %(v_value, args.job_file))
+            
+            command_str = 'command=%s' %command
+            if mode == 'pbs':
+                ret = os.system("qsub -v '%s' %s" %(command_str, args.job_file))
+            else:
+                ret = os.system("sbatch --export=%s %s" %(command_str, args.job_file))
             time.sleep(1)
+        # just run the command
         else:
             os.system(command)
 

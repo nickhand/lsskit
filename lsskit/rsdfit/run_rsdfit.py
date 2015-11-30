@@ -12,36 +12,42 @@ import tempfile
 import subprocess
 from lsskit.rsdfit import DriverParams, BaseTheoryParams, \
                             PkmuDataParams, PoleDataParams
-
-
-def main():
+                            
+def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True, rsdfit_options=[]):
     """
-    Run as a console script
-    """
-    desc = "run rsdfit with the parameters specified on the command line"
-    parser = argparse.ArgumentParser(description=desc)
-
-    h = 'the mode; either pkmu or poles'
-    parser.add_argument('mode', choices=['pkmu', 'poles'], help=h)
-
-    h = 'the name of the file holding the configuration parameters for this run'
-    parser.add_argument('config', type=str, help=h)
-
-    h = 'additional theory parameter options to impose'
-    parser.add_argument('--options', type=str, nargs='*', help=h)
-
-    h = 'the name of the python command to run; default is just `rsdfit`'
-    parser.add_argument('--command', type=str, default='rsdfit', help=h)
-
-    ns, other = parser.parse_known_args()
-    run_rsdfit(run=True, rsdfit_options=other, **vars(ns))
-
-def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfit_options=[]):
-    """
-    Run rsdfit with the parameters specified on the command line
-    """
+    Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
+    parameter file the from input arguments.
     
-    # initialize the parameter objects
+    Notes
+    -----
+    *   if the configuration file specifies a model file, this will be appended
+        to the rsdfit call with the `-m` option
+    *   the parameter file is written to a temporary file, which is not deleted
+        by the code -- perhaps we can fix this?
+    
+    Parameters
+    ----------
+    mode : str, {`pkmu`, `poles`}
+        either `pkmu` or `poles` -- the mode of the RSD fit
+    config : str
+        the name of the file holding the configuration parameters, from which the
+        the parameter file for ``rsdfit`` will be initialized
+    theory_options : list
+        list of options to apply the theory model, i.e., `mu6_corr` or `so_corr`
+    command : str
+        the ``rsdfit`` command to run, i.e., ``python rsdfit.py`` or ``rsdfit``
+    run : bool
+        if `True`, run the ``rsdfit`` command, otherwise, just return
+        the command to be run from a job script
+    rsdfit_options : list
+        list of additional options to pass to the ``rsdfit`` command
+        
+    Returns
+    -------
+    command : str
+        if `run == False`, this returns the rsdfit command as a string
+    """
+    # initialize the driver, theory, and data parameter objects
     driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
     theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
     if mode == 'pkmu':
@@ -53,7 +59,7 @@ def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfi
     if options is not None:
         theory.apply_options(*options)
 
-    # write the temporary param file
+    # write out the parameters to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as ff:
         param_file = ff.name
         driver.to_file(ff)
@@ -74,8 +80,7 @@ def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfi
     if run:
         try:
             ret = subprocess.call(call_signature)
-            if ret:
-                raise RuntimeError
+            if ret: raise RuntimeError
         except:
             raise RuntimeError("error calling command: %s" %" ".join(call_signature))
         finally:
@@ -85,6 +90,28 @@ def run_rsdfit(mode=None, config=None, options=[], command=None, run=True, rsdfi
         return " ".join(map(str, call_signature))
             
             
+def main():
+    """
+    Run as a console script
+    """
+    desc = "run rsdfit with the parameters specified on the command line"
+    parser = argparse.ArgumentParser(description=desc)
+
+    h = 'the mode; either pkmu or poles'
+    parser.add_argument('mode', choices=['pkmu', 'poles'], help=h)
+
+    h = 'the name of the file holding the configuration parameters for this run'
+    parser.add_argument('config', type=str, help=h)
+
+    h = 'additional options to apply the theory model, i.e., `mu6_corr` or `so_corr`'
+    parser.add_argument('--theory_options', type=str, nargs='*', help=h)
+
+    h = 'the name of the python command to run; default is just `rsdfit`'
+    parser.add_argument('--command', type=str, default='rsdfit', help=h)
+
+    ns, other = parser.parse_known_args()
+    run_rsdfit(run=True, rsdfit_options=other, **vars(ns))
+
 if __name__ == '__main__':
     main()
 
