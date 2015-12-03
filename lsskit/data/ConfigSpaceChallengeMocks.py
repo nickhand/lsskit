@@ -68,13 +68,13 @@ class ConfigSpaceChallengeMocks(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            basename = 'poles_challenge_box{box}_%s.dat' %tag
-            path = os.path.join(root, 'corr_poles', basename)
+            basename = 'poles_challenge_box{box}%s.dat' %tag
+            path = os.path.join(self.root, 'corr_poles', basename)
             
             ells = [0, 2, 4]
             r, xi = [], []
             edges = None
-            for box in boxes:
+            for box in self.boxes:
 
                 d, meta = files.ReadPower1DPlainText(path.format(box=box))
                 tostack = []
@@ -88,7 +88,7 @@ class ConfigSpaceChallengeMocks(PowerSpectraLoader):
             r = np.asarray(r); xi = np.asarray(xi)
             rcen = 0.5*(edges[1:]+edges[:-1])
             dims = ['box', 'ell', 'rcen']
-            coords = {'box':boxes, 'rcen':rcen, 'ell':ells}
+            coords = {'box':self.boxes, 'rcen':rcen, 'ell':ells}
             d = {'r':(dims, r), 'corr':(dims, xi)}
             
             poles = xray.Dataset(d, coords=coords)

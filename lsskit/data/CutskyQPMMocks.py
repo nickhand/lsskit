@@ -30,7 +30,7 @@ def to_pkresult(filename, skiprows=31):
     
 class CutskyQPMMocks(PowerSpectraLoader):
     name = "CutskyQPMMocks"
-    boxes = range(1, 1001)
+    boxes = range(1, 991)
     
     def __init__(self, root, dk=None):
         self.root = root

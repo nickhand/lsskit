@@ -29,7 +29,7 @@ def to_pkresult(filename, skiprows=31):
 
 class CutskyChallengeMocks(PowerSpectraLoader):
     name = "CutskyChallengeMocks"
-    boxes = range(1, 84)
+    boxes = range(1, 85)
     
     def __init__(self, root, dk=None):
         self.root = root
