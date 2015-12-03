@@ -162,10 +162,15 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
         if not args.call:
             
             command_str = 'command=%s' %command
+            
             if mode == 'pbs':
-                ret = os.system("qsub -v '%s' %s" %(command_str, args.job_file))
+                x = "qsub -v '%s' %s" %(command_str, args.job_file)
             else:
-                ret = os.system("sbatch '--export=%s=%s,ALL'" %(command_str, args.job_file))
+                x = "sbatch \"--export=%s=%s,ALL\"" %(command_str, args.job_file)
+            print "calling %s..." %x
+            ret = os.system(x)
+            print "...done"
+            
             time.sleep(1)
         # just run the command
         else:
