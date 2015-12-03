@@ -122,8 +122,6 @@ def _write_analysis_file(filename, data, columns, coords, kmin, kmax):
     Internal helper function to write out analysis file
     """
     # checks and balances
-    if 'error' not in data.dtype.names:
-        raise RuntimeError("probably not a good idea to write a data file with no errors")
     if not all(col in data.dtype.names for col in columns):
         args = (str(columns), str(data.dtype.names))
         raise RuntimeError("mismatch between desired columns %s and present columns %s" %args)
@@ -206,7 +204,7 @@ def write_analysis_file(kind,
         # subtract shot noise from monopole
         p = power[0].values
         ells = list(power['ell'].values)
-        if 0 in ells: 
+        if 0 in ells and subtract_shot_noise: 
             data['power'][:,ells.index(0)] -= get_Pshot(p)
         coords = [p.k_center, np.array(ells, dtype=float)]
     else:
