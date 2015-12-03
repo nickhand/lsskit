@@ -87,7 +87,10 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
             if os.path.exists(param_file):
                 os.remove(param_file)
     else:
-        return " ".join(map(str, call_signature))
+        
+        toret = " ".join(map(str, call_signature))
+        print toret
+        return toret
             
             
 def main():
