@@ -60,6 +60,10 @@ def write_analysis_file():
         if len(args.key[k]) != 1:
             raise ValueError("must specify exactly one key for each dimension")
         args.key[k] = args.key[k][0]
+        
+    for k in args.key:
+        cast = data[k].dtype.type
+        args.key[k] = cast(args.key[k])
     try:
         power = data.sel(**args.key)
         if power.size == 1: power = power.values
