@@ -88,9 +88,7 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
                 os.remove(param_file)
     else:
         
-        toret = " ".join(map(str, call_signature))
-        print toret
-        return toret
+        return " ".join(map(str, call_signature))
             
             
 def main():

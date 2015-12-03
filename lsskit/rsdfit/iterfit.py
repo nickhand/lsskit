@@ -166,7 +166,7 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
             if mode == 'pbs':
                 x = "qsub -v '%s' %s" %(command_str, args.job_file)
             else:
-                x = "sbatch \"--export=%s=%s,ALL\"" %(command_str, args.job_file)
+                x = "sbatch \"--export=%s,ALL\" %s" %(command_str, args.job_file)
             print "calling %s..." %x
             ret = os.system(x)
             print "...done"
