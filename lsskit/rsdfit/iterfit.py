@@ -73,6 +73,8 @@ def parse_args(desc, dims, coords):
     parser.add_argument('--setup', required=True, type=str, help=h)
     h = 'just call the command using os.system, instead of submitting a batch job'
     parser.add_argument('--call', action='store_true', help=h)
+    h = 'the job submission mode'
+    parser.add_argument('--mode', choices=['pbs', 'slurm'], default='pbs', help=h)
     
     # add the samples
     for i, (dim, vals) in enumerate(zip(dims, coords)):
@@ -114,8 +116,8 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
     import time
     import itertools
     
-    if mode not in ['pbs', 'sbatch']:
-        raise ValueError("``mode`` must be `pbs` or `sbatch`")
+    if mode not in ['pbs', 'slurm']:
+        raise ValueError("``mode`` must be `pbs` or `slurm`")
     
     # initialize a special string formatter
     formatter = string.Formatter()
@@ -156,14 +158,14 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
         
         command = call['command']
         
-        # submit a job, using qsub or sbatch
+        # submit a job, using qsub or slurm
         if not args.call:
             
             command_str = 'command=%s' %command
             if mode == 'pbs':
                 ret = os.system("qsub -v '%s' %s" %(command_str, args.job_file))
             else:
-                ret = os.system("sbatch --export='%s %s'" %(command_str, args.job_file))
+                ret = os.system("sbatch '--export=%s=%s,ALL'" %(command_str, args.job_file))
             time.sleep(1)
         # just run the command
         else:
