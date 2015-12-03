@@ -56,8 +56,8 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
         data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
 
     # apply any options to the theory model
-    if options is not None:
-        theory.apply_options(*options)
+    if theory_options is not None:
+        theory.apply_options(*theory_options)
 
     # write out the parameters to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as ff:
