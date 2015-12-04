@@ -28,6 +28,19 @@ def use_so_corr(params):
     # model params
     params.model.use_so_correction = True  
 
+def use_vary_f1hcBs(params):
+    """
+    Use a varying f1h_cBs instead of socorr
+    """
+    # fit params
+    params.sigma_so.update(vary=False, fiducial=0.)
+    params.f_so.update(vary=False, fiducial=0.0)
+    params.f1h_cBs.update(vary=True, fiducial=1.0)
+    params.options.append('vary_f1hcBs')  
+    
+    # model params
+    params.model.use_so_correction = False  
+
     
 def use_free_b1cB(params):
     """
