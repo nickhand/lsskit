@@ -208,6 +208,58 @@ class RunPBHalo(PowerSpectraLoader):
             return lam
             
     #--------------------------------------------------------------------------
+    # Phh mu components data
+    #--------------------------------------------------------------------------
+    def get_Phh_mu(self, mu):
+        """
+        Return the mu0 component of the halo-halo auto-spectrum
+        """ 
+        allowable = ['mu0', 'mu2', 'mu4', 'mu6']  
+        if mu not in allowable:
+            raise ValueError('mu must be one of %s' %str(allowable))
+            
+        name = '_Phh_%s' %mu
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            from nbodykit import files, pkresult
+            
+            d = os.path.join(self.root, 'halo/redshift/poles')
+            basename = 'poles_hh{mass}_runPB_mean_{a}.dat'
+            coords = [self.mass, self.a]
+            dims = ['mass', 'a']
+            
+            # read in the data
+            data = np.empty((len(self.mass), len(self.a)), dtype=object)
+            for i, f in utils.enum_files(d, basename, dims, coords, ignore_missing=False):
+                
+                d, meta = files.ReadPower1DPlainText(f)
+                Pshot = meta['volume'] / meta['N1']
+                
+                # need linear combo of mono + quad
+                cols = meta.pop('cols')
+                k = d[:,0]; modes = d[:,-1]
+                pole_cols = [cols.index(c) for c in ['power_0.real', 'power_2.real', 'power_4.real', 'power_6.real']]
+                P0, P2, P4, P6 = d[:,pole_cols].T
+            
+                if mu == 'mu0':
+                    power = P0 - Pshot - 0.5*P2 + 3./8.*P4 - 5./16.*P6
+                elif mu == 'mu2':
+                    power = 1.5*P2 - 15./4.*P4 + 105./16*P6
+                elif mu == 'mu4':
+                    power = 35./8.*P4 - 315./16*P6
+                else:
+                    power = 231./16*P6
+                
+                d = np.vstack([k, power, modes]).T
+                pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], **meta)
+                data[i] = pk
+
+            result = self.reindex(SpectraSet(data, coords=coords, dims=dims), self.dk)
+            self._Phh_mu0 = result
+            return result
+            
+    #--------------------------------------------------------------------------
     # SO data
     #--------------------------------------------------------------------------
     def get_so_Phh(self, space='real'):
