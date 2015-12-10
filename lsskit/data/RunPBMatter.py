@@ -45,6 +45,69 @@ class RunPBMatter(PowerSpectraLoader):
             Pmm.add_errors()
             setattr(self, '_Pmm_'+space, Pmm)
             return Pmm 
+            
+            
+    def get_Pdv(self):
+        """
+        Return density - velocity divergence cross power spectrum in
+        real space
+        """
+        try:
+            return self._Pdv
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'matter/real/poles')
+            basename = 'poles_mm_Pdv_runPB_%s_{a}.dat' %self.tag
+                
+            dims = ['a']
+            coords = [self.a]
+            data = []
+            for i, f in utils.enum_files(d, basename, dims, coords, ignore_missing=True):
+
+                d, meta = files.ReadPower1DPlainText(f)    
+                cols = meta.pop('cols')
+                k = d[:,0]; modes = d[:,-1]
+                power = d[:,cols.index('power_0.real')]
+
+                d = np.vstack([k, power, modes]).T
+                pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], **meta)
+                data.append(pk)
+                    
+            Pdv = SpectraSet(data, dims=dims, coords=coords)
+            Pdv.add_errors(self.get_Pmm(space='real'), self.get_Pvv())
+            self._Pdv = Pdv
+            return Pdv
+            
+    def get_Pvv(self):
+        """
+        Return the velocity divergence auto power spectrum in
+        real space
+        """
+        try:
+            return self._Pvv
+        except AttributeError:
+            
+            d = os.path.join(self.root, 'matter/real/poles')
+            basename = 'poles_mm_Pvv_runPB_%s_{a}.dat' %self.tag
+                
+            dims = ['a']
+            coords = [self.a]
+            data = []
+            for i, f in utils.enum_files(d, basename, dims, coords, ignore_missing=True):
+
+                d, meta = files.ReadPower1DPlainText(f)    
+                cols = meta.pop('cols')
+                k = d[:,0]; modes = d[:,-1]
+                power = d[:,cols.index('power_0.real')]
+
+                d = np.vstack([k, power, modes]).T
+                pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], **meta)
+                data.append(pk)
+                    
+            Pvv = SpectraSet(data, dims=dims, coords=coords)
+            Pvv.add_errors()
+            self._Pvv = Pvv
+            return Pvv
         
     def get_P01(self, los=""):
         """

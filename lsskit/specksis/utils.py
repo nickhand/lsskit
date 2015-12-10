@@ -101,7 +101,7 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
         
         except:
             if not ignore_missing:
-                message = 'no file found for `%s`\n in directory `%s`' %(basename, result_dir)
+                message = 'no file found for `%s`\n in directory `%s`' %(basename.format(**args), result_dir)
                 raise IOError(message)
             else:
                 yield idx, None
@@ -130,14 +130,14 @@ def add_errors(power, power_x1=None, power_x2=None):
     # error = sqrt(2/N_modes) * Pxx
     if power_x1 is None and power_x2 is None:
         with np.errstate(invalid='ignore'):
-            err = (2./power['modes'])**0.5 * power['power']
+            err = (2./power['modes'])**0.5 * abs(power['power'])
     # cross power calculation
     # error = sqrt(1/N_modes) * (Pxy + sqrt(Pxx*Pyy))
     else:
         
         with np.errstate(invalid='ignore'):
-            err = (1./power['modes'])**0.5 * power['power']
-            err += (1./power['modes'])**0.5 * (power_x1['power']*power_x2['power'])**0.5 
+            err = (1./power['modes'])**0.5 * abs(power['power'])
+            err += (1./power['modes'])**0.5 * (abs(power_x1['power']*power_x2['power']))**0.5 
             
     power.add_column('error', err)  
     
