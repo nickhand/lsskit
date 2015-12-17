@@ -2,18 +2,16 @@ import os
 
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, tools, io
-from nbodykit.dataset import Power1dDataSet
-
-
-class CutskyChallengeMocksPower(PowerSpectraLoader):
-    name = "CutskyChallengeMocksPower"
-    boxes = range(1, 85)
+from lsskit.specksis import SpectraSet, covariance, io, tools
+    
+class CutskyQPMMocksPower(PowerSpectraLoader):
+    name = "CutskyQPMMocksPower"
+    boxes = range(1, 991)
     
     def __init__(self, root, dk=None):
         self.root = root
         self.dk = dk
-      
+        
     @classmethod
     def register(cls):
         PowerSpectraLoader.store_class(cls)  
@@ -30,9 +28,8 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         except AttributeError:
         
             # read in the data
-            d = os.path.join(self.root, 'data')
-            basename = 'bianchips_cutsky_TSC_0.7_84mean.dat'
-            f = os.path.join(d, basename)
+            basename = 'bianchips_qpmdr12_TSC_1000mean.dat'
+            f = os.path.join(self.root, basename)
             data = io.read_cutsky_power_poles(f, skiprows=0, sum_only=['modes'], force_index_match=True)
             
             # unstack the poles
@@ -50,19 +47,17 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         """
         Return the cutsky galaxy multipoles in redshift space
         """
-        name = '_poles'
         try:
-            return self._poles           
+            return self._poles
         except AttributeError:
         
             # form the filename and load the data
-            d = os.path.join(self.root, 'data')
-            basename = 'bianchips_cutsky_TSC_0.7_{box:d}.dat'
-
+            basename = 'bianchips_qpmdr12_TSC_{box:04d}.dat'
+            
             # read in the data
             loader = io.read_cutsky_power_poles
             kwargs = {'skiprows' : 31, 'sum_only':['modes'], 'force_index_match':True}
-            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], kwargs=kwargs)
+            poles = SpectraSet.from_files(loader, self.root, basename, [self.boxes], ['box'], kwargs=kwargs)
         
             # reindex
             poles = self.reindex(poles, 'k_cen', self.dk)
@@ -73,3 +68,18 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         
             self._poles = poles
             return poles
+            
+    #--------------------------------------------------------------------------
+    # covariance
+    #--------------------------------------------------------------------------        
+    def get_pole_covariance(self, **kwargs):
+        """
+        Return the multipoles covariance matrix from a set of cutsky 
+        QPM power spectra
+        """
+        # get the non-null poles
+        poles = self.get_poles()
+
+        kwargs['extras'] = False
+        return covariance.compute_pole_covariance(poles, [0, 2, 4], **kwargs)
+            
