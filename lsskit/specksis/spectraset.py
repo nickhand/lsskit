@@ -141,13 +141,13 @@ class SpectraSet(xray.DataArray):
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key, val
             
-    def add_errors(self, power_x1=None, power_x2=None):
+    def add_power_errors(self, power_x1=None, power_x2=None):
         """
         Add power spectrum errors to each object in the set
         
         Parameters
         ----------
-        power_x1, power_x2 : nbodykit.PkmuResult, nbodykit.PkResult, optional
+        power_x1, power_x2 : `Power1dDataSet`, `Power2dDataSet`, optional
             If the set stores a cross-power measurement, the auto power
             measurements are needed to compute the error
         """
@@ -161,7 +161,26 @@ class SpectraSet(xray.DataArray):
             if power_x2 is not None:
                 coord2 = {k:coord[k] for k in power_x2.dims}
                 p2 = power_x2.loc[coord2].values
-            utils.add_errors(power, p1, p2)
+            utils.add_power_errors(power, p1, p2)
+            
+    def add_power_pole_errors(self, pkmu):
+        """
+        Add power spectrum multipole errors to each object in the set
+        
+        Parameters
+        ----------
+        pkmu : `Power2dDataSet`
+            the P(k,mu) spectra set from which the multipole
+            errors will be computed
+        """
+        for key in self.ndindex():
+            if 'ell' not in key:
+                raise ValueError("trying to add multipole errors without an `ell` dimension")
+            this_pole = self.sel(**key).values
+            ell = key.pop('ell')
+            this_pkmu = pkmu.sel(**key).values
+            utils.add_power_pole_errors(this_pole, this_pkmu, ell)
+
 
 
 class HaloSpectraSet(xray.Dataset):
