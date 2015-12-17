@@ -24,7 +24,7 @@ def load_data(root, box):
         errs = np.diag(C)**0.5
         data = np.concatenate([data, errs[:,None]], axis=1)
         meta = {'edges' : make_edges(data[:,0])}
-        corr = Corr1dDataSet.from_nbkit(data, meta, columns=['r', kind, 'error'])
+        corr = Corr1dDataSet.from_nbkit(data, meta, columns=['r', 'corr', 'error'])
         toret.append(corr)
         
     return toret
