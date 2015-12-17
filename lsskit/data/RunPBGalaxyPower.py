@@ -1,10 +1,11 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils, tools
+from lsskit.specksis import SpectraSet, utils, tools, io
 import os
 
 class RunPBGalaxy(PowerSpectraLoader):
-    name = "RunPBGalaxy"
+    
+    name = "RunPBGalaxyPower"
     a = ['0.6452']
     spectra = ['gg', 'cc', 'cAcA', 'cAcB', 'cBcB', 'cs', 'cAs', 'cBs', 'ss', 'sAsA', 'sAsB', 'sBsB']
     samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
@@ -19,27 +20,37 @@ class RunPBGalaxy(PowerSpectraLoader):
     @classmethod
     def register(cls):
         PowerSpectraLoader.store_class(cls) 
-    
+            
     def get_Pmm(self, space='real'):
         """
-        Return Pmm in the space specified, either `real` or `redshift`
+        Return density auto-correlation in the space specified, 
+        either `real` or `redshift`
         """
+        name = '_Pmm_'+space
         try:
-            return getattr(self, '_Pmm_'+space)
+            return getattr(self, name)
         except AttributeError:
             
-            d = os.path.join(self.root, 'matter', space)
+            tag = self.tag
+            columns = None
+            d = os.path.join(self.root, 'matter', space, 'power')
             if space == 'real':
-                basename = 'pk_mm_runPB_%s_{a}.dat' %self.tag
+                basename = 'pk_mm_runPB_%s_{a}.dat' %tag
+                columns = ['k', 'power', 'modes']
             else:
-                basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %self.tag
+                basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %tag
                 
             coords = [self.a]
-            Pmm = self.reindex(SpectraSet.from_files(d, basename, coords, ['a']), self.dk)
-            Pmm.add_errors()
-            setattr(self, '_Pmm_'+space, Pmm)
-            return Pmm 
-        
+            loader = io.load_power
+            kwargs = {}
+            if columns is not None: kwargs['columns'] = columns
+            Pmm = SpectraSet.from_files(loader, d, basename, coords, dims=['a'], 
+                                            args=('1d',), kwargs=kwargs)
+            Pmm.add_power_errors()
+            
+            setattr(self, name, Pmm)
+            return Pmm
+            
     #--------------------------------------------------------------------------
     # galaxy data
     #--------------------------------------------------------------------------
@@ -59,26 +70,42 @@ class RunPBGalaxy(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
             
+            columns = None
             d = os.path.join(self.root, 'galaxy', space, 'power')
             if space == 'real':
                 basename = 'pk_{sample}%s_runPB_%s%s.dat' %(colls_tag, self.tag, spacing)
+                mode = '1d'
+                columns = ['k', 'power', 'modes']
             else:
                 basename = 'pkmu_{sample}%s_runPB_%s%s_Nmu%d.dat' %(colls_tag, self.tag, spacing, Nmu)
+                mode = '2d'
                 
             # load the data from file
             coords = [self.a, self.spectra]
-            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample'], ignore_missing=True), self.dk)
+            dims = ['a', 'sample']
+            
+            loader = io.load_power
+            kw = {'force_index_match':True, 'sum_only':['modes']}
+            if columns is not None: kw['columns'] = columns
+            Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=(mode,), kwargs=kw)
+            
+            # reindex
+            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
             
             # add the errors
-            Pgal.add_errors()
-            crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+            Pgal.add_power_errors()
+            crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 
+                        'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+                        
             for x in crosses:
-
                 this_cross = Pgal.sel(a='0.6452', sample=x)
                 if this_cross.isnull(): continue
                 this_cross = this_cross.values
                 k1, k2 = crosses[x]
-                utils.add_errors(this_cross, Pgal.sel(a='0.6452', sample=k1).values, Pgal.sel(a='0.6452', sample=k2).values)
+                
+                a = Pgal.sel(a='0.6452', sample=k1).values
+                b = Pgal.sel(a='0.6452', sample=k2).values 
+                utils.add_power_errors(this_cross, a, b)
                 
             if not Pgal.notnull().sum():
                 raise ValueError("there appears to be no non-null entries -- something probably went wrong")
@@ -93,6 +120,7 @@ class RunPBGalaxy(PowerSpectraLoader):
         if spacing: spacing = "_"+spacing
         colls_tag = "" if not collisions else "_collisions"
         name = '_poles_%s%s_%s%s' %(self.tag, spacing, space, colls_tag)
+        
         try:
             return getattr(self, name)
         except AttributeError:
@@ -102,16 +130,24 @@ class RunPBGalaxy(PowerSpectraLoader):
                 
             # load the data from file
             coords = [self.a, self.spectra]
+            dims = ['a', 'sample']
+            
+            loader = io.load_power
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            poles = SpectraSet.from_files(d, basename, coords, ['a', 'sample'], ignore_missing=True, columns=columns)
-            poles = self.reindex(poles, self.dk)
+            kw = {'columns':columns, 'force_index_match':True, 'sum_only':['modes']}
+            
+            poles = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
             if not poles.notnull().sum():
                 raise ValueError("there appears to be no non-null entries -- something probably went wrong")
             
-            # now convert
-            pkmu = self.get_Pgal(space=space, spacing=_spacing, Nmu=Nmu)    
+            # unstck multipoles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
-            toret = tools.format_multipoles_set(poles, pkmu, ells)
+            toret = tools.unstack_multipoles(poles, ells, 'power')
+            
+            # add errors
+            pkmu = self.get_Pgal(space=space, spacing=_spacing, Nmu=Nmu)
+            toret.add_power_pole_errors(pkmu)
             
             setattr(self, name, toret)
             return toret
@@ -120,17 +156,27 @@ class RunPBGalaxy(PowerSpectraLoader):
         """
         Return galaxy component spectra x matter
         """
+        name = '_Pgal_x_mm_'+space
         try:
-            return getattr(self, '_Pgal_x_mm_'+space)
+            return getattr(self, name)
         except AttributeError:
             
             d = os.path.join(self.root, 'galaxy', space, 'power')
             if space == 'real':
                 basename = 'pk_{sample}_x_matter_runPB_%s.dat' %self.tag
+                mode = '1d'
+                columns = ['k', 'power', 'modes']
             else:
                 basename = 'pkmu_{sample}_x_matter_runPB_%s_Nmu5.dat' %self.tag
+                
+                
             coords = [['0.6452'], self.samples]
-            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['a', 'sample']), self.dk)
+            dims = ['a', 'sample']
+            
+            loader = io.load_power
+            kw = {'force_index_match':True, 'sum_only':['modes']}
+            if columns is not None: kw['columns'] = columns
+            Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
@@ -140,10 +186,10 @@ class RunPBGalaxy(PowerSpectraLoader):
             for k in self.samples:
                 this_cross = Pgal.sel(a='0.6452', sample=k).values
                 Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
-                utils.add_errors(this_cross, Pgal_auto, Pmm)
+                utils.add_power_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
-            setattr(self, '_Pgal_x_mm_'+space, Pgal)
+            setattr(self, name, Pgal)
             return Pgal
     
     #--------------------------------------------------------------------------
