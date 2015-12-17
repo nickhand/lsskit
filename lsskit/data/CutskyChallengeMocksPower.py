@@ -2,14 +2,14 @@ import os
 
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils
+from lsskit.specksis import SpectraSet, tools
+from nbodykit.dataset import Power1dDataSet
 
-def to_pkresult(filename, skiprows=31):
+def to_dataset(filename, skiprows=31):
     """
-    Return a list of `PkResult` objects for each multipole in
+    Return a list of `Power1dDataSet` objects for each multipole in
     the input data file
     """
-    from nbodykit import pkresult
     data = np.loadtxt(filename, skiprows=skiprows, comments=None)
     
     # make the edges
@@ -20,15 +20,15 @@ def to_pkresult(filename, skiprows=31):
     edges = np.concatenate([edges.ravel()[::2], [edges[-1,-1]]])
 
     toret = []
-    for i, ell in enumerate([0, 2, 4]):
+    columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+    meta = {'edges':edges, 'sum_only':['modes'], 'force_index_match':True}
+    d = data[:,[1, 2, 3, 4, -1]]
     
-        d = data[:,[1, 2+i, -1]]
-        pk = pkresult.PkResult.from_dict(d, ['k', 'power', 'modes'], sum_only=['modes'], edges=edges)
-        toret.append(pk)
-    return toret
+    return Power1dDataSet.from_nbkit(d, meta, columns=columns)
 
-class CutskyChallengeMocks(PowerSpectraLoader):
-    name = "CutskyChallengeMocks"
+
+class CutskyChallengeMocksPower(PowerSpectraLoader):
+    name = "CutskyChallengeMocksPower"
     boxes = range(1, 85)
     
     def __init__(self, root, dk=None):
@@ -76,21 +76,17 @@ class CutskyChallengeMocks(PowerSpectraLoader):
             # form the filename and load the data
             d = os.path.join(self.root, 'data')
             basename = 'bianchips_cutsky_TSC_0.7_{box:d}.dat'
-            coords = [self.boxes]
-            dims = ['box']
-            ells = [0, 2, 4]
 
             # read in the data
-            data = []
-            for i, f in utils.enum_files(d, basename, dims, coords, ignore_missing=False):
-                if f is not None:
-                    data.append(to_pkresult(f))
-                else:
-                    data.append([np.nan]*len(ells))
+            kwargs = {'skiprows' : 31}
+            poles = SpectraSet.from_files(to_dataset, d, basename, [self.boxes], ['box'], kwargs=kwargs)
+        
+            # reindex
+            poles = self.reindex(poles, 'k_cen', self.dk)
             
-            coords += [ells]
-            dims += ['ell']
-            poles = self.reindex(SpectraSet(data, coords=coords, dims=dims), self.dk)
-            
+            # unstack the poles
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
+            poles = tools.unstack_multipoles(poles, ells, 'power')
+        
             setattr(self, name, poles)
             return poles
