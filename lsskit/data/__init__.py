@@ -9,15 +9,15 @@ class PowerSpectraLoader:
     def __init__(self, root):
         self.root = root
 
-    def reindex(self, spectra, dk):
+    def reindex(self, spectra, dim, spacing, weights=None):
         """
         Reindex all power classes in the input SpectraSet
         using the k spacing provided
         """
-        if dk is None:
+        if spacing is None:
             return spectra
         for key, p in spectra.nditer():
-            spectra.loc[key] = p.values.reindex_k(dk, weights='modes', force=True)
+            spectra.loc[key] = p.values.reindex(dim, spacing, weights=weights, force=True)
         return spectra
     
     @classmethod
@@ -53,9 +53,9 @@ class PowerSpectraLoader:
             
         return cls.classes[name](root_dir, **kwargs)
             
-builtins = ['RunPBHalo', 'RunPBGalaxy', 'TeppeiSims', 'ChallengeMocks', 'QPMMocks', 
-            'CutskyQPMMocks', 'CutskyChallengeMocks', 'ConfigSpaceChallengeMocks',
-            'RunPBMatter']
+builtins = ['RunPBHaloPower', 'RunPBGalaxyPower', 'TeppeiSimsPower', 'ChallengeMocksPower', 
+            'QPMMocksPower', 'CutskyQPMMocksPower', 'CutskyChallengeMocksPower', 
+            'ChallengeMocksCorr', 'RunPBMatterPower']
 for plugin in builtins:
     filename = lsskit.path.join(lsskit.path.dirname(__file__), plugin + '.py')
     globals().update(lsskit.load(filename))
