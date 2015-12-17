@@ -1,10 +1,10 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, tools
+from lsskit.specksis import SpectraSet, tools, io
 import os
 
-class ChallengeMocks(PowerSpectraLoader):
-    name = "ChallengeMocks"
+class ChallengeMocksPower(PowerSpectraLoader):
+    name = "ChallengeMocksPower"
     boxes = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
     
     def __init__(self, root, dk=None):
@@ -42,10 +42,15 @@ class ChallengeMocks(PowerSpectraLoader):
             basename = 'pkmu_challenge_box{box}_%s%s_Nmu%d.dat' %(tag, spacing, Nmu)
             coords = [self.boxes]
             d = os.path.join(self.root, 'power')
-            Pgal = self.reindex(SpectraSet.from_files(d, basename, coords, ['box']), self.dk)
             
-            # add the errors
-            Pgal.add_errors()
+            loader = io.load_power
+            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            Pgal = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('2d',), kwargs=kwargs)
+            
+            # reindex and add the errors
+            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal.add_power_errors()
+            
             setattr(self, name, Pgal)
             return Pgal
             
@@ -68,13 +73,22 @@ class ChallengeMocks(PowerSpectraLoader):
             basename = 'poles_challenge_box{box}_%s%s_Nmu%d.dat' %(tag, spacing, Nmu)
             coords = [self.boxes]
             d = os.path.join(self.root, 'poles')
-            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            poles = self.reindex(SpectraSet.from_files(d, basename, coords, ['box'], columns=columns), self.dk)
             
+            loader = io.load_power
+            columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            kwargs = {'sum_only':['modes'], 'force_index_match':True, 'columns':columns}
+            poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kwargs)
+
+            # reindex and add the errors
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+
             # now convert
-            pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu)    
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
-            toret = tools.format_multipoles_set(poles, pkmu, ells)
+            toret = tools.unstack_multipoles(poles, ells, 'power')
+            
+            # add the errors
+            pkmu = self.get_Pgal(scaled=scaled, spacing=_spacing, Nmu=Nmu)  
+            toret.add_power_pole_errors(pkmu)
             
             setattr(self, name, toret)
             return toret
