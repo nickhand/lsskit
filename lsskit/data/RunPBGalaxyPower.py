@@ -136,6 +136,7 @@ class RunPBGalaxy(PowerSpectraLoader):
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kw = {'columns':columns, 'force_index_match':True, 'sum_only':['modes']}
             
+            # load and reindex
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
             if not poles.notnull().sum():
@@ -173,10 +174,14 @@ class RunPBGalaxy(PowerSpectraLoader):
             coords = [['0.6452'], self.samples]
             dims = ['a', 'sample']
             
+            # load
             loader = io.load_power
             kw = {'force_index_match':True, 'sum_only':['modes']}
             if columns is not None: kw['columns'] = columns
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
+            
+            # reindex
+            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
