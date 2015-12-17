@@ -35,13 +35,15 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             f = os.path.join(d, basename)
             data = io.read_cutsky_power_poles(f, skiprows=0, sum_only=['modes'], force_index_match=True)
             
+            if self.dk is not None:
+                data = data.reindex('k_cen', self.dk, weights='modes', force=True)
+            
             # unstack the poles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             data = tools.unstack_multipoles_one(data, ells, 'power')
             
-            # make the SpectraSet and reindex
+            # make the SpectraSet
             poles = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
 
             self._mean_poles = poles
             return poles
