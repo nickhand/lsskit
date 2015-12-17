@@ -3,7 +3,6 @@ from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, tools, io
 import os
 from nbodykit.dataset import Corr1dDataSet
-import xray
 
 def make_edges(rcen):
 
