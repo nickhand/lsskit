@@ -1,7 +1,7 @@
 import xray 
 import itertools
 
-from . import utils, io, tools
+from . import utils, tools
 from .. import numpy as np
 
 class SpectraSet(xray.DataArray):
@@ -37,7 +37,7 @@ class SpectraSet(xray.DataArray):
         
  
     @classmethod
-    def from_files(cls, result_dir, basename, coords, dims=None, ignore_missing=False, columns=None, **kwargs):
+    def from_files(cls, loader, result_dir, basename, coords, dims=None, ignore_missing=False, args=(), kwargs={}):
         """
         Return a SpectraSet instance by loading data from all files in 
         ``result_dir`` with base ``basename``. The filename is formatting using 
@@ -45,6 +45,9 @@ class SpectraSet(xray.DataArray):
         
         Parameters
         ----------
+        loader : callable   
+            the function to call to load the data -- must take the filename
+            as first argument
         result_dir : str
             the directory holding the files to load the spectra from
         basename : str
@@ -60,6 +63,10 @@ class SpectraSet(xray.DataArray):
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords``, which must be dict-like
+        args : tuple, optional
+            additional arguments to pass to `loader` after the filename
+        kwargs : dict, optional
+            additional keywords to pass to `loader`
         """
         if dims is None:
             if not utils.is_dict_like(coords):
@@ -72,15 +79,13 @@ class SpectraSet(xray.DataArray):
         data = np.empty(map(len, coords), dtype=object)
         for i, f in utils.enum_files(result_dir, basename, dims, coords, ignore_missing=ignore_missing):
             try:
-                kw = {}
-                if columns is not None: kw['columns'] = columns
-                data[i] = io.load_data(f, **kw)
+                data[i] = loader(f, *args, **kwargs)
             except Exception as e:
                 if ignore_missing:
                     data[i] = np.nan
                 else:
                     raise Exception(e)
-        return SpectraSet(data, coords=coords, dims=dims, **kwargs)
+        return SpectraSet(data, coords=coords, dims=dims)
 
 
     def ndindex(self, dims=None):
