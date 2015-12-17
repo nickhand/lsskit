@@ -41,7 +41,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             
             # make the SpectraSet and reindex
             poles = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
-            poles = self.reindex(poles, 'k_cen', self.dk)
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
 
             self._mean_poles = poles
             return poles
@@ -65,7 +65,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], kwargs=kwargs)
         
             # reindex
-            poles = self.reindex(poles, 'k_cen', self.dk)
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
             
             # unstack the poles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
