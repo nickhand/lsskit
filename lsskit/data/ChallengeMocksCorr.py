@@ -1,10 +1,17 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, tools
+from lsskit.specksis import SpectraSet, tools, io
 import os
-
-from nbodykit import files
+from nbodykit.dataset import Corr1dDataSet
 import xray
+
+def make_edges(rcen):
+
+    edges = np.empty(len(rcen)+1)
+    spacing = 0.5*np.diff(rcen)
+    edges[0], edges[-1] = rcen[0]-spacing[0], rcen[-1]+spacing[-1]
+    edges[1:-1] = rcen[1:]-spacing
+    return edges
 
 def load_data(root, box):
     
@@ -16,18 +23,20 @@ def load_data(root, box):
         
         errs = np.diag(C)**0.5
         data = np.concatenate([data, errs[:,None]], axis=1)
-        data = np.squeeze(data.view(dtype=dtype))
-        toret.append(data)
+        meta = {'edges' : make_edges(data[:,0])}
+        corr = Corr1dDataSet.from_nbkit(data, meta, columns=['r', kind, 'error'])
+        toret.append(corr)
         
-    return np.asarray(toret).T
+    return toret
     
-class ConfigSpaceChallengeMocks(PowerSpectraLoader):
+class ChallengeMocksCorr(PowerSpectraLoader):
     
-    name = "ConfigSpaceChallengeMocks"
+    name = "ChallengeMocksCorr"
     boxes = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
     
-    def __init__(self, root):
+    def __init__(self, root, dr=None):
         self.root = root
+        self.dr = dr
       
     @classmethod
     def register(cls):
@@ -49,11 +58,9 @@ class ConfigSpaceChallengeMocks(PowerSpectraLoader):
             data = np.asarray([load_data(root, box) for box in self.boxes])
             
             ells = [0, 2]
-            dims = ['box', 'rcen', 'ell']
-            coords = {'box':self.boxes, 'rcen':data[0,:,0]['r'], 'ell':ells}
-            d = {k:(dims, data[k]) for k in ['r', 'corr', 'error']}
-            
-            poles = xray.Dataset(d, coords=coords)
+            dims = ['box', 'ell']
+            coords = [self.boxes, ells]
+            poles = xray.DataArray(data, dims=dims, coords=coords)
             self._wg_poles = poles
             return poles
             
@@ -69,29 +76,18 @@ class ConfigSpaceChallengeMocks(PowerSpectraLoader):
         except AttributeError:
 
             basename = 'poles_challenge_box{box}%s.dat' %tag
-            path = os.path.join(self.root, 'corr_poles', basename)
+            d = os.path.join(self.root, 'corr_poles')
+                        
+            loader = io.load_correlation
+            kwargs = {'sum_only':['RR', 'N'], 'force_index_match':True}
+            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs)
             
-            ells = [0, 2, 4]
-            r, xi = [], []
-            edges = None
-            for box in self.boxes:
+            # reindex and add the errors
+            poles = self.reindex(poles, 'r_cen', self.dr, weights='N')
 
-                d, meta = files.ReadPower1DPlainText(path.format(box=box))
-                tostack = []
-                for i, ell in enumerate(ells):
-                    tostack.append(d[:,1+i])
-                r.append([d[:,0]]*len(ells))
-                xi.append(tostack)
-                
-                if edges is None: edges = meta['edges']
-
-            r = np.asarray(r); xi = np.asarray(xi)
-            rcen = 0.5*(edges[1:]+edges[:-1])
-            dims = ['box', 'ell', 'rcen']
-            coords = {'box':self.boxes, 'rcen':rcen, 'ell':ells}
-            d = {'r':(dims, r), 'corr':(dims, xi)}
-            
-            poles = xray.Dataset(d, coords=coords)
+            # now convert
+            ells = [('corr_0',0), ('corr_2', 2), ('corr_4', 4)]
+            poles = tools.unstack_multipoles(poles, ells, 'corr')
             setattr(self, name, poles)
             return poles
             
