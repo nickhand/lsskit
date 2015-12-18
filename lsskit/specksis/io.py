@@ -6,7 +6,11 @@
     __email__  : nhand@berkeley.edu
     __desc__   : I/O tools for nbodykit's PkmuResult and PkResult
 """
-from nbodykit import files, pkresult, pkmuresult, plugins
+from nbodykit import files
+from nbodykit.dataset import DataSet, Corr1dDataSet, Corr2dDataSet
+from nbodykit.dataset import Power1dDataSet, Power2dDataSet 
+from nbodykit.extensionpoints import MeasurementStorage
+
 from . import tools
 from .. import numpy as np
 import os
@@ -14,106 +18,130 @@ import os
 
 def get_Pshot(power):
     """
-    Return the shot noise from a power spectrum instance
+    Return the shot noise from a power spectrum `DataSet`, 
+    trying to extract it from the `attrs` attribute
     """
-    if hasattr(power, 'volume'):
-        return power.volume / power.N1
-    elif hasattr(power, 'box_size'):
-        return power.box_size**3 / power.N1
-    elif all(hasattr(power, x) for x in ['Lx', 'Ly', 'Lz']):
-        return power.Lx*power.Ly*power.Lz / power.N1
+    if not hasattr(power, 'attrs'):
+        raise ValueError('input power object in get_Pshot needs a `attrs` attribute')
+
+    attrs = power.attrs
+    volume = 0.
+    if 'volume' in attrs:
+        volume = attrs['volume']
+    elif 'box_size' in attrs:
+        volume = attrs['box_size']**3
+    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz']):
+        volume = attrs['Lx']*attrs['Ly']*attrs['Lz']
     else:
-        raise ValueError("cannot compute shot noise")
+        raise ValueError("cannot compute volume for shot noise")
+    return volume / attrs['N1']
+    
         
 #------------------------------------------------------------------------------
 # readers
 #------------------------------------------------------------------------------
-def read_1d_data(filename, columns=['k', 'power', 'modes']):
+def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
     """
-    Read a `PkResult` from a file with the format used by ``nbodykit::power.py``
+    Return a list of `Power1dDataSet` objects for each multipole in
+    the input data file
     """
-    d, meta = files.ReadPower1DPlainText(filename)
+    data = np.loadtxt(filename, skiprows=skiprows, comments=None)
     
-    # try to extract the columns from the first line of the file
-    cols = open(filename, 'r').readline()
-    if cols[0] == '#':
-        columns = cols.split()[1:]
-    pk = pkresult.PkResult.from_dict(d, columns, sum_only=['modes'], **meta)
-    return pk
-   
-def read_2d_data(filename, columns=None):
+    # make the edges
+    dk = 0.005
+    lower = data[:,0]-dk/2.
+    upper = data[:,0]+dk/2.
+    edges = np.array(zip(lower, upper))
+    edges = np.concatenate([edges.ravel()[::2], [edges[-1,-1]]])
+
+    toret = []
+    columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
+    meta = {'edges':edges, 'sum_only':['modes'], 'force_index_match':True}
+    d = data[:,[1, 2, 3, 4, -1]]
+    
+    return Power1dDataSet.from_nbkit(d, meta, columns=columns, **kwargs)
+    
+def load_correlation(filename, mode, usecols=[], mapcols={}, **kwargs):
     """
-    Read a `PkmuResult` from a file with the format used by ``nbodykit::power.py``
+    Load a 1D or 2D correlation measurement and return a `DataSet`
     """
-    d, meta = files.ReadPower2DPlainText(filename)
-    pkmu = pkmuresult.PkmuResult.from_dict(d, sum_only=['modes'], **meta)
-    return pkmu
-  
-def load_data(filename, columns=['k', 'power', 'modes']):
-    """
-    Load either a ``PkmuResult`` or ``PkResult`` from file, assuming that the
-    file has the format used by ``nbodykit::power.py``
-    """
-    readers = [read_1d_data, read_2d_data]
-    for reader in readers:
-        try:
-            return reader(filename, columns)
-        except Exception as e:
-            continue
+    if mode not in ['1d', '2d']:
+        raise ValueError("`mode` must be on of '1d' or '2d'")
+
+    if mode == '1d':
+        toret = Corr1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
     else:
-        raise IOError("failure to load data from `%s`: %s" %(filename, str(e)))
+        toret = Corr2dDataSet.from_nbkit(*files.Read2DPlainText(filename), **kwargs)
+    
+    # rename any variables
+    if len(mapcols):
+        for old_name in mapcols:
+            toret.rename_variable(old_name, mapcols[old_name])
+    
+    # only return certain variables
+    if len(usecols):
+        toret = toret[usecols]
+
+    return toret
+    
+def load_power(filename, mode, usecols=[], mapcols={}, **kwargs):
+    """
+    Load a 1D or 2D power measurement and return a `DataSet`
+    """
+    if mode not in ['1d', '2d']:
+        raise ValueError("`mode` must be on of '1d' or '2d'")
+
+    if mode == '1d':
+        toret = Power1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
+    else:
+        toret = Power2dDataSet.from_nbkit(*files.Read2DPlainText(filename), **kwargs)
+    
+    # rename any variables
+    if len(mapcols):
+        for old_name in mapcols:
+            toret.rename_variable(old_name, mapcols[old_name])
+    
+    # only return certain variables
+    if len(usecols):
+        toret = toret[usecols]
+
+    return toret
+
 
 #------------------------------------------------------------------------------
 # writers
 #------------------------------------------------------------------------------ 
 def write_plaintext(data, filename):
     """
-    Write either a `PkResult` or ``PkmuResult`` instance as a plaintext file, using
-    the format used by ``nbodykit::power.py``
+    Write a 1D or 2D `DataSet` instance as a plaintext file
     
     Parameters
     ----------
-    data : nbodykit.PkmuResult, nbodykit.PkResult
-        the power instance to write out
+    data : `DataSet`
+        the data set instance to write out
     filename : str
         the desired name for the output file
     """
-    if isinstance(data, pkresult.PkResult):
-        write_1d_plaintext(data, filename)
-    elif isinstance(data, pkmuresult.PkmuResult):
-        write_2d_plaintext(data, filename)
+    if not isinstance(data, DataSet):
+        raise TypeError("input `data` must be an instance of `DataSet`")
+    
+    if data.ndim == 1:
+        mode = '1d'
+    elif data.ndim == 2:
+        mode = '2d'
     else:
-        raise ValueError("input power must be a `PkmuResult` or `PkResult` instance")
+        raise ValueError("`data` has too many dimensions to write to plaintext file")
                
-def write_2d_plaintext(power, filename):
-    """
-    Write a `PkmuResult` instance as a plaintext file, using the format used 
-    by ``nbodykit::power.py``
-    """
     # format the output
-    result = {name:power.data[name].data for name in power.columns}
-    result['edges'] = [power.kedges, power.muedges]
-    meta = {k:getattr(power, k) for k in power._metadata}
+    columns = [data[name] for name in data.variables]
+    edges = [data.edges[dim] for dim in data.dims]
+    if len(edges) == 1:
+        edges = edges[0]
     
     # and write
-    storage = plugins.PowerSpectrumStorage.new('2d', filename)
-    storage.write(result, **meta)
-    
-def write_1d_plaintext(power, filename):
-    """
-    Write a `PkResult` instance as a plaintext file, using the format used 
-    by ``nbodykit::power.py``
-    """
-    # format the output
-    result = [power.data[name].data for name in ['k', 'power', 'modes']]
-    meta = {k:getattr(power, k) for k in power._metadata}
-    meta['edges'] = power.kedges
-    
-    # and write
-    storage = plugins.PowerSpectrumStorage.new('1d', filename)
-    storage.write(result, **meta)
+    storage = MeasurementStorage.new(mode, filename)
+    storage.write(edges, data.variables, columns, **data.attrs)
                 
-
 #------------------------------------------------------------------------------
 # read/write analysis files
 #------------------------------------------------------------------------------ 
