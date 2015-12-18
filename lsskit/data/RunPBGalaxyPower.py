@@ -46,6 +46,11 @@ class RunPBGalaxy(PowerSpectraLoader):
             if columns is not None: kwargs['columns'] = columns
             Pmm = SpectraSet.from_files(loader, d, basename, coords, dims=['a'], 
                                             args=('1d',), kwargs=kwargs)
+            
+            # reindex
+            Pmm = self.reindex(Pmm, 'k_cen', self.dk, weights='modes')
+            
+            # add errors
             Pmm.add_power_errors()
             
             setattr(self, name, Pmm)
