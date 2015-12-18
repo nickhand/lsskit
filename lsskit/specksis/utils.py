@@ -106,7 +106,7 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
             else:
                 yield idx, None
 
-def add_errors(power, power_x1=None, power_x2=None):
+def add_power_errors(power, power_x1=None, power_x2=None):
     """
     Add the error on power spectrum measurement as the column `error`
     to the input ``power`` object.
@@ -117,9 +117,9 @@ def add_errors(power, power_x1=None, power_x2=None):
     
     Parameters
     ----------
-    power : nbodykit.PkmuResult, nbodykit.PkResult
+    power : `Power1dDataSet`, `Power2dDataSet`
         the power spectrum object. must have `modes` data column
-    power_x1, power_x2 : nbodykit.PkmuResult, nbodykit.PkResult, optional
+    power_x1, power_x2 : `Power1dDataSet`, `Power2dDataSet`, optional
         If ``power`` stores a cross-power measurement, the auto power
         measurements are needed to compute the error
     """
@@ -139,7 +139,46 @@ def add_errors(power, power_x1=None, power_x2=None):
             err = (1./power['modes'])**0.5 * abs(power['power'])
             err += (1./power['modes'])**0.5 * (abs(power_x1['power']*power_x2['power']))**0.5 
             
-    power.add_column('error', err)  
+    # add the error variable
+    power['error'] = err
+    
+def add_power_pole_errors(pole, pkmu, ell):
+    """
+    Add the error on power spectrum multipole measurement as the 
+    column `error` to the input ``pole`` instance
+
+    Notes
+    -----
+    This modifies the power spectrum instance in place
+    
+    Parameters
+    ----------
+    pole : `Power1dDataSet`, `Power2dDataSet`
+        the power spectrum object. must have `modes` data column
+    pkmu : `Power1dDataSet`, `Power2dDataSet`, optional
+        If ``power`` stores a cross-power measurement, the auto power
+        measurements are needed to compute the error
+    """
+    from scipy.special import legendre
+
+    if 'modes' not in pkmu:
+        raise ValueError("need `modes` data column to compute multipole serrors")
+    
+    # weight by modes
+    modes = np.nan_to_num(pkmu['modes'])
+    N_1d = modes.sum(axis=-1)
+    weights = modes / N_1d[:,None]
+
+    # avg mu
+    mu = np.nan_to_num(pkmu['mu'])
+
+    # compute the variance
+    power = pkmu['power']
+    variance = 2 * np.nansum(weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
+
+    # add the error variable
+    pole['error'] = variance**0.5
+    
     
 def load_data_from_file(filename, dims, shape):
     """
