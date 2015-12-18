@@ -178,10 +178,11 @@ class SpectraSet(xray.DataArray):
                 raise ValueError("trying to add multipole errors without an `ell` dimension")
             this_pole = self.sel(**key).values
             ell = key.pop('ell')
-            this_pkmu = pkmu.sel(**key).values
+            if len(key):
+                this_pkmu = pkmu.sel(**key).values
+            else:
+                this_pkmu = pkmu
             utils.add_power_pole_errors(this_pole, this_pkmu, ell)
-
-
 
 class HaloSpectraSet(xray.Dataset):
     """
