@@ -17,6 +17,52 @@ def flat_and_nonnull(arr):
     flat = arr.ravel(order='F')
     return flat[np.isfinite(flat)]
 
+
+def unstack_multipoles_one(pole, ells, new_column):
+    """
+    Unstack a single `DataSet`
+    """
+    old_columns, ells = zip(*ells)    
+    new_poles = []
+    
+    for old_column, ell in zip(old_columns, ells):
+        
+        copy = pole.copy()
+        copy.rename_variable(old_column, new_column)
+        usecols = [col for col in copy.variables if col not in old_columns]
+        new_poles.append(copy[usecols])
+        
+    return new_poles
+    
+def unstack_multipoles(poles, ells, new_column):
+    """
+    Format the input `SpectraSet` of multipoles, which includes multiple
+    multipoles within one `DataSet`, such that the multipole number
+    has its own dimension in the set
+    
+    Parameters
+    ----------
+    poles : SpectraSet
+        set holding the data 
+    ells : list of tuples 
+        a list of tuples specifying the column name and ell integer to 
+        map to
+    new_column : str
+        set the data variable to have this name in the new DataSet
+    """
+    from . import SpectraSet
+
+    all_data = []    
+    for key in poles.ndindex():
+
+        this_pole = poles.sel(**key).values
+        all_data.append(unstack_multipoles_one(this_pole, ells, new_column))
+
+    old_columns, ells = zip(*ells)
+    all_data = np.reshape(all_data, poles.shape + (3,))
+    coords = [poles.coords[dim] for dim in poles.dims] + [ells]
+    return SpectraSet(all_data, coords, poles.dims+('ell',))
+    
 def stack_multipoles(pole_set, ells=None):
     """
     Given a SpectraSet with an `ell` dimension, stack those individual
@@ -55,68 +101,7 @@ def stack_multipoles(pole_set, ells=None):
         return np.rollaxis(toret, 0, toret.ndim)
     else:
         return stack_one(pole_set)
-             
-def format_multipoles(this_pole, this_pkmu, ells):
-    """
-    Format the input spectra of multipoles, which includes multiple
-    multipoles within one `PkResult`, such that the multipole number
-    has its own dimension. Also add errors based on the specified
-    `P(k,mu)` results
-    """
-    from scipy.special import legendre
-    from nbodykit import pkresult
-
-    tags, ells = zip(*ells)
-
-    meta = {k:getattr(this_pole, k) for k in this_pole._metadata}
-    meta['edges'] = this_pole.kedges
-    
-    # weight by modes
-    modes = np.nan_to_num(this_pkmu['modes'].data)
-    N_1d = modes.sum(axis=-1)
-    weights = modes / N_1d[:,None]
-
-    # avg mu
-    mu = np.nan_to_num(this_pkmu['mu'].data)
-
-    new_poles = []
-    for tag, ell in zip(tags, ells):
-        
-        # compute the variance
-        power = this_pkmu['power'].data
-        variance = 2 * np.nansum(weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
-        
-        # make the new PkResult object
-        data = np.vstack([this_pole['k'], this_pole[tag], variance**0.5, this_pole['modes']]).T
-        pk = pkresult.PkResult.from_dict(data, ['k', 'power', 'error', 'modes'], sum_only=['modes'], **meta)
-        new_poles.append(pk)
-            
-    return new_poles
-
-def format_multipoles_set(poles, pkmu, ells):
-    """
-    Format the input spectra set of multipoles, which includes multiple
-    multipoles within one `PkResult`, such that the multipole number
-    has its own dimension. Also add errors based on the specified
-    `P(k,mu)` results
-    """
-    from . import SpectraSet
-
-    all_data = []
-    for key in poles.ndindex():
-
-        this_pole = poles.sel(**key).values
-        this_pkmu = pkmu.sel(**key).values    
-        
-        new_poles = format_multipoles(this_pole, this_pkmu, ells)
-        all_data.append(new_poles)
-        
-    tags, ells = zip(*ells)
-    all_data = np.reshape(all_data, poles.shape + (3,))
-    coords = [poles.coords[dim] for dim in poles.dims] + [ells]
-    return SpectraSet(all_data, coords, poles.dims+('ell',))
-    
-    
+                  
 def get_valid_data(k_cen, power, kmin=-np.inf, kmax=np.inf):
     """
     Return the valid data, removing any `null` entries and
