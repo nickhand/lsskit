@@ -61,6 +61,69 @@ def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
     
     return Power1dDataSet.from_nbkit(d, meta, columns=columns, **kwargs)
     
+    
+def load_momentum(filename, ell, ell_prime, **kwargs):
+    """
+    Return a list of mu powers as measured from momentum correlators
+    """
+    allowed = [(1, 1), (2, 2), (0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (0, 4)]
+    moments = (ell, ell_prime)
+    if moments not in allowed:
+        raise ValueError("(ell, ell_prime) must be one of %s" %str(allowed))
+    
+    # load the multipoles
+    poles = Corr1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
+    k = poles['k']
+
+    # P01
+    power = []
+    if moments == (0, 1):
+        P_mu2 = k * poles['power_1.imag']
+        power += [P_mu2, np.nan, np.nan]
+        
+    # P11 or P02
+    elif moments == (1, 1) or moments == (0, 2):
+        P0 = poles['power_0.real']
+        P2 = poles['power_2.real']
+
+        P_mu2 = k**2 * (P0 - 0.5 * P2)
+        P_mu4 = k**2 * 1.5 * P2
+        power += [P_mu2, P_mu4, np.nan]
+    
+    # P12 or P03
+    elif moments == (1, 2) or moments == (0, 3):
+        
+        P1 = poles['power_1.imag']
+        P3 = poles['power_3.imag']
+            
+        P_mu4 = k**3 * (P1 - 1.5 * P3)
+        P_mu6 = k**3 * 5./2 * P3
+        power += [np.nan, P_mu4, P_mu6]
+        
+    # P22 or P13 or P04
+    else:
+        
+        P0 = poles['power_0.real']
+        P2 = poles['power_2.real']
+        
+        P_mu4 = k**4 * (P0 - 0.5 * P2)
+        P_mu6 = k**4 * 1.5 * P2
+        power += [np.nan, P_mu4, P_mu6]
+        
+    usecols = ['k', 'modes']
+    new_poles = []
+    for P in power:
+        if np.isscalar(P) and np.isnan(P):
+            new_poles.append(np.nan)
+        else:
+            copy = poles.copy()
+            copy = copy[usecols]
+            copy['power'] = P
+            new_poles.append(copy)
+    
+    return new_poles
+    
+            
 def load_correlation(filename, mode, usecols=[], mapcols={}, **kwargs):
     """
     Load a 1D or 2D correlation measurement and return a `DataSet`
