@@ -188,9 +188,9 @@ def write_plaintext(data, filename):
     if not isinstance(data, DataSet):
         raise TypeError("input `data` must be an instance of `DataSet`")
     
-    if data.ndim == 1:
+    if len(data.dims) == 1:
         mode = '1d'
-    elif data.ndim == 2:
+    elif len(data.dims) == 2:
         mode = '2d'
     else:
         raise ValueError("`data` has too many dimensions to write to plaintext file")

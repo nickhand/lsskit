@@ -7,7 +7,7 @@
 """
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
-from lsskit.specksis import SpectraSet, utils, tools, io
+from lsskit.specksis import SpectraSet, io
 import os
         
 class RunPBMatterPower(PowerSpectraLoader):
@@ -134,7 +134,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=(0,1,), kwargs=kwargs)
 
             # add the mu dimension
-            data = np.asarray(list(poles.values))
+            data = np.asarray(poles.values.tolist())
             poles = SpectraSet(data, coords=[self.a, [2, 4, 6]], dims=['a', 'mu'])
             
             # reindex 
@@ -173,7 +173,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=(1,1,), kwargs=kwargs)
             
             # add the mu dimension
-            data = np.asarray(list(poles.values))
+            data = np.asarray(poles.values.tolist())
             poles = SpectraSet(data, coords=[self.a, [2, 4, 6]], dims=['a', 'mu'])
             
             # reindex 
