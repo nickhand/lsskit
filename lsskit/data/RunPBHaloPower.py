@@ -34,7 +34,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             tag = self.tag
             columns = None
-            d = os.path.join(self.root, 'matter', space, 'power')
+            d = os.path.join(self.root, 'matter/fourier', space, 'density/power')
             if space == 'real':
                 basename = 'pk_mm_runPB_%s_{a}.dat' %tag
                 columns = ['k', 'power', 'modes']
