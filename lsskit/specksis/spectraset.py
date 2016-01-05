@@ -88,16 +88,18 @@ class SpectraSet(xray.DataArray):
         return SpectraSet(data, coords=coords, dims=dims)
 
 
-    def ndindex(self, dims=None):
+    def ndindex(self, dims=None, skip_null=True):
         """
         A generator to iterate over the specified dimensions, yielding a
         dictionary holding the index keys
         
         Parameters
         ----------
-        dims : list or basestring
+        dims : list or basestring, optional
             A list or single string specifying the dimension names to 
             iterate over
+        skip_null : bool, optional
+            do not iterate over null entries. Default is `True`
         """
         if dims is None:
             dims = self.dims
@@ -110,7 +112,12 @@ class SpectraSet(xray.DataArray):
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
-                if val.isnull(): continue
+                if skip_null:
+                    isnull = val.isnull()
+                    if isnull.dims:
+                       isnull = all(isnull) 
+                    if isnull: continue
+                    
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key
                 
