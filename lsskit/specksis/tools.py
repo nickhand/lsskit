@@ -146,16 +146,23 @@ def get_valid_data(k_cen, power, kmin=-np.inf, kmax=np.inf):
 
 def get_Pshot(power):
     """
-    Return the shot noise from a power spectrum instance
+    Return the shot noise from a power spectrum `DataSet`, 
+    trying to extract it from the `attrs` attribute
     """
-    if hasattr(power, 'volume'):
-        return power.volume / power.N1
-    elif hasattr(power, 'box_size'):
-        return power.box_size**3 / power.N1
-    elif all(hasattr(power, x) for x in ['Lx', 'Ly', 'Lz']):
-        return power.Lx*power.Ly*power.Lz / power.N1
+    if not hasattr(power, 'attrs'):
+        raise ValueError('input power object in get_Pshot needs a `attrs` attribute')
+
+    attrs = power.attrs
+    volume = 0.
+    if 'volume' in attrs:
+        volume = attrs['volume']
+    elif 'box_size' in attrs:
+        volume = attrs['box_size']**3
+    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz']):
+        volume = attrs['Lx']*attrs['Ly']*attrs['Lz']
     else:
-        raise ValueError("cannot compute shot noise")
+        raise ValueError("cannot compute volume for shot noise")
+    return volume / attrs['N1']
         
 def trim_zeros_indices(filt):
     """
