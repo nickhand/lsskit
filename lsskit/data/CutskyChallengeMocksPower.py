@@ -75,3 +75,11 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         
             self._poles = poles
             return poles
+            
+    def get_window(self):
+        """
+        Return the formatted window function for the cutsky challenge mocks
+        """
+        
+        filename = os.path.join(self.root, 'extra', 'wilson_random_win_Ncutsky_0.4_strim_7.00e+02_smooth_201x2.dat')
+        return np.loadtxt(filename)
