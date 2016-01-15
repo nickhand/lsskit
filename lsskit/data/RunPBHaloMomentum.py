@@ -86,10 +86,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
                 # add the mu dimension
                 data = np.asarray(poles.values.tolist())
                 poles = SpectraSet(data, coords=coords+[self.mu], dims=dims+['mu'])
-                        
-                # reindex 
-                poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
-            
+                                    
                 # choose specific mu
                 if sel_mu is not None:
                     poles = poles.sel(mu=sel_mu)
@@ -113,6 +110,13 @@ class RunPBHaloMomentum(PowerSpectraLoader):
             if add_errors:
                 kw = {'sel_mu':sel_mu, 'save_errors':save_errors, 'name':name, 'ignore_cache':ignore_cache}
                 self._add_errors(toret, moments, **kw)
+                
+            # reindex
+            if self.dk is not None:
+                for key in toret.ndindex():
+                    new_key = tuple(key[k] for k in toret.dims)
+                    d = toret.sel(**{k:key[k] for k in toret.dims}).values
+                    toret.loc[new_key] = d.reindex('k_cen', self.dk, weights='modes')
                 
             setattr(self, name_, toret)
             return toret
@@ -157,8 +161,6 @@ class RunPBHaloMomentum(PowerSpectraLoader):
             for j, f in enumerate(files):
             
                 loaded = io.load_momentum(f, ell, ell_prime, **kw)
-                if self.dk is not None:
-                    loaded = loaded.reindex('k_cen', self.dk, weights='modes')
             
                 for k, mu in enumerate(self.mu):
                     if mu not in sel_mu: continue
