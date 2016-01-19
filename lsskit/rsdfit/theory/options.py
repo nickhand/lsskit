@@ -7,13 +7,13 @@
     __desc__   : apply various options to the parameter set
 """
 
-def use_mu6_corr(params):
+def use_mu_corr(params):
     """
-    Use the mu6 corrections
+    Use the mu2, mu4 corrections
     """
-    params.model.use_mu_corrections = True
-    params.model.max_mu = 6
-    params.options.append('mu6corr')
+    params.model.correct_mu2 = True
+    params.model.correct_mu4 = True
+    params.options.append('mucorr')
 
 def use_so_corr(params):
     """
