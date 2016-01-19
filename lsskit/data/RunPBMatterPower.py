@@ -8,7 +8,9 @@
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, io
+from nbodykit.dataset import DataSet
 import os
+
         
 class RunPBMatterPower(PowerSpectraLoader):
     """
@@ -18,6 +20,7 @@ class RunPBMatterPower(PowerSpectraLoader):
     name = "RunPBMatterPower"
     a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', 
             '0.7143', '0.8000', '0.9091', '1.0000']
+    mu = [0, 2, 4, 6, 8]
     
     def __init__(self, root, realization='mean', dk=None):
         
@@ -29,6 +32,101 @@ class RunPBMatterPower(PowerSpectraLoader):
     def register(cls):
         PowerSpectraLoader.store_class(cls) 
     
+    def _errors_from_realizations(self, a, ell, ell_prime):
+        """
+        Internal function to compute the momentum moment errors as the 
+        diagonal elements of the covariance matrix, which is constructed using 
+        the 30 different realizations of each spectrum 
+        (3 lines-of-sight + 10 realizations)
+        """
+        from glob import glob
+        from collections import defaultdict
+    
+        Nmu = len(self.mu)
+        
+        # the file pattern
+        d = "/Volumes/Frodo/RSDResearch/RunPB/Results/matter/fourier/real/momentum/poles"
+        data = defaultdict(list)
+        
+        args = (ell, ell_prime, a)
+        basename = 'poles_P%d%d_runPB_*_%s_*los.dat' %args
+        pattern = os.path.join(d, basename)
+    
+        # the matching files
+        files = glob(pattern)
+        kw = {'sum_only':['modes'], 'force_index_match':True}
+    
+        for j, f in enumerate(files):
+        
+            loaded = io.load_momentum(f, ell, ell_prime, **kw)
+            if self.dk is not None:
+                for ii, l in enumerate(loaded):
+                    if isinstance(l, DataSet):
+                        loaded[ii] = l.reindex('k_cen', self.dk, weights='modes')
+        
+            for k, mu in enumerate(self.mu):
+                if isinstance(loaded[k], DataSet):
+                    data[mu].append(loaded[k]['power'])
+
+                
+        toret = [None]*Nmu
+        for i, mu in enumerate(self.mu):
+            
+            if len(data[mu]):
+                cov = np.cov(np.nan_to_num(data[mu]), rowvar=False)
+                errs = cov.diagonal()**0.5
+        
+                # divide by root N if mean
+                if 'mean' in self.tag:
+                    errs /= len(files)**0.5
+                toret[i] = errs
+        
+        return toret
+            
+    def _add_errors(self, poles, ell, ell_prime, save_errors=False, ignore_cache=False):
+        """
+        Internal function to add errors to the exisiting data sets, optionally
+        loading or saving them to a pickle file
+        """
+        import pickle 
+        
+        name = "P%d%d" %(ell, ell_prime)
+        d = os.path.join(self.root, 'matter/fourier/real/momentum/poles/errors')
+        reindex_tag = "" if self.dk is None else str(self.dk)+"_"
+        args = (name, self.tag, reindex_tag)
+        basename = 'poles_%s_runPB_%s_{a}_%serrors.pickle' %args
+       
+        # compute errors for a, mass
+        for key in poles.ndindex(dims='a'):
+        
+            error_file = os.path.join(d, basename.format(a=key['a']))
+            
+            # load from pickle file
+            if os.path.exists(error_file) and not ignore_cache:
+                errors = pickle.load(open(error_file, 'r'))
+            # compute fresh
+            else:
+                if not os.path.exists("/Volumes/Frodo"):
+                    raise OSError("please mount `Frodo` in order to compute momentum errors")
+                errors = self._errors_from_realizations(key['a'], ell, ell_prime)
+                if save_errors:
+                    pickle.dump(errors, open(error_file, 'w'))
+            
+            # do each mu
+            subkey = key.copy()
+            
+            for i, mu in enumerate(self.mu):                
+                if errors[i] is not None:
+                    if 'mu' not in poles.dims:
+                        subkey.pop('mu', None)
+                    else:
+                        subkey['mu'] = mu
+                                       
+                    P = poles.sel(**subkey).values
+                    P['error'] = errors[i]
+                    
+        return poles
+        
     def get_Pmm(self, space='real'):
         """
         Return density auto-correlation in the space specified, 
@@ -40,8 +138,11 @@ class RunPBMatterPower(PowerSpectraLoader):
         except AttributeError:
             
             tag = self.tag
+            if 'mean' in self.tag:
+                tag = '10mean'
+            
             columns = None
-            d = os.path.join(self.root, 'matter', space, 'power')
+            d = os.path.join(self.root, 'matter/fourier', space, 'density/power')
             if space == 'real':
                 basename = 'pk_mm_runPB_%s_{a}.dat' %tag
                 columns = ['k', 'power', 'modes']
@@ -64,52 +165,8 @@ class RunPBMatterPower(PowerSpectraLoader):
             setattr(self, name, Pmm)
             return Pmm
             
-            
-    def get_Pdv(self):
-        """
-        Return density - velocity divergence cross power spectrum in
-        real space
-        """
-        try:
-            return self._Pdv
-        except AttributeError:
-
-            d = os.path.join(self.root, 'matter/real/poles')
-            basename = 'poles_mm_Pdv_runPB_%s_{a}.dat' %self.tag
-
-            coords = [self.a]
-            loader = io.load_power
-            kwargs = {'usecols':['k', 'power', 'modes'], 'mapcols':{'power_0.real':'power'}}
-            
-            Pdv = SpectraSet.from_files(loader, d, basename, coords, dims=['a'], 
-                                            args=('1d',), kwargs=kwargs, ignore_missing=True)
-            Pdv.add_errors(self.get_Pmm(space='real'), self.get_Pvv())
-            self._Pdv = Pdv
-            return Pdv
-
-    def get_Pvv(self):
-        """
-        Return the velocity divergence auto power spectrum in
-        real space
-        """
-        try:
-            return self._Pvv
-        except AttributeError:
-
-            d = os.path.join(self.root, 'matter/real/poles')
-            basename = 'poles_mm_Pvv_runPB_%s_{a}.dat' %self.tag
-
-            coords = [self.a]
-            loader = io.load_power
-            kwargs = {'usecols':['k', 'power', 'modes'], 'mapcols':{'power_0.real':'power'}}
-            
-            Pvv = SpectraSet.from_files(loader, d, basename, coords, dims=['a'], 
-                                            args=('1d',), kwargs=kwargs, ignore_missing=True)
-            Pvv.add_errors()
-            self._Pvv = Pvv
-            return Pvv
     
-    def get_P01(self, los=""):
+    def get_P01(self, los="", save_errors=False, ignore_cache=False):
         """
         Return either the `mu2` component of the real-space
         P01 density - radial velocity correlator
@@ -120,11 +177,11 @@ class RunPBMatterPower(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            d = os.path.join(self.root, 'matter/real/poles')
+            d = os.path.join(self.root, 'matter/fourier/real/momentum/poles')
             if los:
-                basename = 'poles_mm_P01_runPB_%s_{a}_%slos.dat' %(self.tag, los)
+                basename = 'poles_P01_runPB_%s_{a}_%slos.dat' %(self.tag, los)
             else:
-                basename = 'poles_mm_P01_runPB_%s_{a}.dat' %(self.tag)
+                basename = 'poles_P01_runPB_%s_{a}.dat' %(self.tag)
             coords = [self.a]
             dims = ['a']
 
@@ -135,15 +192,19 @@ class RunPBMatterPower(PowerSpectraLoader):
 
             # add the mu dimension
             data = np.asarray(poles.values.tolist())
-            poles = SpectraSet(data, coords=[self.a, [2, 4, 6]], dims=['a', 'mu'])
+            poles = SpectraSet(data, coords=[self.a, [0, 2, 4, 6, 8]], dims=['a', 'mu'])
             
             # reindex 
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
                 
+            # add errors
+            kw = {'save_errors':save_errors, 'ignore_cache':ignore_cache}
+            self._add_errors(poles, 0, 1, **kw)
+            
             setattr(self, name, poles)
             return poles
     
-    def get_P11(self, los=''):
+    def get_P11(self, los='', save_errors=False, ignore_cache=False):
         """
         Return either the `mu2` or `mu4` component of the real-space
         P11 velocity correlator
@@ -159,11 +220,11 @@ class RunPBMatterPower(PowerSpectraLoader):
             import pandas as pd
             stats = pd.read_hdf(os.path.join(self.root, 'meta/matter_mean_sq_vel.hdf'), 'data')
 
-            d = os.path.join(self.root, 'matter/real/poles')
+            d = os.path.join(self.root, 'matter/fourier/real/momentum/poles')
             if los:
-                basename = 'poles_mm_P11_runPB_%s_{a}_%slos.dat' %(self.tag, los)
+                basename = 'poles_P11_runPB_%s_{a}_%slos.dat' %(self.tag, los)
             else:
-                basename = 'poles_mm_P11_runPB_%s_{a}.dat' %(self.tag)
+                basename = 'poles_P11_runPB_%s_{a}.dat' %(self.tag)
             coords = [self.a]
             dims = ['a']
             
@@ -174,7 +235,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             
             # add the mu dimension
             data = np.asarray(poles.values.tolist())
-            poles = SpectraSet(data, coords=[self.a, [2, 4, 6]], dims=['a', 'mu'])
+            poles = SpectraSet(data, coords=[self.a, [0, 2, 4, 6, 8]], dims=['a', 'mu'])
             
             # reindex 
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
@@ -200,5 +261,9 @@ class RunPBMatterPower(PowerSpectraLoader):
                 pole['power'] -= pole['k']**2 * Pshot
                 pole.attrs['Pv2_shot'] = Pv2_shot
 
+            # add errors
+            kw = {'save_errors':save_errors, 'ignore_cache':ignore_cache}
+            self._add_errors(poles, 1, 1, **kw)
+            
             setattr(self, name, poles)
             return poles
