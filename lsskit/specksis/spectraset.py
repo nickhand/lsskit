@@ -242,9 +242,7 @@ class HaloSpectraSet(xray.Dataset):
                 Lambda_A = Phh - 2*b1*Phm + b1**2 * Pmm
             type B: 
                 Lambda_B = Phh - (Phm / Pmm)**2 * Pmm
-        """
-        from nbodykit import pkmuresult, pkresult
-        
+        """        
         if stoch_type.lower() not in ['a', 'b']:
             raise ValueError("valid stochasticity types are `A` or `B`")
 
@@ -295,17 +293,9 @@ class HaloSpectraSet(xray.Dataset):
                 raise ValueError("stochasticity type not recognized")
 
             # make a new PkResult or PkmuResult class
-            d = {}
-            d['power'] = lam
-            d['error'] = err
-            if isinstance(Phh, pkresult.PkResult):
-                d['k'] = Phh['k']
-                power = pkresult.PkResult(Phh.kedges, d)
-            elif isinstance(Phh, pkmuresult.PkmuResult):
-                d['k'] = Phh['k']
-                d['mu'] = Phh['mu']
-                power = pkresult.PkResult(Phh.kedges, Phh.muedges, d)
-                
+            power = Phh.copy()
+            power['power'] = lam
+            power['error'] = err                
             data[ii] = power
         
         toret = SpectraSet(data, coords=self['Phh'].coords, dims=self['Phh'].dims)
