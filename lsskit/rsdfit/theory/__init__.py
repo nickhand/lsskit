@@ -21,8 +21,7 @@ class ModelParams(AttrDict):
                 'max_mu' : 4,
                 'interpolate' : True,
                 'use_so_correction' : False, 
-                'enhance_wiggles' : False, 
-                'linear_power_file' : None}
+                'enhance_wiggles' : False}
                 
     def __init__(self, *args, **kwargs):
         for name in self.defaults:
