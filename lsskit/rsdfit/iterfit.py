@@ -63,7 +63,7 @@ def parse_args(desc, dims, coords):
                             
     h = 'the name of the batch job script to run. This file should take one' + \
         'command line argument `command` which is the rsdfit command to run'
-    parser.add_argument('job_file', type=str, help=h)
+    parser.add_argument('-j', 'job_file', type=str, help=h)
     h = 'the name of the file specifying the template file for configuration parameters'
     parser.add_argument('-p', '--config', required=True, type=param_file, help=h)
     h = 'the name of the file specifying the selection parameters'
@@ -73,8 +73,6 @@ def parse_args(desc, dims, coords):
     parser.add_argument('--setup', required=True, type=str, help=h)
     h = 'just call the command using os.system, instead of submitting a batch job'
     parser.add_argument('--call', action='store_true', help=h)
-    h = 'the job submission mode'
-    parser.add_argument('--mode', choices=['pbs', 'slurm'], default='pbs', help=h)
     
     # add the samples
     for i, (dim, vals) in enumerate(zip(dims, coords)):
@@ -83,7 +81,7 @@ def parse_args(desc, dims, coords):
     
     return parser.parse_known_args()
 
-def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
+def submit_jobs(args, dims, coords, rsdfit_options=[]):
     """
     Submit the job script specified on the command line for the desired 
     sample(s). This could submit several job at once, but will 
@@ -115,10 +113,7 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
     """
     import time
     import itertools
-    
-    if mode not in ['pbs', 'slurm']:
-        raise ValueError("``mode`` must be `pbs` or `slurm`")
-    
+        
     # initialize a special string formatter
     formatter = string.Formatter()
     
@@ -160,13 +155,10 @@ def submit_jobs(args, dims, coords, rsdfit_options=[], mode='pbs'):
         
         # submit a job, using qsub or slurm
         if not args.call:
-            
+            if args.job_file is None or not os.path.exists(args.job_file):
+                raise ValueError("please specify an existing job file to run")
             command_str = 'command=%s' %command
-            
-            if mode == 'pbs':
-                x = "qsub -v '%s' %s" %(command_str, args.job_file)
-            else:
-                x = "sbatch \"--export=%s,ALL\" %s" %(command_str, args.job_file)
+            x = "sbatch \"--export=%s,ALL\" %s" %(command_str, args.job_file)
             print "calling %s..." %x
             ret = os.system(x)
             print "...done"
