@@ -42,7 +42,7 @@ class TheoryParams(object):
         fractions    = ['fcB', 'fsB', 'fs', 'Nsat_mult', 'f_so']
         sigmas       = ['sigma_c', 'sigma_s', 'sigma_sA', 'sigma_sB', 'sigma_so']
         amplitudes   = ['NcBs', 'NsBsB', 'nbar', 'N']
-        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs', 'alpha_mu']
+        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs']
         self.__dict__['valid_params'] = cosmo + biases + fractions + sigmas + amplitudes + nuisance
     
         # cosmology
@@ -89,7 +89,6 @@ class TheoryParams(object):
 
         self.f1h_sBsB = AttrDict(vary=False, fiducial=4.0, prior='normal', mu=4.0, sigma=1.0, min=0.)
         self.f1h_cBs  = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.5, sigma=0.75 , min=0)
-        self.alpha_mu   = AttrDict(vary=False, fiducial=0.61, prior='uniform', lower=0.3, upper=0.9)
         
         # model parameters
         self.__dict__['model'] = ModelParams()
