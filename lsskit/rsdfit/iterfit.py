@@ -63,7 +63,7 @@ def parse_args(desc, dims, coords):
                             
     h = 'the name of the batch job script to run. This file should take one' + \
         'command line argument `command` which is the rsdfit command to run'
-    parser.add_argument('-j', 'job_file', type=str, help=h)
+    parser.add_argument('-j', '--job_file', type=str, help=h)
     h = 'the name of the file specifying the template file for configuration parameters'
     parser.add_argument('-p', '--config', required=True, type=param_file, help=h)
     h = 'the name of the file specifying the selection parameters'
