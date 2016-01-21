@@ -88,6 +88,7 @@ class TheoryParams(object):
 
         self.f1h_sBsB = AttrDict(vary=False, fiducial=4.0, prior='normal', mu=4.0, sigma=1.0, min=0.)
         self.f1h_cBs  = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.5, sigma=0.75 , min=0)
+        self.epsilon  = AttrDict(vary=False, fiducial=0., prior='uniform', lower=0., upper=10., min=0)
         
         # model parameters
         self.__dict__['model'] = ModelParams()
