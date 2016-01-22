@@ -51,7 +51,7 @@ def parse_binned_mcmc(desc, dims, coords, return_parser=False, cache_model=True)
         return parser
     
     
-def parse_global_mcmc(desc):
+def parse_global_mcmc(desc, return_parser=False):
     """
     Return the parsed arguments for a global mcmc fit
     """
@@ -71,5 +71,8 @@ def parse_global_mcmc(desc):
         
     # model caching
     add_model_cache(parser)
-            
-    return parser.parse_args()
+         
+    if not return_parser:
+        return parser.parse_args()
+    else:
+        return parser   

@@ -147,6 +147,18 @@ class SpectraSet(xray.DataArray):
                 if val.isnull(): continue
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key, val
+
+            
+    def add_corr_errors(self):
+        """
+        Add correlation function errors to each object in the set
+        """
+        for coord, corr in self.nditer():
+            corr = corr.values
+            if 'error' in corr: continue
+            DD = (corr['corr']+1)*corr['RR']
+            err = (corr['corr']+1)/DD**0.5
+            corr['error'] = err
             
     def add_power_errors(self, power_x1=None, power_x2=None):
         """

@@ -39,9 +39,9 @@ class TheoryParams(object):
         cosmo        = ['sigma8_z', 'f', 'alpha_perp', 'alpha_par']
         biases       = ['b1_cA', 'b1_cB', 'b1_sA', 'b1_sB']
         fractions    = ['fcB', 'fsB', 'fs', 'Nsat_mult', 'f_so']
-        sigmas       = ['sigma_c', 'sigma_s', 'sigma_sA', 'sigma_sB', 'sigma_so']
+        sigmas       = ['sigma_c', 'sigma_s', 'sigma_sA', 'sigma_sB', 'sigma_so', 'sigmav_02']
         amplitudes   = ['NcBs', 'NsBsB', 'nbar', 'N']
-        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs']
+        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs', 'A_sigmav']
         self.__dict__['valid_params'] = cosmo + biases + fractions + sigmas + amplitudes + nuisance
     
         # cosmology
@@ -67,6 +67,7 @@ class TheoryParams(object):
         self.sigma_s  = AttrDict(vary=False, fiducial=4.0, prior='uniform', lower=2., upper=10.)
         self.sigma_sA = AttrDict(vary=False, fiducial=3.5)
         self.sigma_sB = AttrDict(vary=False, fiducial=5)
+        self.A_sigmav = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.0, sigma=0.2, min=0)
 
         # amplitude
         self.NcBs  = AttrDict(vary=False, fiducial=4.5e4)
