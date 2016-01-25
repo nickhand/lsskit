@@ -69,8 +69,8 @@ def data_pkmu_gausscov(pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf, components=Fa
             the number of modes
     """           
     # initialize the grid transfer
-    data = pkmu.data.data.copy()
-    grid = PkmuGrid.from_structured([pkmu.k_center, pkmu.mu_center], data)
+    data = pkmu.data.copy()
+    grid = PkmuGrid.from_structured([pkmu.coords['k_cen'], pkmu.coords['mu_cen']], data)
     
     # return the Gaussian covariance components
     kw = {'mu_bounds':mu_bounds, 'kmin':kmin, 'kmax':kmax, 'power':data['power'], 'components':components}
@@ -106,8 +106,8 @@ def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
             the number of modes
     """    
     # initialize the grid transfer
-    data = pkmu.data.data.copy()
-    grid = PkmuGrid.from_structured([pkmu.k_center, pkmu.mu_center], data)
+    data = pkmu.data.copy()
+    grid = PkmuGrid.from_structured([pkmu.coords['k_cen'], pkmu.coords['mu_cen']], data)
     
     # return the Gaussian covariance components
     kw = {'ells':ells, 'kmin':kmin, 'kmax':kmax, 'power':data['power'], 'components':components}
@@ -147,7 +147,7 @@ def model_pkmu_gausscov(model, pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf):
     modes = pkmu['modes'].data
     modes[k < model.kmin] = 0.
     modes[k > model.kmax] = 0.
-    grid = PkmuGrid([pkmu.k_center, pkmu.mu_center], k, mu, modes)
+    grid = PkmuGrid([pkmu.coords['k_cen'], pkmu.coords['mu_cen']], k, mu, modes)
 
     # the model P(k,mu)
     power = model.Pgal(grid.k[grid.notnull], grid.mu[grid.notnull]) + tools.get_Pshot(pkmu)
@@ -189,7 +189,7 @@ def model_pole_gausscov(model, pkmu, ells, kmin=-np.inf, kmax=np.inf):
     modes = pkmu['modes'].data
     modes[k < model.kmin] = 0.
     modes[k > model.kmax] = 0.
-    grid = PkmuGrid([pkmu.k_center, pkmu.mu_center], k, mu, modes)
+    grid = PkmuGrid([pkmu.coords['k_cen'], pkmu.coords['mu_cen']], k, mu, modes)
 
     # the model P(k,mu)
     power = model.Pgal(grid.k[grid.notnull], grid.mu[grid.notnull]) + tools.get_Pshot(pkmu)
@@ -277,8 +277,8 @@ def compute_pole_covariance(pole_set,
     arr = tools.stack_multipoles(pole_set, ells=ells)
      
     # get the coordinates from the first box
-    pole_0 = pole_set[0, 0].values
-    coords = [pole_0.k_center, np.asarray(ells, dtype=float)]
+    pole_0 = pole_set.isel(**{k:0 for k in pole_set.dims}).values
+    coords = [pole_0.coords['k_cen'], np.asarray(ells, dtype=float)]
     
     # do the work
     C, new_coords, sizes, x = _covariance_from_data(coords, arr, kmin, kmax)
@@ -328,12 +328,12 @@ def compute_pkmu_covariance(pkmu_set,
     if kmax is None: kmax = np.inf
     
     # first stack the structured arrays
-    arr = np.asarray([x.data.data for x in pkmu_set])
+    arr = np.asarray([x.data for x in pkmu_set])
     arr = np.rollaxis(arr, 0, arr.ndim)
      
     # get the coordinates from the first box
     pkmu_0 = pkmu_set[0].values
-    coords = [pkmu_0.k_center, pkmu_0.mu_center]
+    coords = [pkmu_0.coords['k_cen'], pkmu_0.coords['mu_cen']]
     
     # do the work
     C, new_coords, sizes, x = _covariance_from_data(coords, arr, kmin, kmax)
