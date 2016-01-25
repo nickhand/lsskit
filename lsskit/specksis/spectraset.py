@@ -88,7 +88,7 @@ class SpectraSet(xray.DataArray):
         return SpectraSet(data, coords=coords, dims=dims)
 
 
-    def ndindex(self, dims=None, skip_null=True):
+    def ndindex(self, dims=None):
         """
         A generator to iterate over the specified dimensions, yielding a
         dictionary holding the index keys
@@ -98,8 +98,6 @@ class SpectraSet(xray.DataArray):
         dims : list or basestring, optional
             A list or single string specifying the dimension names to 
             iterate over
-        skip_null : bool, optional
-            do not iterate over null entries. Default is `True`
         """
         if dims is None:
             dims = self.dims
@@ -111,13 +109,7 @@ class SpectraSet(xray.DataArray):
             yield key
         else:
             for d in utils.ndindex(dims, self.coords):
-                val = self.loc[d]
-                if skip_null:
-                    isnull = val.isnull()
-                    if isnull.dims:
-                       isnull = all(isnull) 
-                    if isnull: continue
-                    
+                val = self.loc[d]                   
                 key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
                 yield key
                 
@@ -202,6 +194,93 @@ class SpectraSet(xray.DataArray):
             else:
                 this_pkmu = pkmu
             utils.add_power_pole_errors(this_pole, this_pkmu, ell)
+            
+    def average(self, weights=None, axis=None, sum_only=None):
+        """
+        Compute the average of SpectraSet, optionally weighting, over
+        the axis specified 
+        """
+        if axis is None:
+            axis = list(self.dims)
+        else:
+            if isinstance(axis, int):
+                axis = [self.dims[axis]]
+            elif isinstance(axis, str):
+                axis = [axis]
+            if not all(k in self.dims for k in axis):
+                raise ValueError("specified `axis` must be one of %s" %str(self.dims))
+            
+        if isinstance(sum_only, str):
+            sum_only = [sum_only]
+        
+        # the number of measurements to average over
+        N = np.prod([len(self[k]) for k in axis])
+        first = {k:0 for k in axis}
+        first = (self.isel(**first))
+        
+        scalar = sorted(axis) == sorted(self.dims)
+                
+        def compute_mean(first_, extra_key={}):    
+            sum_only_ = sum_only
+            if sum_only_ is None: sum_only_ = first_.sum_only
+        
+            # the weights
+            if weights is None:
+                weights_ = np.ones((N,) + first_.shape)
+            else:
+                if isinstance(weights, str):
+                    if weights not in first_.variables:
+                        raise ValueError("cannot weight by `%s`; no such column" %weights)
+                    t = []
+                    for key in self.ndindex(dims=axis):
+                        key.update(extra_key)
+                        d = self.loc[key].values
+                        t.append(d[weights])
+                    weights_ = np.array(t)
+                else:
+                    weights_ = weights.copy()
+        
+            # return a copy
+            toret = first_.copy()
+    
+            # take the mean or the sum   
+            for name in first_.variables:
+            
+                col_data = []
+                for key in self.ndindex(dims=axis):
+                    key.update(extra_key)
+                    d = self.loc[key].values
+                    col_data.append(d[name])
+                col_data = np.array(col_data)
+            
+                if name not in sum_only_:
+                    with np.errstate(invalid='ignore'):
+                        toret[name] = (col_data*weights_).sum(axis=0) / weights_.sum(axis=0)
+                else:
+                    toret[name] = np.sum(col_data, axis=0)
+            return toret
+            
+        # return a SpectraSet
+        if not scalar:
+            
+            toret = first.copy()
+            for k in axis: toret = toret.drop(k)
+            
+            # loop over each coordinate of remaining dimensions
+            for key in toret.ndindex():
+                d = first.copy().sel(**key).values
+                toret.loc[key] = compute_mean(d, extra_key=key)
+        else:
+            first = first.values
+            toret = compute_mean(first)
+            
+        return toret
+                
+                
+            
+            
+        
+        
 
 class HaloSpectraSet(xray.Dataset):
     """

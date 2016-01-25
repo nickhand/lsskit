@@ -88,14 +88,13 @@ def stack_multipoles(pole_set, ells=None):
         tostack = []
         for ell in ells:
             p = poles.sel(ell=int(ell)).values
-            tostack.append(p.data.data)
+            tostack.append(p.data)
         return np.vstack(tostack).T
 
     if len(dims):
-        other_dim = dims[0]
         toret = []
-        for i in pole_set[other_dim]:
-            poles = pole_set.sel(**{other_dim:i})
+        for i in pole_set.ndindex(dims=dims):
+            poles = pole_set.sel(**i)
             toret.append(stack_one(poles))
         toret = np.asarray(toret)
         return np.rollaxis(toret, 0, toret.ndim)
@@ -126,9 +125,9 @@ def get_valid_data(k_cen, power, kmin=-np.inf, kmax=np.inf):
     toret : np.ndarray
         array holding the trimmed data
     """
-    from nbodykit import pkresult, pkmuresult
-    if isinstance(power, (pkmuresult.PkmuResult, pkresult.PkResult)):
-        power = power.data.data
+    from nbodykit import dataset
+    if isinstance(power, dataset.DataSet):
+        power = power.data
        
     # not null entries
     not_null = ~isnull(power, broadcast=True)    

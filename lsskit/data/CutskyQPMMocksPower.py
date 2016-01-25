@@ -19,38 +19,22 @@ class CutskyQPMMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    # def get_mean_poles(self):
-    #     """
-    #     Return the mean of the cutsky galaxy multipoles in redshift space
-    #     """
-    #     try:
-    #         return self._mean_poles
-    #     except AttributeError:
-    #
-    #         # read in the data
-    #         basename = 'bianchips_qpmdr12_TSC_1000mean.dat'
-    #         f = os.path.join(self.root, basename)
-    #         data = io.read_cutsky_power_poles(f, skiprows=0, sum_only=['modes'], force_index_match=True)
-    #
-    #         if self.dk is not None:
-    #             data = data.reindex('k_cen', self.dk, weights='modes', force=True)
-    #
-    #         # unstack the poles
-    #         ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
-    #         data = tools.unstack_multipoles_one(data, ells, 'power')
-    #
-    #         # make the SpectraSet
-    #         poles = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
-    #
-    #         self._mean_poles = poles
-    #         return poles
-
-    def get_poles(self):
+    def get_poles(self, average=None):
         """
         Return the cutsky galaxy multipoles in redshift space
         """
+        if average is not None:
+            if isinstance(average, str):
+                average = [average]
+        else:
+            average = []
+        
+        name = '_poles'
+        if len(average):
+            name += '_' + '_'.join(average)
+            
         try:
-            return self._poles
+            return getattr(self, name)
         except AttributeError:
         
             # form the filename and load the data
@@ -63,12 +47,15 @@ class CutskyQPMMocksPower(PowerSpectraLoader):
         
             # reindex
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
-            
+                        
             # unstack the poles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             poles = tools.unstack_multipoles(poles, ells, 'power')
         
-            self._poles = poles
+            if len(average):
+                poles = poles.average(axis=average, weights='modes')
+        
+            setattr(self, name, poles)
             return poles
             
     #--------------------------------------------------------------------------
