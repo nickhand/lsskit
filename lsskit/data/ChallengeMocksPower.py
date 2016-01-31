@@ -139,7 +139,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # power data
     #--------------------------------------------------------------------------            
-    def get_Pgal(self, spacing="dk005", Nmu=100, average=None):
+    def get_Pgal(self, spacing="dk005", Nmu=100, scaled=False, average=None):
         """
         Return the total galaxy spectrum in redshift space
         """
@@ -150,9 +150,10 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             average = []
                 
         # determine the tag
+        scaled_tag = 'scaled' if scaled else 'unscaled'
         _spacing = spacing
         if spacing: spacing = '_'+spacing            
-        name = '_Pgal%s_Nmu%d' %(spacing, Nmu)
+        name = '_Pgal%s_Nmu%d_%s' %(spacing, Nmu, scaled_tag)
         if len(average):
             name += '_' + '_'.join(average)        
         
@@ -161,7 +162,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
         except AttributeError:
             
             # load the data from file
-            basename = 'pkmu_challenge_boxN{box}_scaled%s_Nmu%d_{los}los.dat' %(spacing, Nmu)
+            basename = 'pkmu_challenge_boxN{box}_%s%s_Nmu%d_{los}los.dat' %(scaled_tag, spacing, Nmu)
             coords = [self.los, self.boxes]
             d = os.path.join(self.root, 'power')
             
@@ -196,7 +197,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    def get_poles(self, spacing="dk005", Nmu=100, average=None):
+    def get_poles(self, spacing="dk005", Nmu=100, scaled=False, average=None):
         """
         Return the N-series multipoles in redshift space
         """
@@ -207,9 +208,10 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             average = []
             
         # determine the tag
+        scaled_tag = 'scaled' if scaled else 'unscaled'
         _spacing = spacing
         if spacing: spacing = '_'+spacing        
-        name = '_nseries_poles%s' %(spacing)
+        name = '_nseries_poles_%s%s' %(scaled_tag, spacing)
         if len(average):
             name += '_' + '_'.join(average)
         
@@ -218,7 +220,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
         except AttributeError:
             
             # load the data from file
-            basename = 'poles_challenge_boxN{box}_scaled%s_Nmu%d_{los}los.dat' %(spacing, Nmu)
+            basename = 'poles_challenge_boxN{box}_%s%s_Nmu%d_{los}los.dat' %(scaled_tag, spacing, Nmu)
             coords = [self.los, self.boxes]
             d = os.path.join(self.root, 'poles')
             
@@ -240,7 +242,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
                 toret = toret.average(axis=average, weights='modes')
             
             # add the errors
-            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average)  
+            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled)  
             toret.add_power_pole_errors(pkmu)
             
             setattr(self, name, toret)

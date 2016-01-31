@@ -21,45 +21,24 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    def get_mean_poles(self):
-        """
-        Return the mean of the cutsky galaxy multipoles in redshift space
-        """
-        try:
-            return self._mean_poles
-        except AttributeError:
-        
-            # read in the data
-            d = os.path.join(self.root, 'data')
-            basename = 'bianchips_cutsky_TSC_0.7_84mean.dat'
-            f = os.path.join(d, basename)
-            data = io.read_cutsky_power_poles(f, skiprows=0, sum_only=['modes'], force_index_match=True)
-            
-            if self.dk is not None:
-                data = data.reindex('k_cen', self.dk, weights='modes', force=True)
-            
-            # unstack the poles
-            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
-            data = tools.unstack_multipoles_one(data, ells, 'power')
-            
-            # make the SpectraSet
-            poles = SpectraSet(data, coords=[[0, 2, 4]], dims=['ell'])
-
-            self._mean_poles = poles
-            return poles
-
-    def get_poles(self):
+    def get_poles(self, scaled=True, average=False):
         """
         Return the cutsky galaxy multipoles in redshift space
         """
-        name = '_poles'
+        scaled_tag = 'scaled' if scaled else 'unscaled'
+        name = '_poles_' + scaled_tag
+        if average: name += '_mean'
+        
         try:
-            return self._poles           
+            return getattr(self, name)         
         except AttributeError:
         
             # form the filename and load the data
-            d = os.path.join(self.root, 'data')
-            basename = 'bianchips_cutsky_TSC_0.7_{box:d}.dat'
+            d = os.path.join(self.root, 'data', scaled_tag)
+            if scaled:
+                basename = 'bianchips_cutsky_TSC_0.7_{box:d}.dat'
+            else:
+                basename = 'bianchips_Ncutsky_{box:02d}.dat'
 
             # read in the data
             loader = io.read_cutsky_power_poles
@@ -72,8 +51,11 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             # unstack the poles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             poles = tools.unstack_multipoles(poles, ells, 'power')
+            
+            if average:
+                poles = poles.average(axis='box', weights='modes')
         
-            self._poles = poles
+            setattr(self, name, poles)
             return poles
             
     def get_window(self):
