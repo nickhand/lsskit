@@ -195,7 +195,7 @@ class SpectraSet(xray.DataArray):
                 this_pkmu = pkmu
             utils.add_power_pole_errors(this_pole, this_pkmu, ell)
             
-    def average(self, weights=None, axis=None, sum_only=None):
+    def average(self, weights=None, axis=None):
         """
         Compute the average of SpectraSet, optionally weighting, over
         the axis specified 
@@ -209,10 +209,7 @@ class SpectraSet(xray.DataArray):
                 axis = [axis]
             if not all(k in self.dims for k in axis):
                 raise ValueError("specified `axis` must be one of %s" %str(self.dims))
-            
-        if isinstance(sum_only, str):
-            sum_only = [sum_only]
-        
+                    
         # the number of measurements to average over
         N = np.prod([len(self[k]) for k in axis])
         first = {k:0 for k in axis}
@@ -221,8 +218,9 @@ class SpectraSet(xray.DataArray):
         scalar = sorted(axis) == sorted(self.dims)
                 
         def compute_mean(first_, extra_key={}):    
-            sum_only_ = sum_only
-            if sum_only_ is None: sum_only_ = first_.sum_only
+            sum_only_ = []
+            if hasattr(first_, '_fields_to_sum'):
+                sum_only_ = first_._fields_to_sum
         
             # the weights
             if weights is None:
