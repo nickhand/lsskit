@@ -102,7 +102,7 @@ def solve(params, theory, objective, init_values=None):
     # initialize the parameters
     #---------------------------------------------------------------------------
     # 1) initialixe from initial provided values
-    if init_from == 'fiducial':
+    if init_from == 'fiducial' or init_from == 'chain':
         if init_values is None:
             raise ValueError("EMCEE: cannot initialize around best guess -- none provided")
         

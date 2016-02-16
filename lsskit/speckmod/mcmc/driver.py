@@ -175,6 +175,13 @@ def run_global_mcmc(args, theory_model, data_loader):
     # setup the mcmc run
     params, theory_params, init_values = setup_mcmc(args.param_file)
     
+    # check for init_from == chain
+    if params['init_from'] == 'chain':
+        from pyRSD.rsdfit.results import EmceeResults
+        r = EmceeResults.from_npz(params['start_chain'].value)
+        best = dict(zip(r.free_names, r.max_lnprob_values()))
+        init_values = np.array([best[k] for k in theory_params.free_names])
+    
     # load the data
     data_kws = data_loader()
 
