@@ -10,6 +10,7 @@ class RunPBHaloPower(PowerSpectraLoader):
     name = "RunPBHaloPower"
     a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
     mass = range(8)
+    box = ['%02d' %i for i in range(10)]
     
     def __init__(self, root, realization='10mean', dk=None):
         
@@ -198,7 +199,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
             
-            d = os.path.join(self.root, 'halo-matter', space, 'power')
+            d = os.path.join(self.root, 'halo-matter/fourier', space, 'power')
             basename = 'pk_{sample}_x_matter_fof_runPB_%s_{a}.dat' %self.tag
 
             samples = ['gal', 'cen', 'cenA', 'cenB', 'sat', 'satA', 'satB']
@@ -227,36 +228,43 @@ class RunPBHaloPower(PowerSpectraLoader):
             setattr(self, name, Pgal)
             return Pgal
             
-    def get_fof_Phm(self, space='real'):
+    def get_fof_Phm(self, space='real', average=None):
         """
         Return Phm in the space specified, either `real` or `redshift`
         """
         name = '_Phm_'+space
+        if average is not None:
+            name += '_'+average
+            
         try:
             return getattr(self, name)
         except AttributeError:
             
             columns = None
             if space == 'real':
-                basename = 'pk_hm{mass}_runPB_%s_{a}.dat' %self.tag
+                basename = 'pk_hm{mass}_runPB_PB{box}_{a}.dat'
                 mode = '1d'
                 columns = ['k', 'power', 'modes']
             else:
-                basename = 'pkmu_hm{mass}_runPB_%s_{a}_Nmu5.dat' %self.tag
+                basename = 'pkmu_hm{mass}_runPB_PB{box}_{a}_Nmu5.dat'
                 mode = '2d'
-            d = os.path.join(self.root, 'halo-matter', space, 'power')
+            d = os.path.join(self.root, 'halo-matter/fourier', space, 'power')
                 
-            coords = [self.a, self.mass]
-            dims = ['a', 'mass']
+            coords = [self.a, self.mass, self.box]
+            dims = ['a', 'mass', 'box']
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {}
             if columns is not None: kw['columns'] = columns
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
             Phm = self.reindex(Phm, 'k_cen', self.dk, weights='modes')
+            
+            # average?
+            if average is not None:
+                Phm = Phm.average(axis=average)
             
             # add errors
             Phm.add_power_errors(self.get_fof_Phh(space), self.get_Pmm(space))
