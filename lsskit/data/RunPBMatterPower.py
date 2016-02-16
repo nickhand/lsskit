@@ -18,9 +18,9 @@ class RunPBMatterPower(PowerSpectraLoader):
     at several redshifts
     """
     name = "RunPBMatterPower"
-    a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', 
-            '0.7143', '0.8000', '0.9091', '1.0000']
+    a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
     mu = [0, 2, 4, 6, 8]
+    box = ['%02d' %i for i in range(10)]
     
     def __init__(self, root, realization='mean', dk=None):
         
@@ -127,37 +127,39 @@ class RunPBMatterPower(PowerSpectraLoader):
                     
         return poles
         
-    def get_Pmm(self, space='real'):
+    def get_Pmm(self, space='real', average='box'):
         """
         Return density auto-correlation in the space specified, 
         either `real` or `redshift`
         """
         name = '_Pmm_'+space
+        if average is not None:
+            name += '_'+average
+            
         try:
             return getattr(self, name)
         except AttributeError:
             
-            tag = self.tag
-            if 'mean' in self.tag:
-                tag = '10mean'
-            
             columns = None
             d = os.path.join(self.root, 'matter/fourier', space, 'density/power')
             if space == 'real':
-                basename = 'pk_mm_runPB_%s_{a}.dat' %tag
+                basename = 'pk_mm_runPB_PB{box}_{a}.dat'
                 columns = ['k', 'power', 'modes']
             else:
-                basename = 'pkmu_mm_runPB_%s_{a}_Nmu5.dat' %tag
+                basename = 'pkmu_mm_runPB_PB{box}_{a}_Nmu5.dat' %tag
                 
-            coords = [self.a]
+            coords = [self.a, self.box]; dims = ['a', 'box']
             loader = io.load_power
             kwargs = {}
             if columns is not None: kwargs['columns'] = columns
-            Pmm = SpectraSet.from_files(loader, d, basename, coords, dims=['a'], 
-                                            args=('1d',), kwargs=kwargs)
+            Pmm = SpectraSet.from_files(loader, d, basename, coords, dims=dims, args=('1d',), kwargs=kwargs)
             
             # reindex
             Pmm = self.reindex(Pmm, 'k_cen', self.dk, weights='modes')
+            
+            # average?
+            if average is not None:
+                Pmm = Pmm.average(axis=average)
             
             # add errors
             Pmm.add_power_errors()
