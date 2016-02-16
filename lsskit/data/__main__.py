@@ -88,7 +88,7 @@ def save_runPB_galaxy_stats():
     # and save
     pickle.dump(toret, open(args.output_file, 'w'))
     
-def compute_biases():
+def compute_fourier_biases():
     """
     Compute the linear biases from set of cross/auto realspace spectra
     """
@@ -153,6 +153,82 @@ def compute_biases():
         # substitute any alias
         for i, v in enumerate(tup):
             dim = Pxm.dims[i]
+            if dim in args.aliases:
+                if v in args.aliases[dim]:
+                    tup[i] = args.aliases[dim][v]
+        toret[tuple(tup)] = b1
+        
+    pickle.dump(toret, open(args.output, 'w'))
+    
+def compute_config_biases():
+    """
+    Compute the linear biases from set of cross/auto correlation functions
+    """
+    import pickle
+                    
+    # parse the input arguments
+    desc = "compute the linear biases from set of cross/auto realspace spectra"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    # required arguments
+    h = parse_tools.PowerSpectraParser.format_help()
+    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('cross_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = parse_tools.PowerSpectraCallable.format_help()
+    parser.add_argument('matter_callable', type=parse_tools.PowerSpectraCallable.data, help=h)
+    h = 'the name of the output file'
+    parser.add_argument('-o', '--output', type=str, required=True, help=h)
+    
+    # options
+    h = "only consider a subset of keys; specify as ``-s a = '0.6452', '0.7143'``"
+    parser.add_argument('-s', '--subset', type=str, action=parse_tools.StoreDataKeys, default={}, help=h)
+    h = "aliases to use for the keys; specify as ``--aliases sample = cc:cen, gg:gal"
+    parser.add_argument('--aliases', type=str, action=parse_tools.AliasAction, default={}, help=h)
+    
+    h = 'the minimum r value to include in the bias fit'
+    parser.add_argument('--rmin', type=float, default=20, help=h)
+    h = 'the maximum r value to include in the bias fit'
+    parser.add_argument('--rmax', type=float, default=40, help=h)
+    args = parser.parse_args()
+    
+    # the correlations
+    xi_xm = getattr(args.data, args.cross_callable['name'])(**args.cross_callable['kwargs'])
+    xi_mm = getattr(args.data, args.matter_callable['name'])(**args.matter_callable['kwargs'])
+    
+    def squeeze(tup):
+        if not (len(tup)-1):
+            return tup[0]
+        else:
+            return tup
+    
+    def determine_bias(r, data):
+        inds = (r >= args.rmin)&(r <= args.rmax)
+        return np.mean(data[inds])
+    
+    # loop over each
+    toret = {}
+    for key in xi_xm.ndindex():
+        valid = True
+        for k in args.subset:
+            if key[k] not in args.subset[k]:
+                valid = False
+                break
+        if not valid:
+            continue
+            
+        tup = squeeze(list(key[k] for k in xi_xm.dims))
+        subkey = {k:key[k] for k in xi_xm.dims if k in xi_mm.dims}
+        
+        x = xi_xm.sel(**key).values
+        y = xi_mm.sel(**subkey).values
+        
+        ratio = x['corr']/y['corr']
+        b1 = determine_bias(x['r'], ratio)
+        
+        # substitute any alias
+        for i, v in enumerate(tup):
+            dim = xi_xm.dims[i]
             if dim in args.aliases:
                 if v in args.aliases[dim]:
                     tup[i] = args.aliases[dim][v]
