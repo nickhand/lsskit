@@ -227,7 +227,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             loader = io.load_power
             mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kwargs = {'sum_only':['modes'], 'force_index_match':True, 'usecols':usecols, 'mapcols':mapcols}
+            kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, coords, ['los', 'box'], args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
