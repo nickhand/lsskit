@@ -9,7 +9,7 @@
 from nbodykit import files
 from nbodykit.dataset import DataSet, Corr1dDataSet, Corr2dDataSet
 from nbodykit.dataset import Power1dDataSet, Power2dDataSet 
-from nbodykit.extensionpoints import MeasurementStorage
+from nbodykit.storage import MeasurementStorage
 
 from . import tools
 from .. import numpy as np
@@ -209,7 +209,7 @@ def write_plaintext(data, filename):
         edges = edges[0]
     
     # and write
-    storage = MeasurementStorage.new(mode, filename)
+    storage = MeasurementStorage.create(mode, filename)
     storage.write(edges, data.variables, columns, **data.attrs)
                 
 #------------------------------------------------------------------------------
