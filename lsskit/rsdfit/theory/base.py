@@ -45,8 +45,8 @@ class BaseTheoryParams(TheoryParams):
         # sigmas
         self.sigma_c.vary = True
         self.sigma_s.vary = True
-        self.sigma_sA.update(vary=False, expr="sigma_s * sigmav_from_bias(b1_sA) / sigmav_from_bias(b1_s)")
-        self.sigma_sB.update(vary=False, expr="sigma_s * sigmav_from_bias(b1_sB) / sigmav_from_bias(b1_s)")
+        self.sigma_sA.update(vary=False, expr="sigma_s * sigmav_from_bias(sigma8_z, b1_sA) / sigmav_from_bias(sigma8_z, b1_s)")
+        self.sigma_sB.update(vary=False, expr="sigma_s * sigmav_from_bias(sigma8_z, b1_sB) / sigmav_from_bias(sigma8_z, b1_s)")
         self.sigma_so.update(vary=False, fiducial=0.)
 
         # amplitudes

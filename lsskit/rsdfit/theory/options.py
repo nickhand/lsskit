@@ -55,8 +55,8 @@ def use_delta_sigmas(params):
     """
     Apply nuisance factors to the higher order sigma relations
     """
-    params.sigma_sA.update(vary=False, expr="delta_sigsA * sigma_s * sigmav_from_bias(b1_sA) / sigmav_from_bias(b1_s)")
-    params.sigma_sB.update(vary=False, expr="delta_sigsB * sigma_s * sigmav_from_bias(b1_sB) / sigmav_from_bias(b1_s)")
+    params.sigma_sA.update(vary=False, expr="delta_sigsA * sigma_s * sigmav_from_bias(sigma8_z, b1_sA) / sigmav_from_bias(sigma8_z, b1_s)")
+    params.sigma_sB.update(vary=False, expr="delta_sigsB * sigma_s * sigmav_from_bias(sigma8_z, b1_sB) / sigmav_from_bias(sigma8_z, b1_s)")
     params.delta_sigsA.update(vary=True, fiducial=1., prior='normal', mu=1., sigma=0.2, min=0.)
     params.delta_sigsB.update(vary=True, fiducial=1., prior='normal', mu=1., sigma=0.2, min=0.)
     params.options.append('delta_sig')    
