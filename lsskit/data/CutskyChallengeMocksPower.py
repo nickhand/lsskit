@@ -19,7 +19,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         PowerSpectraLoader.store_class(cls)  
         
         
-    def get_poles(self, tag="", scaled=True, average=False):
+    def get_poles(self, tag="", scaled=False, average=False):
         """
         Return the cutsky galaxy multipoles in redshift space, as
         measured by `nbodykit`
@@ -37,7 +37,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         
             # form the filename and load the data
             d = os.path.join(self.root, 'nbodykit/poles')
-            basename = 'poles_cutskyN{box:d}_%s_dk005%s.dat' %(scaled_tag, tag)
+            basename = 'poles_cutskyN{box:d}_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
 
             # read in the data
             loader = io.load_power
