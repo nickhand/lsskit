@@ -7,12 +7,74 @@
     __desc__   : run rsdfit with the parameters specified on the command line
 """
 import argparse
-import os
+import os, sys
 import tempfile
 import subprocess
-from lsskit.rsdfit import DriverParams, BaseTheoryParams, \
-                            PkmuDataParams, PoleDataParams
-                            
+from lsskit.rsdfit import (DriverParams, BaseTheoryParams, 
+                            PkmuDataParams, PoleDataParams)
+
+from lsskit.rsdfit.theory import valid_theory_options
+
+def ExistingFile(f):
+    if not os.path.isfile(f):
+        raise ValueError("'%s' is not an existing file" %f)
+    return f
+    
+def _write_rsdfit_params():
+    """
+    The function to write an ``rsdfit`` parameter file, as called
+    by a console script
+    """
+    desc = "write a parameter file for ``rsdfit`` from the input configuration file"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    parser.add_argument('mode', choices=['pkmu', 'poles'], 
+        help='the fitting mode; either ``pkmu`` or ``poles``')
+    parser.add_argument('config', type=ExistingFile, 
+        help='the configuration file to make the parameter file from')
+    parser.add_argument('-th', '--theory_options', nargs='*', choices=valid_theory_options, 
+        help='additional theory options to apply, i.e., `so_corr`')
+    parser.add_argument('-o', '--output', type=argparse.FileType('w'), nargs='?',
+        default=sys.stdout, help='the output file to write; default is stdout')
+        
+    ns = parser.parse_args()
+    write_rsdfit_params(ns.mode, ns.config, ns.output, theory_options=ns.theory_options)
+    
+
+def write_rsdfit_params(mode, config, output, theory_options=[]):
+    """
+    Write a parameter file for ``rsdfit`` from a configuration file
+        
+    Parameters
+    ----------
+    mode : str, {`pkmu`, `poles`}
+        either `pkmu` or `poles` -- the mode of the RSD fit
+    config : str
+        the name of the file holding the configuration parameters, from which the
+        the parameter file for ``rsdfit`` will be made
+    output : file object
+        the file object to write to
+    theory_options : list
+        list of options to apply the theory model, i.e., `mu6_corr` or `so_corr`
+    """
+    # initialize the driver, theory, and data parameter objects
+    driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
+    theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
+    if mode == 'pkmu':
+        data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
+    else:
+        data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
+
+    # apply any options to the theory model
+    if theory_options is not None:
+        theory.apply_options(*theory_options)
+
+    # write out the parameters to the specified output
+    driver.to_file(output)
+    data.to_file(output)
+    theory.to_file(output)
+    
+    
 def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True, rsdfit_options=[]):
     """
     Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
@@ -47,24 +109,10 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
     command : str
         if `run == False`, this returns the rsdfit command as a string
     """
-    # initialize the driver, theory, and data parameter objects
-    driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
-    theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
-    if mode == 'pkmu':
-        data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
-    else:
-        data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
-
-    # apply any options to the theory model
-    if theory_options is not None:
-        theory.apply_options(*theory_options)
-
     # write out the parameters to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as ff:
-        param_file = ff.name
-        driver.to_file(ff)
-        data.to_file(ff)
-        theory.to_file(ff)
+    ff = tempfile.NamedTemporaryFile(delete=False)
+    param_file = ff.name
+    write_rsdfit_params(mode, config, ff, theory_options=theory_options)
     
     # get the output name
     tags = [x.name for x in [driver, theory, data] if x.name]
@@ -91,9 +139,9 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
         return " ".join(map(str, call_signature))
             
             
-def main():
+def _run_rsdfit():
     """
-    Run as a console script
+    Run ``run_rsdfit`` as a console script
     """
     desc = "run rsdfit with the parameters specified on the command line"
     parser = argparse.ArgumentParser(description=desc)

@@ -255,4 +255,3 @@ class TheoryParams(object):
             globals()[name](self)
             
 from .options import *
-        

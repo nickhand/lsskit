@@ -7,6 +7,8 @@
     __desc__   : apply various options to the parameter set
 """
 
+valid_theory_options = ['mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas']
+
 def use_mu_corr(params):
     """
     Use the mu2, mu4 corrections
