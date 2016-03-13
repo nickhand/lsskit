@@ -4,7 +4,8 @@ class DriverParams(object):
     """
     Class to hold and manipulate the driver parameters required for fitting
     """
-    valid_params = ['fitter', 'init_from', 'start_chain', 'burnin', 'test_convergence', 'epsilon']
+    valid_params = ['fitter', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
+                     'lbfgs_epsilon', 'lbfgs_factor', 'lbfgs_use_bounds', 'lbfgs_use_priors']
     
     def __iter__(self):
         """
@@ -149,38 +150,48 @@ class DriverParams(object):
         self._name = val
         
     @property
-    def start_chain(self):
+    def start_from(self):
         """
-        The name of the chain file to use to initialize the parameters
+        The name of the results file to use to initialize the parameters
         """
         try:
-            return self._start_chain
+            return self._start_from
         except AttributeError:
-            raise AttributeError("please specify `start_chain`")
+            raise AttributeError("please specify `start_from`")
     
-    @start_chain.setter
-    def start_chain(self, val):
+    @start_from.setter
+    def start_from(self, val):
         if val is None:
-            self._start_chain = val
+            self._start_from = val
             return
         
         import os
         if not os.path.exists(val):
-            raise RuntimeError("cannot set `start_chain` to `%s`: no such file" %val)
+            raise RuntimeError("cannot set `start_from` to `%s`: no such file" %val)
+        
         if os.path.isdir(val):
             from glob import glob
-            from pyRSD.rsdfit.results import EmceeResults
+            from pyRSD.rsdfit.results import EmceeResults, LBFGSResults
             import operator
             
             pattern = os.path.join(val, "*.npz")
-            chains = glob(pattern)
+            result_files = glob(pattern)
             if not len(chains):
                 raise RuntimeError("did not find any chain (`.npz`) files matching pattern `%s`" %pattern)
             
             # find the chain file which has the maximum log prob in it and use that
-            max_lnprobs = [EmceeResults.from_npz(f).max_lnprob for f in chains]
+            max_lnprobs = []
+            for f in result_files:
+                
+                try:
+                    r = EmceeResults.from_npz(f)
+                    max_lnprobs.append(r.max_lnprob)
+                except:
+                    r = LBFGSResults.from_npz(f)
+                    max_lnprobs.append(-r.min_chi2)
+
             index, value = max(enumerate(max_lnprobs), key=operator.itemgetter(1))
-            self._start_chain = chains[index]
+            self._start_from = result_files[index]
         
     
         
