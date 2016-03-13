@@ -136,6 +136,62 @@ class DriverParams(object):
         self._epsilon = val
         
     @property
+    def lbfgs_epsilon(self):
+        """
+        The step-size for derivatives in LBFGS; default is 1e-8
+        """
+        try:
+            return self._lbfgs_epsilon
+        except:
+            return 1e-8
+    
+    @lbfgs_epsilon.setter
+    def lbfgs_epsilon(self, val):
+        self._lbfgs_epsilon = val
+        
+    @property
+    def lbfgs_factor(self):
+        """
+        The convergence factor in LBFGS; default is 1e8
+        """
+        try:
+            return self._lbfgs_factor
+        except:
+            return 1e8
+    
+    @lbfgs_factor.setter
+    def lbfgs_factor(self, val):
+        self._lbfgs_factor = val
+        
+    @property
+    def lbfgs_use_bounds(self):
+        """
+        Whether to use bounds in LBFGS; default is False
+        """
+        try:
+            return self._lbfgs_use_bounds
+        except:
+            return False
+    
+    @lbfgs_use_bounds.setter
+    def lbfgs_use_bounds(self, val):
+        self._lbfgs_use_bounds = val
+        
+    @property
+    def lbfgs_use_priors(self):
+        """
+        Whether to use priors in LBFGS; default is True
+        """
+        try:
+            return self._lbfgs_use_priors
+        except:
+            return True
+    
+    @lbfgs_use_priors.setter
+    def lbfgs_use_priors(self, val):
+        self._lbfgs_use_priors = val
+        
+    @property
     def name(self):
         """
         The identifying name for this parameter set
