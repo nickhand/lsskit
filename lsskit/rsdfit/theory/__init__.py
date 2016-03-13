@@ -58,7 +58,7 @@ class TheoryParams(object):
     
         # fractions
         self.fcB        = AttrDict(vary=False, fiducial=0.089, min=0, max=1)
-        self.fsB        = AttrDict(vary=False, fiducial=0.400, prior='normal', mu=0.4, sigma=0.1, min=0., max=1)
+        self.fsB        = AttrDict(vary=False, fiducial=0.400, prior='uniform', lower=0., upper=1., min=0., max=1)
         self.fs         = AttrDict(vary=False, fiducial=0.104, prior='uniform', lower=0., upper=0.25, min=0., max=1)
         self.Nsat_mult  = AttrDict(vary=False, fiducial=2.400, prior='normal', mu=2.4, sigma=0.1, min=2.)
 
@@ -80,8 +80,8 @@ class TheoryParams(object):
 
         # nuisance
         self.gamma_b1cB = AttrDict(vary=False, fiducial=0.40, prior='normal', mu=0.4, sigma=0.2, min=0., max=1)
-        self.gamma_b1sA = AttrDict(vary=False, fiducial=1.45, prior='normal', mu=1.45, sigma=0.2, min=1.0)
-        self.gamma_b1sB = AttrDict(vary=False, fiducial=2.05, prior='normal', mu=2.05, sigma=0.2, min=1.0) 
+        self.gamma_b1sA = AttrDict(vary=False, fiducial=1.45, prior='normal', mu=1.45, sigma=0.3, min=1.0)
+        self.gamma_b1sB = AttrDict(vary=False, fiducial=2.05, prior='normal', mu=2.05, sigma=0.3, min=1.0) 
 
         self.delta_sigsA = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
         self.delta_sigsB = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
