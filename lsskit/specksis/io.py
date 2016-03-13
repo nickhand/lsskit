@@ -25,16 +25,17 @@ def get_Pshot(power):
         raise ValueError('input power object in get_Pshot needs a `attrs` attribute')
 
     attrs = power.attrs
-    volume = 0.
-    if 'volume' in attrs:
-        volume = attrs['volume']
-    elif 'box_size' in attrs:
-        volume = attrs['box_size']**3
-    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz']):
-        volume = attrs['Lx']*attrs['Ly']*attrs['Lz']
+    if 'shot_noise' in attrs:
+        Pshot = attrs['shot_noise']
+    elif 'volume' in attrs and 'N1' in attrs:
+        Pshot = attrs['volume'] / attrs['N1']
+    elif 'box_size' in attrs and 'N1' in attrs:
+        Pshot = attrs['box_size']**3 / attrs['N1']
+    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz', 'N1']):
+        Pshot = attrs['Lx']*attrs['Ly']*attrs['Lz'] / attrs['N1']
     else:
-        raise ValueError("cannot compute volume for shot noise")
-    return volume / attrs['N1']
+        raise ValueError("cannot compute shot noise")
+    return Pshot
     
         
 #------------------------------------------------------------------------------
@@ -289,7 +290,7 @@ def write_analysis_file(kind,
         Pshot = 0. if not subtract_shot_noise else get_Pshot(power)
         data = power.data.data.copy() # removes the mask
         data['power'] -= Pshot
-        coords = [power.k_center, power.mu_center]
+        coords = [power['k_cen'], power['mu_cen']]
     
     # case of multipoles
     elif kind == 'poles':
@@ -304,7 +305,7 @@ def write_analysis_file(kind,
         ells = list(power['ell'].values)
         if 0 in ells and subtract_shot_noise: 
             data['power'][:,ells.index(0)] -= get_Pshot(p)
-        coords = [p.k_center, np.array(ells, dtype=float)]
+        coords = [p['k_cen'], np.array(ells, dtype=float)]
     else:
         raise ValueError("first argument to `write_analysis_file` must be `power` or `poles`")    
 
