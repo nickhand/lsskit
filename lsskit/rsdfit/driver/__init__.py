@@ -5,7 +5,8 @@ class DriverParams(object):
     Class to hold and manipulate the driver parameters required for fitting
     """
     valid_params = ['fitter', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
-                     'lbfgs_epsilon', 'lbfgs_factor', 'lbfgs_use_bounds', 'lbfgs_use_priors']
+                     'lbfgs_epsilon', 'lbfgs_factor', 'lbfgs_use_bounds', 'lbfgs_use_priors', 
+                     'init_scatter']
     
     def __iter__(self):
         """
@@ -148,6 +149,20 @@ class DriverParams(object):
     @lbfgs_epsilon.setter
     def lbfgs_epsilon(self, val):
         self._lbfgs_epsilon = val
+        
+    @property
+    def init_scatter(self):
+        """
+        The fractional (normal) scatter to add to the init values
+        """
+        try:
+            return self._init_scatter
+        except:
+            return 0.
+    
+    @init_scatter.setter
+    def init_scatter(self, val):
+        self._init_scatter = val
         
     @property
     def lbfgs_factor(self):
