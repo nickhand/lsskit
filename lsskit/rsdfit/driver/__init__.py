@@ -263,6 +263,8 @@ class DriverParams(object):
 
             index, value = max(enumerate(max_lnprobs), key=operator.itemgetter(1))
             self._start_from = result_files[index]
+        else:
+            self._start_from = val
         
     
         
