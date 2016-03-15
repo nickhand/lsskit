@@ -112,7 +112,23 @@ def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True
     # write out the parameters to a temporary file
     ff = tempfile.NamedTemporaryFile(delete=False)
     param_file = ff.name
-    write_rsdfit_params(mode, config, ff, theory_options=theory_options)
+    
+    # initialize the driver, theory, and data parameter objects
+    driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
+    theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
+    if mode == 'pkmu':
+        data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
+    else:
+        data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
+
+    # apply any options to the theory model
+    if theory_options is not None:
+        theory.apply_options(*theory_options)
+
+    # write out the parameters to the specified output
+    driver.to_file(ff)
+    data.to_file(ff)
+    theory.to_file(ff)
     
     # get the output name
     tags = [x.name for x in [driver, theory, data] if x.name]
