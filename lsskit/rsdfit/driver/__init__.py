@@ -247,7 +247,7 @@ class DriverParams(object):
             
             pattern = os.path.join(val, "*.npz")
             result_files = glob(pattern)
-            if not len(chains):
+            if not len(result_files):
                 raise RuntimeError("did not find any chain (`.npz`) files matching pattern `%s`" %pattern)
             
             # find the chain file which has the maximum log prob in it and use that
