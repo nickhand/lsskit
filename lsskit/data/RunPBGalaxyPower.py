@@ -212,7 +212,7 @@ class RunPBGalaxy(PowerSpectraLoader):
         try:
             return self._gal_biases
         except:
-            import xray
+            import xarray
             if filename is None:
                 filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_galaxy_samples.pickle")
                 if not os.path.exists(filename):

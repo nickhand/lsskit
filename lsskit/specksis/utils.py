@@ -20,7 +20,7 @@ def ndindex(dims, coords):
     ----------
     dims : list of str
         the names of the dimensions; the keys in the yielded dictionary
-    coordinates : list, xray.core.coordinates.DataArrayCoordinates
+    coordinates : list, xarray.core.coordinates.DataArrayCoordinates
         list of coordinates for each dimension. `itertools.product` of
         each coordinate axis is yielded.
     """
@@ -38,7 +38,7 @@ def ndenumerate(dims, coords):
     ----------
     dims : list of str
         the names of the dimensions; the keys in the yielded dictionary
-    coordinates : list, xray.core.coordinates.DataArrayCoordinates
+    coordinates : list, xarray.core.coordinates.DataArrayCoordinates
         list of coordinates for each dimension. `itertools.product` of
         each coordinate axis is yielded.
     """
@@ -183,7 +183,7 @@ def add_power_pole_errors(pole, pkmu, ell):
 def load_data_from_file(filename, dims, shape):
     """
     Load a pickled dictionary of linear biases and return
-    a `xray.DataArray`
+    a `xarray.DataArray`
     
     Parameters
     ----------
@@ -197,7 +197,7 @@ def load_data_from_file(filename, dims, shape):
         shape of dim 0, dim 1, etc
     """
     import pickle
-    import xray
+    import xarray as xr
     
     # load the data
     biases = pickle.load(open(filename))
@@ -214,5 +214,5 @@ def load_data_from_file(filename, dims, shape):
         coords = zip(*keys)
         coords = [np.unique(x) for x in coords]
         b1 = np.array(b1).reshape(shape)
-    return xray.DataArray(b1, coords, dims)
+    return xr.DataArray(b1, coords, dims)
 

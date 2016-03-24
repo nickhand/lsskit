@@ -236,13 +236,13 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             toret = tools.unstack_multipoles(poles, ells, 'power')
-            
+
             # average?
             if len(average):
                 toret = toret.average(axis=average, weights='modes')
-            
+
             # add the errors
-            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled)  
+            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled)
             toret.add_power_pole_errors(pkmu)
             
             setattr(self, name, toret)

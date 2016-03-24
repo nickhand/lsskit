@@ -391,10 +391,10 @@ class TeppeiSimsPower(PowerSpectraLoader):
         try:
             return self._gal_biases
         except:
-            import xray
+            import xarray as xr
             samples = ['cen', 'cenA', 'cenB', 'gal', 'sat', 'satA', 'satB']
             data = [2.02, 1.91, 2.92, 2.17, 3.26, 2.68, 4.00]
-            biases = xray.DataArray(data, coords=[samples], dims=['sample'])
+            biases = xr.DataArray(data, coords=[samples], dims=['sample'])
             setattr(self, '_gal_biases', biases)
             return biases
 
@@ -418,8 +418,8 @@ class TeppeiSimsPower(PowerSpectraLoader):
         try:
             return self._halo_biases
         except:
-            import xray
+            import xarray as xr
             data = [[1.17, 1.46, 2.03, 3.04], [1.64, 2.18, 3.13, 4.82], [2.33, 3.18, 4.72, np.nan]]
-            biases = xray.DataArray(data, coords=[self.z, self.mass], dims=['z', 'mass'])
+            biases = xr.DataArray(data, coords=[self.z, self.mass], dims=['z', 'mass'])
             setattr(self, '_halo_biases', biases)
             return biases

@@ -354,7 +354,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
         Return the mean velocity dispersion 
         """
         import pandas as pd
-        import xray
+        import xarray as xr
         
         f = os.path.join(self.root, 'meta/halo_mean_vel_powers.hdf')
         if not os.path.exists(f):
@@ -371,7 +371,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
             sigma_sq = stats['vpar_2'].xs(los, level='los').xs(real, level='realization')
             
         values = sigma_sq.reshape((len(self.a), len(self.mass)))**0.5
-        toret = xray.DataArray(values, dims=['a', 'mass'], coords=[self.a, self.mass])
+        toret = xr.DataArray(values, dims=['a', 'mass'], coords=[self.a, self.mass])
         
         return toret
         

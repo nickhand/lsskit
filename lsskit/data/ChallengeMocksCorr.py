@@ -52,6 +52,7 @@ class ChallengeMocksCorr(PowerSpectraLoader):
         try:
             return self._wg_poles
         except AttributeError:
+            import xarray
             
             root = os.path.join(os.environ['RSD_DIR'], 'CorrelationFunction/Results')
             data = np.asarray([load_data(root, box) for box in self.boxes])
@@ -59,7 +60,7 @@ class ChallengeMocksCorr(PowerSpectraLoader):
             ells = [0, 2]
             dims = ['box', 'ell']
             coords = [self.boxes, ells]
-            poles = xray.DataArray(data, dims=dims, coords=coords)
+            poles = xarray.DataArray(data, dims=dims, coords=coords)
             self._wg_poles = poles
             return poles
             

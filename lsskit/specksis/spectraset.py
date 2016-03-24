@@ -1,16 +1,16 @@
-import xray 
+import xarray as xr
 import itertools
 
 from . import utils, tools
 from .. import numpy as np
 
-class SpectraSet(xray.DataArray):
+class SpectraSet(xr.DataArray):
     """
     N-dimensional set of power spectra measurements
     """
 
     def __init__(self, data, coords=None, dims=None, name=None,
-                 attrs=None):
+                 attrs=None, **kwargs):
         """
         Parameters
         ----------
@@ -33,7 +33,7 @@ class SpectraSet(xray.DataArray):
             Attributes to assign to the new variable. By default, an empty
             attribute dictionary is initialized.
         """
-        super(SpectraSet, self).__init__(data, coords=coords, dims=dims, name=name, attrs=attrs)
+        super(SpectraSet, self).__init__(data, coords=coords, dims=dims, name=name, attrs=attrs, **kwargs)
         
  
     @classmethod
@@ -105,12 +105,12 @@ class SpectraSet(xray.DataArray):
             dims = [dims]
         
         if not len(dims):
-            key = {k:v.values.tolist() for k,v in self.coords.iteritems()}
+            key = {k:v.values for k,v in self.coords.iteritems()}
             yield key
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]                   
-                key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
+                key = {k:v.values for k,v in val.coords.iteritems()}
                 yield key
                 
     def nditer(self, dims=None):
@@ -131,13 +131,13 @@ class SpectraSet(xray.DataArray):
             dims = [dims]
         
         if not len(dims):
-            key = {k:v.values.tolist() for k,v in self.coords.iteritems()}
+            key = {k:v.values for k,v in self.coords.iteritems()}
             yield key, self
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
                 if val.isnull(): continue
-                key = {k:v.values.tolist() for k,v in val.coords.iteritems()}
+                key = {k:v.values for k,v in val.coords.iteritems()}
                 yield key, val
 
             
@@ -280,9 +280,9 @@ class SpectraSet(xray.DataArray):
         
         
 
-class HaloSpectraSet(xray.Dataset):
+class HaloSpectraSet(xr.Dataset):
     """
-    A set of `SpectraSet` instances, stored as a ``xray.DataSet``, 
+    A set of `SpectraSet` instances, stored as a ``xarray.DataSet``, 
     to store the following halo spectra:
         1) Phh : halo-halo auto spectra
         2) Phm : halo-matter cross spectra
@@ -301,8 +301,8 @@ class HaloSpectraSet(xray.Dataset):
             a ``SpectraSet`` storing the halo-matter cross spectra
         Pmm : SpectraSet
             a ``SpectraSet`` storing the matter auto spectra
-        b1  : xray.DataArray
-            a ``xray.DataArray`` storing the linear biases
+        b1  : xarray.DataArray
+            a ``xarray.DataArray`` storing the linear biases
         mass_keys : dict
             a dictionary with a single key specifying the mass column name
             for the relevant auto spectra, and the matching keys

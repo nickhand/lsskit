@@ -39,7 +39,7 @@ def make_param_table(param_names, dims, coords):
         the names of the parameters, which will serve as the column names
     dims : list of str
         the names of the dimensions of the MultiIndex
-    coordinates : list, xray.core.coordinates.DataArrayCoordinates
+    coordinates : list, xarray.core.coordinates.DataArrayCoordinates
         list of coordinates for each dimension. `itertools.product` of
         each coordinate axis is used to make the MultiIndex
     
