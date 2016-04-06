@@ -136,7 +136,6 @@ class SpectraSet(xr.DataArray):
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
-                if val.isnull(): continue
                 key = {k:v.values for k,v in val.coords.iteritems()}
                 yield key, val
 
