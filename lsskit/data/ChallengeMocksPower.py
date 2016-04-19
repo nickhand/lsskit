@@ -139,7 +139,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # power data
     #--------------------------------------------------------------------------            
-    def get_Pgal(self, spacing="dk005", Nmu=100, scaled=False, average=None):
+    def get_Pgal(self, spacing="dk005", Nmu=100, scaled=False, average=None, tag=""):
         """
         Return the total galaxy spectrum in redshift space
         """
@@ -157,12 +157,16 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
         if len(average):
             name += '_' + '_'.join(average)        
         
+        if tag: 
+            tag = '_'+tag
+            name += tag
+            
         try:
             return getattr(self, name)
         except AttributeError:
             
             # load the data from file
-            basename = 'pkmu_challenge_boxN{box}_%s%s_Nmu%d_{los}los.dat' %(scaled_tag, spacing, Nmu)
+            basename = 'pkmu_challenge_boxN{box}_%s%s_Nmu%d_{los}los%s.dat' %(scaled_tag, spacing, Nmu, tag)
             coords = [self.los, self.boxes]
             d = os.path.join(self.root, 'power')
             
@@ -197,7 +201,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    def get_poles(self, spacing="dk005", Nmu=100, scaled=False, average=None):
+    def get_poles(self, spacing="dk005", Nmu=100, scaled=False, average=None, tag="", include_tetrahex=False):
         """
         Return the N-series multipoles in redshift space
         """
@@ -214,19 +218,25 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
         name = '_nseries_poles_%s%s' %(scaled_tag, spacing)
         if len(average):
             name += '_' + '_'.join(average)
+
+        tag_ = '_'+tag if tag else ''
+        if tag: name += tag_
         
         try:
             return getattr(self, name)
         except AttributeError:
             
             # load the data from file
-            basename = 'poles_challenge_boxN{box}_%s%s_Nmu%d_{los}los.dat' %(scaled_tag, spacing, Nmu)
+            basename = 'poles_challenge_boxN{box}_%s%s_Nmu%d_{los}los%s.dat' %(scaled_tag, spacing, Nmu, tag_)
             coords = [self.los, self.boxes]
             d = os.path.join(self.root, 'poles')
             
             loader = io.load_power
             mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            if include_tetrahex: 
+                mapcols['power_6.real'] = 'tetrahex'
+                usecols.append('tetrahex')
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, coords, ['los', 'box'], args=('1d',), kwargs=kwargs)
 
@@ -235,6 +245,8 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
 
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
+            if include_tetrahex: 
+                ells.append(('tetrahex', 6))
             toret = tools.unstack_multipoles(poles, ells, 'power')
 
             # average?
@@ -242,7 +254,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
                 toret = toret.average(axis=average, weights='modes')
 
             # add the errors
-            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled)
+            pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled, tag=tag)
             toret.add_power_pole_errors(pkmu)
             
             setattr(self, name, toret)
