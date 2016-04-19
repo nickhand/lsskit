@@ -87,7 +87,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             setattr(self, name, poles)
             return poles
             
-    def get_my_poles(self, scaled=False, average=False, subtract_shot_noise=True):
+    def get_my_poles(self, scaled=False, average=False, tag="", subtract_shot_noise=True):
         """
         Return the cutsky galaxy multipoles in redshift space, measured
         for my 84 box realizations
@@ -96,20 +96,31 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         name = '_my_poles_' + scaled_tag
         if average: name += '_mean'
         
+        if tag: 
+            tag = '_'+tag
+            name += tag
+        
         try:
             return getattr(self, name)         
         except AttributeError:
         
             # form the filename and load the data
             d = os.path.join(self.root, 'nbodykit/poles')
-            basename = 'poles_my_cutskyN{box:d}_%s_no_fkp_dk005.dat' %scaled_tag
+            basename = 'poles_my_cutskyN{box:d}_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
 
             # read in the data
             loader = io.load_power
             mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
-            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs)
+            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs, ignore_missing=True)
+
+            # remove null
+            valid_boxes = []
+            for key, p in poles.nditer():
+                if not p.isnull():
+                    valid_boxes.append(key['box'].tolist())
+            poles = poles.sel(box=valid_boxes)
         
             # reindex
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
@@ -186,10 +197,13 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             setattr(self, name, poles)
             return poles
             
-    def get_window(self):
+    def get_window(self, scaled=False):
         """
         Return the formatted window function for the cutsky challenge mocks
         """
-        
-        filename = os.path.join(self.root, 'extra', 'wilson_random_win_Ncutsky_0.4_strim_7.00e+02_smooth_201x2.dat')
+        if scaled:
+            filename = 'wilson_random_win_Ncutsky_0.4_fidcosmo_strim_7.00e+02_smooth_201x2.dat'
+        else:
+            filename = 'wilson_random_win_Ncutsky_0.3_truecosmo_strim_7.00e+02_smooth_201x2.dat'
+        filename = os.path.join(self.root, 'extra', filename)
         return np.loadtxt(filename)
