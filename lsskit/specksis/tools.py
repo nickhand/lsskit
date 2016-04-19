@@ -59,7 +59,7 @@ def unstack_multipoles(poles, ells, new_column):
         all_data.append(unstack_multipoles_one(this_pole, ells, new_column))
 
     old_columns, ells = zip(*ells)
-    all_data = np.reshape(all_data, poles.shape + (3,))
+    all_data = np.reshape(all_data, poles.shape + (len(ells),))
     coords = [poles.coords[dim].values for dim in poles.dims] + [np.array(ells)]
     return SpectraSet(all_data, coords, poles.dims+('ell',))
     
