@@ -204,6 +204,6 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         if scaled:
             filename = 'wilson_random_win_Ncutsky_0.4_fidcosmo_strim_7.00e+02_smooth_201x2.dat'
         else:
-            filename = 'wilson_random_win_Ncutsky_0.3_truecosmo_strim_7.00e+02_smooth_201x2.dat'
+            filename = 'wilson_random_win_Ncutsky_0.3_truecosmo_strim_7.00e+02_smooth_401x2.dat'
         filename = os.path.join(self.root, 'extra', filename)
         return np.loadtxt(filename)
