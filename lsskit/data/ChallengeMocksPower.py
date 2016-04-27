@@ -259,3 +259,53 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             
             setattr(self, name, toret)
             return toret
+            
+    def get_shifted_poles(self, name, tag="", average=False, subtract_shot_noise=True):
+        """
+        Return the N-series multipoles in redshift space, which haven been shifted in
+        space (and computed with Bianchi algorithm)
+        """
+        if name not in ['boss_like', 'plane_parallel']:
+            raise ValueError("please choose a name from 'boss_like' or 'plane_parallel'")
+            
+        tag_ = '_'+tag if tag else ''
+        if tag: name += tag_
+        
+        name_ = name
+        if average:
+            name_ += '_mean'
+        
+        try:
+            return getattr(self, 'shifted_poles_%s' %name_)
+        except AttributeError:
+            
+            # load the data from file
+            basename = 'poles_challenge_boxN{box}_shifted_unscaled_%s.dat' %name
+            coords = [self.boxes]
+            d = os.path.join(self.root, 'poles')
+            
+            loader = io.load_power
+            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            kwargs = {'usecols':usecols, 'mapcols':mapcols}
+            poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kwargs)
+
+            # reindex and add the errors
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+
+            # now convert
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
+            poles = tools.unstack_multipoles(poles, ells, 'power')
+
+            if subtract_shot_noise:
+                for key in poles.ndindex():
+                    if key['ell'] == 0:
+                        p = poles.loc[key].values
+                        p['power'] = p['power'] - p.attrs['shot_noise']
+
+            # average?
+            if average:
+                poles = poles.average(axis='box', weights='modes')
+            
+            setattr(self, name, poles)
+            return poles
