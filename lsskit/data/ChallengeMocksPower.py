@@ -201,7 +201,8 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # multipoles data
     #--------------------------------------------------------------------------
-    def get_poles(self, spacing="dk005", Nmu=100, scaled=False, average=None, tag="", include_tetrahex=False):
+    def get_poles(self, subtract_shot_noise=True, spacing="dk005", Nmu=100, 
+                    scaled=False, average=None, tag="", include_tetrahex=False):
         """
         Return the N-series multipoles in redshift space
         """
@@ -247,18 +248,24 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
             if include_tetrahex: 
                 ells.append(('tetrahex', 6))
-            toret = tools.unstack_multipoles(poles, ells, 'power')
+            poles = tools.unstack_multipoles(poles, ells, 'power')
+
+            if subtract_shot_noise:
+                for key in poles.ndindex():
+                    if key['ell'] == 0:
+                        p = poles.loc[key].values
+                        p['power'] = p['power'] - p.attrs['volume'] / p.attrs['N1']
 
             # average?
             if len(average):
-                toret = toret.average(axis=average, weights='modes')
+                poles = poles.average(axis=average, weights='modes')
 
             # add the errors
             pkmu = self.get_Pgal(spacing=_spacing, Nmu=Nmu, average=average, scaled=scaled, tag=tag)
-            toret.add_power_pole_errors(pkmu)
+            poles.add_power_pole_errors(pkmu)
             
-            setattr(self, name, toret)
-            return toret
+            setattr(self, name, poles)
+            return poles
             
     def get_shifted_poles(self, name, tag="", average=False, subtract_shot_noise=True):
         """
