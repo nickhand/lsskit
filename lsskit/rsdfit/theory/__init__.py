@@ -5,8 +5,12 @@ def load_nbar(val):
     Load the nbar from the shot noise file
     """
     import pickle
+    from pyRSD.rsdfit.parameters.tools import replace_vars
     
     val = val.split(":")
+    if '$' in val[0]:
+        val = replace_vars(val, {})
+    
     nbar = pickle.load(open(val[0], 'r'))
     if len(val) > 1:
         sl = dict(eval(val[1]))
