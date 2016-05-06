@@ -288,7 +288,7 @@ def write_analysis_file(kind,
     # case of P(k) or P(k,mu)
     if kind == 'power':
         Pshot = 0. if not subtract_shot_noise else get_Pshot(power)
-        data = power.data.data.copy() # removes the mask
+        data = power.data.copy() # removes the mask
         data['power'] -= Pshot
         coords = [power['k_cen'], power['mu_cen']]
     
