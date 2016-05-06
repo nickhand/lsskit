@@ -54,6 +54,11 @@ def write_analysis_file():
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    coords = data.coords
+    for c in coords:
+        if c in args.key:
+            dt = data.coords[c].dtype.type
+            args.key[c] = [dt(x) for x in args.key[c]]
     
     # now slice
     for k in args.key:
@@ -193,10 +198,10 @@ def write_data_gaussian_covariance():
     pkmu_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     pkmu_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
-    pkmu_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'a list of (lower, upper) specifying the mu bin bounds'
     pkmu_parser.add_argument('mu_bounds', type=str, help=h)
+    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
+    pkmu_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     
     # poles parser
     pole_parser = subparsers.add_parser('poles')
@@ -204,10 +209,10 @@ def write_data_gaussian_covariance():
     pole_parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
     h = parse_tools.PowerSpectraCallable.format_help()
     pole_parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
-    pole_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
     h = 'the multipole numbers'
     pole_parser.add_argument('ells', type=str, help=h)
+    h = "the data keys to slice the data on; specified as `a = '0.6452'`"
+    pole_parser.add_argument('key', type=str, nargs='+', action=parse_tools.StoreDataKeys, help=h)
 
     # options
     for p in [pkmu_parser, pole_parser]:
@@ -227,6 +232,11 @@ def write_data_gaussian_covariance():
     
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
+    coords = data.coords
+    for c in coords:
+        if c in args.key:
+            dt = data.coords[c].dtype.type
+            args.key[c] = [dt(x) for x in args.key[c]]
     
     # now slice
     for k in args.key:
