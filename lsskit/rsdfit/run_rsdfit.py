@@ -74,6 +74,11 @@ def write_rsdfit_params(mode, config, output, theory_options=[]):
     data.to_file(output)
     theory.to_file(output)
     
+    # get the output name
+    tags = [x.name for x in [driver, theory, data] if x.name]
+    output_dir = os.path.join(driver.output, "_".join(tags))
+    print output_dir
+    
     
 def run_rsdfit(mode=None, config=None, theory_options=[], command=None, run=True, rsdfit_options=[]):
     """
