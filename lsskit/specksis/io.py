@@ -235,11 +235,11 @@ def _write_analysis_file(filename, data, columns, coords, kmin, kmax):
         if len(shape) > 1:
             ff.write("{:d} {:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
-            np.savetxt(ff, data[columns].ravel(order='F'))
+            np.savetxt(ff, data[columns].ravel(order='F'), fmt='%.5e')
         else:
             ff.write("{:d}\n".format(*shape))
             ff.write(" ".join(columns)+"\n")
-            np.savetxt(ff, data[columns])
+            np.savetxt(ff, data[columns], fmt='%.5e')
             
 def write_analysis_file(kind, 
                         filename, 
