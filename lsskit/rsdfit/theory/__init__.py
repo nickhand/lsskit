@@ -1,5 +1,41 @@
 from .. import AttrDict
+
+def load_nbar(val):
+    """
+    Load the nbar from the shot noise file
+    """
+    import pickle
+    
+    val = val.split(":")
+    nbar = pickle.load(open(val[0], 'r'))
+    if len(val) > 1:
+        sl = dict(eval(val[1]))
+        nbar = nbar.sel(**sl)
         
+    if nbar.size != 1:
+        raise ValueError(("shot noise loaded from file should be one value; "
+                          "please provide a slice via format [('key1', val), ('key2', val)]"))
+    nbar = 1.0 / nbar.values
+    return nbar
+     
+
+class NBarParam(AttrDict):
+    """
+    Nbar can be loaded from a shot noise file
+    """
+    def __setattr__(self, key, val): 
+        if key == 'fiducial':
+            if isinstance(key, str):
+                try:
+                    val = load_nbar(val)
+                except Exception as e:
+                    msg = "error trying to load nbar from file: '%s'\n" %val
+                    msg += '\toriginal exception: %s' %str(e)
+                    raise ValueError(msg)
+            
+        return dict.__setattr__(self, key, val)
+
+       
 class ModelParams(AttrDict):
     
     defaults = {'z' : None, 
@@ -71,7 +107,7 @@ class TheoryParams(object):
         # amplitude
         self.NcBs  = AttrDict(vary=False, fiducial=4.5e4)
         self.NsBsB = AttrDict(vary=False, fiducial=9.45e4)
-        self.nbar  = AttrDict(vary=False, fiducial=3.117e-4)
+        self.nbar  = NBarParam(vary=False, fiducial=3.117e-4)
         self.N     = AttrDict(vary=False, fiducial=0, prior='uniform', lower=0, upper=500, min=0)
 
         # so vs fof
