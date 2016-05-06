@@ -25,7 +25,7 @@ def get_Pshot(power):
         raise ValueError('input power object in get_Pshot needs a `attrs` attribute')
 
     attrs = power.attrs
-    if 'shot_noise' in attrs:
+    if 'shot_noise' in attrs and attrs['shot_noise'] > 0.:
         Pshot = attrs['shot_noise']
     elif 'volume' in attrs and 'N1' in attrs:
         Pshot = attrs['volume'] / attrs['N1']
