@@ -4,7 +4,7 @@ class DriverParams(object):
     """
     Class to hold and manipulate the driver parameters required for fitting
     """
-    valid_params = ['fitter', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
+    valid_params = ['solver_type', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
                      'lbfgs_epsilon', 'lbfgs_use_priors', 'lbfgs_options', 'init_scatter']
     
     def __iter__(self):
@@ -52,18 +52,18 @@ class DriverParams(object):
             ff.write("driver.%s = %s\n" %(name, repr(par)))
                         
     @property
-    def fitter(self):
+    def solver_type(self):
         """
-        The type of fitter, default is `emcee`
+        The type of solver_type, default is `emcee`
         """
         try:
-            return self._fitter
+            return self._solver_type
         except:
             return 'emcee'
     
-    @fitter.setter
-    def fitter(self, val):
-        self._fitter = val
+    @solver_type.setter
+    def solver_type(self, val):
+        self._solver_type = val
         
     @property
     def output(self):
