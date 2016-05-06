@@ -5,8 +5,7 @@ class DriverParams(object):
     Class to hold and manipulate the driver parameters required for fitting
     """
     valid_params = ['fitter', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
-                     'lbfgs_epsilon', 'lbfgs_factor', 'lbfgs_use_bounds', 'lbfgs_use_priors', 
-                     'init_scatter']
+                     'lbfgs_epsilon', 'lbfgs_use_priors', 'lbfgs_options', 'init_scatter']
     
     def __iter__(self):
         """
@@ -139,12 +138,12 @@ class DriverParams(object):
     @property
     def lbfgs_epsilon(self):
         """
-        The step-size for derivatives in LBFGS; default is 1e-8
+        The step-size for derivatives in LBFGS; default is 1e-4
         """
         try:
             return self._lbfgs_epsilon
         except:
-            return 1e-8
+            return 1e-4
     
     @lbfgs_epsilon.setter
     def lbfgs_epsilon(self, val):
@@ -165,18 +164,18 @@ class DriverParams(object):
         self._init_scatter = val
         
     @property
-    def lbfgs_factor(self):
+    def lbfgs_options(self):
         """
-        The convergence factor in LBFGS; default is 1e8
+        The options in LBFGS
         """
         try:
-            return self._lbfgs_factor
+            return self._lbfgs_options
         except:
-            return 1e8
+            return {'xtol':1e-4, 'ftol':1e-6, 'gtol':1e-5, 'maxiter':500}
     
-    @lbfgs_factor.setter
-    def lbfgs_factor(self, val):
-        self._lbfgs_factor = val
+    @lbfgs_options.setter
+    def lbfgs_options(self, val):
+        self._lbfgs_options = val
         
     @property
     def lbfgs_use_bounds(self):
