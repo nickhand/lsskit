@@ -267,7 +267,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             setattr(self, name, poles)
             return poles
             
-    def get_shifted_poles(self, name, tag="", average=False, subtract_shot_noise=True):
+    def get_shifted_poles(self, name, tag="", average=None, subtract_shot_noise=True):
         """
         Return the N-series multipoles in redshift space, which haven been shifted in
         space (and computed with Bianchi algorithm)
@@ -278,24 +278,30 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
         tag_ = '_'+tag if tag else ''
         if tag: name += tag_
         
+        if average is not None:
+            if isinstance(average, str):
+                average = [average]
+        else:
+            average = []
+            
         name_ = name
-        if average:
-            name_ += '_mean'
+        if len(average):
+            name_ += '_' + '_'.join(average)
         
         try:
             return getattr(self, 'shifted_poles_%s' %name_)
         except AttributeError:
             
             # load the data from file
-            basename = 'poles_challenge_boxN{box}_shifted_unscaled_%s.dat' %name
-            coords = [self.boxes]
+            basename = 'poles_challenge_boxN{box}_shifted_unscaled_shift{shift}_%s.dat' %name
+            coords = [self.boxes, [0, 1, 2]]
             d = os.path.join(self.root, 'poles')
             
             loader = io.load_power
             mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
-            poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kwargs)
+            poles = SpectraSet.from_files(loader, d, basename, coords, ['box', 'shift'], args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
             poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
@@ -311,8 +317,8 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
                         p['power'] = p['power'] - p.attrs['shot_noise']
 
             # average?
-            if average:
-                poles = poles.average(axis='box', weights='modes')
+            if len(average):
+                poles = poles.average(axis=average, weights='modes')
             
             setattr(self, name, poles)
             return poles
