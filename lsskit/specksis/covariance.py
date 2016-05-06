@@ -113,6 +113,52 @@ def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
     kw = {'ells':ells, 'kmin':kmin, 'kmax':kmax, 'power':data['power'], 'components':components}
     return _return_covariance('pole', grid, **kw)
 
+def cutsky_pole_gausscov(pkmu, ells, cosmo, zbins, nbar_spline, P0, fsky, kmin=-np.inf, kmax=np.inf):
+    """
+    Compute the gaussian covariance for a set of cutsky multipole measurements,
+    from the measured P(k,mu) simulation boxes
+    
+    Parameters
+    ----------
+    pkmu : nbodykit.PkmuResult
+        the mean P(k,mu) periodic measurement, on the finely-binned grid
+    ells : array_like, (Nell,)
+        the desired multipole numbers
+    cosmo : pygcl.Cosmology
+        the cosmology instance used in the volume calculation
+    zbins : array_like
+        bins in redshift, used in the volume calculation
+    nbar_spline : callable
+        a function returning n(z)
+    P0 : float
+        the value of P0 used in the FKP weight
+    fsky : float
+        the fraction of the sky area covered
+    kmin : {float, array_like}, optional
+        minimum wavenumber to trim by (inclusively), in h/Mpc
+    kmax : {float, array_like}, optional
+        maximum wavenumber to trim by (inclusively), in h/Mpc
+        
+    Returns
+    -------
+    cov : (N, N)
+        the covariance matrix for the multipole measurements
+    coords : list
+        list of the flat coordinates corresponding to the the cov
+
+    """    
+    # initialize the grid transfer
+    data = pkmu.data.copy()
+    grid = PkmuGrid.from_structured([pkmu.coords['k_cen'], pkmu.coords['mu_cen']], data)
+    
+    # return the Gaussian covariance components
+    power = data['power'] - tools.get_Pshot(pkmu)    
+    transfer = PolesTransfer(grid, ells, kmin=kmin, kmax=kmax, power=power)
+
+    coords = transfer.coords_flat
+    C = transfer.to_cutsky_covariance(cosmo, zbins, nbar_spline, P0, fsky)
+    return C, coords
+
 #------------------------------------------------------------------------------
 # gaussian covariance from best-fit model
 #------------------------------------------------------------------------------
@@ -328,7 +374,7 @@ def compute_pkmu_covariance(pkmu_set,
     if kmax is None: kmax = np.inf
     
     # first stack the structured arrays
-    arr = np.asarray([x.data for x in pkmu_set])
+    arr = np.asarray([x.values.data for x in pkmu_set])
     arr = np.rollaxis(arr, 0, arr.ndim)
      
     # get the coordinates from the first box
