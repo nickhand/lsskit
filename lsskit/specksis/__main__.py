@@ -105,6 +105,13 @@ def write_analysis_grid():
     # get the data from the parent data and function
     data = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
     
+    if args.key is not None:
+        coords = data.coords
+        for c in coords:
+            if c in args.key:
+                dt = data.coords[c].dtype.type
+                args.key[c] = [dt(x) for x in args.key[c]]
+            
     # now slice
     if args.key is not None:
         for k in args.key:
@@ -113,11 +120,12 @@ def write_analysis_grid():
             args.key[k] = args.key[k][0]
         try:
             data = data.sel(**args.key)
+            if data.size == 1: data = data.values
         except Exception as e:
             raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
     
     # now make the grid and save to plaintext file
-    grid = PkmuGrid.from_pkmuresult(data.values)
+    grid = PkmuGrid.from_pkmuresult(data)
     grid.to_plaintext(args.output)
 
 
