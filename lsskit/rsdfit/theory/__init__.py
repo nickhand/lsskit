@@ -9,8 +9,8 @@ def load_nbar(val):
     
     val = val.split(":")
     if '$' in val[0]:
-        val = replace_vars(val, {})
-    
+        val[0] = replace_vars(val[0], {})
+        
     nbar = pickle.load(open(val[0], 'r'))
     if len(val) > 1:
         sl = dict(eval(val[1]))
