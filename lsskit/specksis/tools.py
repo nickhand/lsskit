@@ -152,16 +152,17 @@ def get_Pshot(power):
         raise ValueError('input power object in get_Pshot needs a `attrs` attribute')
 
     attrs = power.attrs
-    volume = 0.
-    if 'volume' in attrs:
-        volume = attrs['volume']
-    elif 'box_size' in attrs:
-        volume = attrs['box_size']**3
-    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz']):
-        volume = attrs['Lx']*attrs['Ly']*attrs['Lz']
+    if 'shot_noise' in attrs:
+        Pshot = attrs['shot_noise']
+    elif 'volume' in attrs and 'N1' in attrs:
+        Pshot = attrs['volume'] / attrs['N1']
+    elif 'box_size' in attrs and 'N1' in attrs:
+        Pshot = attrs['box_size']**3 / attrs['N1']
+    elif all(x in attrs for x in ['Lx', 'Ly', 'Lz', 'N1']):
+        Pshot = attrs['Lx']*attrs['Ly']*attrs['Lz'] / attrs['N1']
     else:
-        raise ValueError("cannot compute volume for shot noise")
-    return volume / attrs['N1']
+        raise ValueError("cannot compute shot noise")
+    return Pshot
         
 def trim_zeros_indices(filt):
     """
