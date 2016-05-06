@@ -1,5 +1,4 @@
 import xarray as xr
-import itertools
 
 from . import utils, tools
 from .. import numpy as np
