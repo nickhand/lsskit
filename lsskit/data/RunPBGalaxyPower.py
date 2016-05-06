@@ -3,7 +3,7 @@ from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, utils, tools, io
 import os
 
-class RunPBGalaxy(PowerSpectraLoader):
+class RunPBGalaxyPower(PowerSpectraLoader):
     
     name = "RunPBGalaxyPower"
     a = ['0.6452']
