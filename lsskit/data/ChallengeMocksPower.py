@@ -139,7 +139,8 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # power data
     #--------------------------------------------------------------------------            
-    def get_Pgal(self, spacing="dk005", Nmu=100, scaled=False, average=None, tag=""):
+    def get_Pgal(self, spacing="dk005",subtract_shot_noise=False, 
+                    Nmu=100, scaled=False, average=None, tag=""):
         """
         Return the total galaxy spectrum in redshift space
         """
@@ -179,6 +180,11 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
                 pkmu = (Pgal.loc[key]).values
                 pkmu['power'] = pkmu['power'].real
                 
+            if subtract_shot_noise:
+                for key in Pgal.ndindex():
+                    p = Pgal.loc[key].values
+                    p['power'] = p['power'] - p.attrs['volume'] / p.attrs['N1']
+                        
             if len(average):
                 Pgal = Pgal.average(axis=average, weights='modes')
             
