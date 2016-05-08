@@ -54,12 +54,12 @@ class DriverParams(object):
     @property
     def solver_type(self):
         """
-        The type of solver_type, default is `emcee`
+        The type of solver_type, default is `mcmc`
         """
         try:
             return self._solver_type
         except:
-            return 'emcee'
+            return 'mcmc'
     
     @solver_type.setter
     def solver_type(self, val):
@@ -115,7 +115,7 @@ class DriverParams(object):
         try:
             return self._test_convergence
         except:
-            return False
+            return True if self.solver_type != 'mcmc' else False
     
     @test_convergence.setter
     def test_convergence(self, val):
