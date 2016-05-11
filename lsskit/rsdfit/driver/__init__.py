@@ -234,6 +234,10 @@ class DriverParams(object):
         if val is None:
             self._start_from = val
             return
+            
+        from pyRSD.rsdfit.parameters.tools import replace_vars
+        if '$' in val:
+            val = replace_vars(val, {})
         
         import os
         if not os.path.exists(val):
