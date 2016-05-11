@@ -87,15 +87,19 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             setattr(self, name, poles)
             return poles
             
-    def get_my_poles(self, scaled=False, average=False, tag="", subtract_shot_noise=True):
+    def get_my_poles(self, space='redshift', scaled=False, average=False, tag="", 
+                        subtract_shot_noise=True):
         """
         Return the cutsky galaxy multipoles in redshift space, measured
         for my 84 box realizations
         """ 
-        scaled_tag = 'scaled' if scaled else 'unscaled'
-        name = '_my_poles_' + scaled_tag
-        if average: name += '_mean'
+        if space not in ['real', 'redshift']:
+            raise ValueError("`space` should be 'real' or 'redshift'")
         
+        scaled_tag = 'scaled' if scaled else 'unscaled'
+        name = '_my_poles_%s' %space + scaled_tag
+        if average: name += '_mean'
+    
         if tag: 
             tag = '_'+tag
             name += tag
@@ -106,7 +110,10 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         
             # form the filename and load the data
             d = os.path.join(self.root, 'nbodykit/poles')
-            basename = 'poles_my_cutskyN{box:d}_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
+            if space == 'redshift':
+                basename = 'poles_my_cutskyN{box:d}_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
+            else:
+                basename = 'poles_my_cutskyN{box:d}_real_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
 
             # read in the data
             loader = io.load_power
