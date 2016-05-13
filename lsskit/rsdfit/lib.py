@@ -121,7 +121,8 @@ def construct_rsdfit_call(config, stat, kmax,
     return command.split() + ['run', '-o', output_dir, '-p', param_file] + rsdfit_options
    
 def run_rsdfit(config, stat, kmax, 
-                theory_options=[], rsdfit_options=[], tag="", command=None):
+                theory_options=[], rsdfit_options=[], tag="", 
+                command=None, nodes=None, partition=None):
     """
     Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
     parameter file the from input arguments.
@@ -156,14 +157,49 @@ def run_rsdfit(config, stat, kmax,
             'tag':tag, 'command':command}
     call_signature = construct_rsdfit_call(config, stat, kmax, **kws)
     
-    # now run
-    try:
-        ret = subprocess.call(call_signature)
-        if ret: raise
-    except:
-        raise RuntimeError("error calling command: %s" %" ".join(call_signature))
-    finally:
-        i = call_signature.index('-p')
-        param_file = call_signature[i+1]
-        if os.path.exists(param_file):
-           os.remove(param_file)
+    # run the command
+    if nodes is None and partition is None:
+        try:
+            ret = subprocess.call(call_signature)
+            if ret: raise
+        except:
+            raise RuntimeError("error calling command: %s" %" ".join(call_signature))
+        finally:
+            i = call_signature.index('-p')
+            param_file = call_signature[i+1]
+            if os.path.exists(param_file):
+               os.remove(param_file)
+    # submit the job
+    else:
+        if nodes is None or partition is None:
+            raise ValueError("both `nodes` and `partition` must be given to submit job")
+        
+        command = " ".join(call_signature)
+        submit_rsdfit_job(command, nodes, partition)
+
+def submit_rsdfit_job(command, nodes, partition):
+    """
+    Submit a ``rsdfit`` job via the SLURM batch scheduling system
+    
+    Parameters
+    ----------
+    command : str
+        the ``rsdfit`` command to run
+    nodes : int
+        the number of nodes to request
+    partition : str
+        the queue to submit the job to
+    """
+    batch_file = """#!/bin/bash
+    
+    source /project/projectdirs/m779/python-mpi/nersc/activate.sh
+    bcast -v $TAR_DIR/$NERSC_HOST/pyRSD*
+    
+    N=$(($CPUS_PER_NODE * $SLURM_NNODES))
+    srun -n $N %s
+    """
+    batch_file = batch_file %command
+    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition]
+    
+    p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
+    p.communicate(batch_file)

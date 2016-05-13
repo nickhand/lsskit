@@ -53,6 +53,12 @@ def run_rsdfit():
     h = 'the executable command to call, i.e, ``rsdfit`` or ``mpirun -n 2 rsdfit``'
     parser.add_argument('--command', type=str, help=h)
     
+    h = 'the number of nodes to use when submitting the job'
+    parser.add_argument('-N', '--nodes', type=int, help=h)
+    
+    h = 'the partition to submit the job to'
+    parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'] help=h)
+    
     # required named arguments
     group = parser.add_argument_group('configuration arguments')
     
@@ -72,10 +78,10 @@ def run_rsdfit():
     ns, other = parser.parse_known_args()
     
     kws = {'rsdfit_options':other, 'theory_options':ns.theory_options, 
-            'tag':ns.tag, 'command':ns.command}
+            'tag':ns.tag, 'command':ns.command, 'nodes':ns.nodes,
+            'partition':ns.partition}
     lib.run_rsdfit(ns.config, ns.stat, ns.kmax, **kws)
-    
-
+        
 #------------------------------------------------------------------------------
 # SYNCING UTILITIES
 #------------------------------------------------------------------------------
