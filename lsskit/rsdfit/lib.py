@@ -10,11 +10,11 @@
 import os, sys
 import tempfile
 import subprocess
+import string
 
 from . import DriverParams, BaseTheoryParams
 from . import PkmuDataParams, PoleDataParams
 from . import RSDFIT_BIN, RSDFIT_PARAMS
-
 
 def write_rsdfit_params(mode, config, output, theory_options=[]):
     """
@@ -162,8 +162,13 @@ def run_rsdfit(config, stat, kmax,
         try:
             ret = subprocess.call(call_signature)
             if ret: raise
-        except:
-            raise RuntimeError("error calling command: %s" %" ".join(call_signature))
+        except Exception as e:
+            if not isinstance(e, KeyboardInterrupt):        
+                msg = "error calling ``rsdfit``:\n" + "-"*20 + "\n"
+                msg += "\toriginal command:\n\t\t%s\n" %(" ".join(call_signature))
+                msg += "\toriginal exception: %s\n" %e.msg
+                e.msg = msg
+            raise e
         finally:
             i = call_signature.index('-p')
             param_file = call_signature[i+1]
@@ -203,3 +208,32 @@ def submit_rsdfit_job(command, nodes, partition):
     
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
+    
+def my_string_parse(formatter, s, keys):
+    l = list(string.Formatter.parse(formatter, s))
+    toret = []
+    for x in l:
+        if x[1] in keys:
+            toret.append(x)
+        else:
+            val = x[0]
+            if x[1] is not None:
+                fmt = "" if not x[2] else ":%s" %x[2]
+                val += "{%s%s}" %(x[1], fmt)
+            toret.append((val, None, None, None))
+    return iter(toret)
+    
+def make_temp_config(config, key, value):
+    """
+    Format the configuration file
+    """
+    # initialize a special string formatter
+    formatter = string.Formatter()
+    formatter.parse = lambda l: my_string_parse(formatter, l, key)
+    
+    d = dict(zip(key, value))
+    with tempfile.NamedTemporaryFile(delete=False) as ff:
+        fname = ff.name
+        ff.write(formatter.format(config, **d))
+        
+    return fname

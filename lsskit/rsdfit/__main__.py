@@ -8,6 +8,7 @@
 """
 import argparse 
 import os
+import sys
 
 from lsskit.rsdfit import lib, sync
 from lsskit.rsdfit.theory import valid_theory_options
@@ -57,7 +58,7 @@ def run_rsdfit():
     parser.add_argument('-N', '--nodes', type=int, help=h)
     
     h = 'the partition to submit the job to'
-    parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'] help=h)
+    parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
     
     # required named arguments
     group = parser.add_argument_group('configuration arguments')
@@ -76,12 +77,101 @@ def run_rsdfit():
     
     # parse known and unknown arguments
     ns, other = parser.parse_known_args()
-    
-    kws = {'rsdfit_options':other, 'theory_options':ns.theory_options, 
-            'tag':ns.tag, 'command':ns.command, 'nodes':ns.nodes,
-            'partition':ns.partition}
-    lib.run_rsdfit(ns.config, ns.stat, ns.kmax, **kws)
+
+    # get the kwargs
+    kws = {}
+    kws['rsdfit_options'] = other
+    kws['theory_options'] = ns.theory_options
+    kws['tag'] = ns.tag
+    kws['command'] = ns.command
+    kws['nodes'] = ns.nodes
+    kws['partition'] = ns.partition
+
+    # can accept input ``box`` values to loop over
+    if not sys.stdin.isatty():
         
+        # the iteration values to loop over
+        itervalues = [line.split() for line in sys.stdin.readlines()]
+        iterkeys = itervalues[0]
+        itervalues = itervalues[1:]
+        
+        # the input config file
+        config = open(ns.config, 'r').read()
+        
+        # run for each iteration
+        for ival in itervalues:
+           
+            # make the param file and run
+            try:
+                param_file = lib.make_temp_config(config, iterkeys, ival)
+                lib.run_rsdfit(param_file, ns.stat, ns.kmax, **kws)
+            
+            # if KeyboardInterrupt, continue on to next
+            except KeyboardInterrupt:
+                pass
+            except Exception as e:
+                raise e
+            finally:
+                # if we actually ran rsdfit, delete the temp file
+                if ns.partition is None and ns.nodes is None:
+                    if os.path.exists(param_file):
+                       os.remove(param_file)
+
+    # just call the ``rsdfit`` command
+    else: # no stdin data
+        lib.run_rsdfit(ns.config, ns.stat, ns.kmax, **kws)
+        
+
+def iter_rsdfit():
+    """
+    Iterate over one or more sequences, printing out the product
+    
+    Examples
+    --------
+    >> iter_rsdfit "box: [1, 2, 3]; los: ['x', 'y', 'z']"
+    box los
+    1 x
+    1 y
+    1 z
+    2 x
+    2 y
+    2 z
+    3 x
+    3 y
+    3 z
+    """
+    import yaml
+    import itertools
+    
+    desc = "iterate over one or more sequences, print the product to stdout"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    h = "the input list of sequences, of the form key1: seq1; key2: seq2"
+    parser.add_argument('input', type=str, help=h)
+    
+    ns = parser.parse_args()
+        
+    # do the yaml load, replacing any semicolons with newlines
+    s = ns.input.replace(';', '\n')
+    s = s.replace('\n ', '\n')
+    s = yaml.load(s)
+    for k in s:
+        if not isinstance(s[k], list):
+            s[k] = eval(s[k])
+    
+    # take the product
+    keys = list(s.keys())
+    output = itertools.product(*[s[k] for k in keys])
+    
+    # make the individual lines of the output
+    toret = [" ".join(keys) + '\n']
+    for v in output:
+        toret.append(" ".join(map(str, v)) + '\n')
+    
+    # write to stdout
+    sys.stdout.writelines(toret)
+    
+    
 #------------------------------------------------------------------------------
 # SYNCING UTILITIES
 #------------------------------------------------------------------------------

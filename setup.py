@@ -29,7 +29,8 @@ setup(
             'write_rsdfit_params = lsskit.rsdfit.__main__:write_rsdfit_params',
             'sync_rsdfit_models = lsskit.rsdfit.__main__:sync_rsdfit_models',
             'sync_rsdfit_data = lsskit.rsdfit.__main__:sync_rsdfit_data',
-            'sync_rsdfit_fits = lsskit.rsdfit.__main__:sync_rsdfit_fits'
+            'sync_rsdfit_fits = lsskit.rsdfit.__main__:sync_rsdfit_fits',
+            'iter_rsdfit = lsskit.rsdfit.__main__:iter_rsdfit'
         ]
     },
 )
