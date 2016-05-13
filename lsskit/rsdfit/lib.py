@@ -209,7 +209,22 @@ def submit_rsdfit_job(command, nodes, partition):
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
     
-def my_string_parse(formatter, s, keys):
+def MyStringParse(formatter, s, keys):
+    """
+    Special string format parser that will only 
+    format certain keys, doing nothing with
+    others
+    
+    Parameters
+    ----------
+    formatter : string.Formatter
+        the base formatter class
+    s : str
+        the string we are formatting
+    keys: list
+        the list of keys we are formatting, ignoring
+        all other keys
+    """
     l = list(string.Formatter.parse(formatter, s))
     toret = []
     for x in l:
@@ -225,11 +240,29 @@ def my_string_parse(formatter, s, keys):
     
 def make_temp_config(config, key, value):
     """
-    Format the configuration file
+    Make a temporary configuration file, by string formatting
+    the input string and writing to a temporary file
+    
+    Parameters
+    ----------
+    config : str
+        the lines of the input template configuration file, 
+        returned via read()
+    key : list
+        list of the names for each iteration dimension that
+        serve as the string formatting keys
+    values : list
+        list of tuples providing the string formatting values
+        for each iteration
+    
+    Returns
+    -------
+    str :
+        the name of the temporary file that was written to
     """
     # initialize a special string formatter
     formatter = string.Formatter()
-    formatter.parse = lambda l: my_string_parse(formatter, l, key)
+    formatter.parse = lambda l: MyStringParse(formatter, l, key)
     
     d = dict(zip(key, value))
     with tempfile.NamedTemporaryFile(delete=False) as ff:
