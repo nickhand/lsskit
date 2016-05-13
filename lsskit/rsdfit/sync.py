@@ -3,9 +3,11 @@ import os
 
 from . import RSDFIT_MODELS, RSDFIT_DATA, RSDFIT_FITS
 
+RSYNC = "rsync -e ssh -avzl --progress --delete"
+
 class NERSCConnection(object):
     """
-    Context manager to connect to NERSC
+    Context manager to connect to NERSC via ``ssh``
     """
     def __init__(self, host):
         
@@ -20,13 +22,25 @@ class NERSCConnection(object):
         
         
     def run(self, cmd):
+        """
+        Run a command on NERSC remotely via ssh; this first 
+        source the bash profile on NERSC before executing any
+        commands
+        
+        Returns
+        -------
+        str:
+            the stdout return value
+        """
         
         cmd = "source ~/.bash_profile; " + cmd
         stdin, stdout, stderr = self.ssh_client.exec_command(cmd)
         return stdout.read().rstrip()
     
     def __enter__(self):
-        
+        """
+        Use paramiko to connect to NERSC over ``ssh``
+        """
         # ssh client
         self.ssh_client = SSHClient()
         self.ssh_client.load_system_host_keys()
@@ -38,10 +52,11 @@ class NERSCConnection(object):
         return self
         
     def __exit__ (self, exc_type, exc_value, traceback):
+        """
+        Close the ssh client when exiting the context
+        """
         self.ssh_client.close()
         
-RSYNC = "rsync -e ssh -avzl --progress --delete"
-
 def sync_models(host, dry_run=False):
     """
     Sync the RSD models to NERSC
