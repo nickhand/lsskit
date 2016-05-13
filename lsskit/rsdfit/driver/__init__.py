@@ -77,6 +77,9 @@ class DriverParams(object):
     
     @output.setter
     def output(self, val):
+        if '$' in val:
+            from pyRSD.rsdfit.parameters.tools import replace_vars
+            val = replace_vars(val, {})
         self._output = val
         
     @property
@@ -91,6 +94,10 @@ class DriverParams(object):
     
     @model_file.setter
     def model_file(self, val):
+        
+        if '$' in val:
+            from pyRSD.rsdfit.parameters.tools import replace_vars
+            val = replace_vars(val, {})    
         self._model_file = val
         
     @property
@@ -235,8 +242,8 @@ class DriverParams(object):
             self._start_from = val
             return
             
-        from pyRSD.rsdfit.parameters.tools import replace_vars
         if '$' in val:
+            from pyRSD.rsdfit.parameters.tools import replace_vars
             val = replace_vars(val, {})
         
         import os

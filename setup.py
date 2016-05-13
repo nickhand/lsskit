@@ -25,8 +25,8 @@ setup(
             'load_mock = lsskit.catio.__main__:load_mock',
             'write_mock_coordinates = lsskit.catio.__main__:write_coordinates',
             'gal_to_halo_samples = lsskit.catio.__main__:gal_to_halo_samples',
-            'run_rsdfit = lsskit.rsdfit.run_rsdfit:_run_rsdfit',
-            'write_rsdfit_params = lsskit.rsdfit.run_rsdfit:_write_rsdfit_params'
+            'run_rsdfit = lsskit.rsdfit.__main__:run_rsdfit',
+            'write_rsdfit_params = lsskit.rsdfit.__main__:write_rsdfit_params'
         ]
     },
 )

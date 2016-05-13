@@ -208,11 +208,14 @@ class DataParams(object):
         
     @property
     def name(self):
-        try:
-            s = "kmax%.1f" %self.kmax[0]
-            return s.replace('.', '')
-        except:
-            return ''
+        
+        if 'qpm' in self.covariance.lower():
+            if 'diagonal' in self.covariance_lower():
+                return 'qpmcov_diag'
+            else:
+                return 'qpmcov'
+        else:
+            return 'gausscov'
         
         
 class PkmuDataParams(DataParams):
