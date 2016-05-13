@@ -26,7 +26,10 @@ setup(
             'write_mock_coordinates = lsskit.catio.__main__:write_coordinates',
             'gal_to_halo_samples = lsskit.catio.__main__:gal_to_halo_samples',
             'run_rsdfit = lsskit.rsdfit.__main__:run_rsdfit',
-            'write_rsdfit_params = lsskit.rsdfit.__main__:write_rsdfit_params'
+            'write_rsdfit_params = lsskit.rsdfit.__main__:write_rsdfit_params',
+            'sync_rsdfit_models = lsskit.rsdfit.__main__:sync_rsdfit_models',
+            'sync_rsdfit_data = lsskit.rsdfit.__main__:sync_rsdfit_data',
+            'sync_rsdfit_fits = lsskit.rsdfit.__main__:sync_rsdfit_fits'
         ]
     },
 )

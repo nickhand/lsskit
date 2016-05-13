@@ -9,7 +9,7 @@
 import argparse 
 import os
 
-from lsskit.rsdfit import lib
+from lsskit.rsdfit import lib, sync
 from lsskit.rsdfit.theory import valid_theory_options
 
 def ExistingFile(f):
@@ -74,3 +74,63 @@ def run_rsdfit():
     kws = {'rsdfit_options':other, 'theory_options':ns.theory_options, 
             'tag':ns.tag, 'command':ns.command}
     lib.run_rsdfit(ns.config, ns.stat, ns.kmax, **kws)
+    
+
+#------------------------------------------------------------------------------
+# SYNCING UTILITIES
+#------------------------------------------------------------------------------
+def sync_rsdfit_models():
+    """
+    Sync the ``rsdfit`` models, using `rsync`
+    """
+    desc = "sync the ``rsdfit`` models stored in ``RSDFIT_MODELS``, using `rsync`"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    h = 'the remote host; either `cori` or `edison`'
+    parser.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
+    
+    h = 'show what would have been transferred'
+    parser.add_argument('-n', '--dry-run', action='store_true', help=h)
+    
+    ns = parser.parse_args()
+    sync.sync_models(ns.host, dry_run=ns.dry_run)
+    
+def sync_rsdfit_data():
+    """
+    Sync the ``rsdfit`` data, using `rsync`
+    """
+    desc = "sync the ``rsdfit`` data stored in ``RSDFIT_DATA``, using `rsync`"
+    parser = argparse.ArgumentParser(description=desc)
+    
+    h = 'the remote host; either `cori` or `edison`'
+    parser.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
+    
+    h = 'show what would have been transferred'
+    parser.add_argument('-n', '--dry-run', action='store_true', help=h)
+    
+    ns = parser.parse_args()
+    sync.sync_data(ns.host, dry_run=ns.dry_run)
+    
+def sync_rsdfit_fits():
+    """
+    Sync the ``rsdfit`` fits, using `rsync`
+    """
+    desc = "sync the ``rsdfit`` fits stored in ``RSDFIT_FITS``, using `rsync`"
+    parser = argparse.ArgumentParser(description=desc)
+
+    h = 'the transfer direction; either `to` or `from` the remote host'
+    parser.add_argument('direction', type=str, choices=['to', 'from'], help=h)
+    
+    h = 'the remote host; either `cori` or `edison`'
+    parser.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
+    
+    h = 'an additional subpath from RSDFIT_FITS to sync only'
+    parser.add_argument('-d', '--dir', type=str, help=h)
+
+    h = 'show what would have been transferred'
+    parser.add_argument('-n', '--dry-run', action='store_true', help=h)
+    
+    ns = parser.parse_args()
+    sync.sync_fits(ns.direction, ns.host, path=ns.dir, dry_run=ns.dry_run)
+    
+    
