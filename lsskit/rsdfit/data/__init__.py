@@ -1,5 +1,6 @@
 from .. import AttrDict
 import numpy as np
+import copy
 
 class DataParams(object):
     """
@@ -10,6 +11,9 @@ class DataParams(object):
                     'covariance', 'covariance_rescaling', 'covariance_Nmocks', 
                     'rescale_inverse_covariance', 'mode', 'mu_bounds', 'ells', 
                     'grid_file', 'window_file']
+    
+    def copy(self):
+        return copy.copy(self)
     
     def __iter__(self):
         """

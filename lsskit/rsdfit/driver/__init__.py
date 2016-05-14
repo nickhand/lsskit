@@ -1,4 +1,5 @@
 from .. import AttrDict
+import copy
 
 class DriverParams(object):
     """
@@ -7,6 +8,9 @@ class DriverParams(object):
     valid_params = ['solver_type', 'init_from', 'start_from', 'burnin', 'test_convergence', 'epsilon',
                      'lbfgs_epsilon', 'lbfgs_use_priors', 'lbfgs_options', 'init_scatter']
     
+    def copy(self):
+        return copy.copy(self)
+        
     def __iter__(self):
         """
         Iterate over the valid parameters

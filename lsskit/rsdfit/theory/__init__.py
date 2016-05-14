@@ -1,4 +1,5 @@
 from .. import AttrDict
+import copy
 
 def load_nbar(val):
     """
@@ -29,7 +30,7 @@ class NBarParam(AttrDict):
     """
     def __setattr__(self, key, val): 
         if key == 'fiducial':
-            if isinstance(key, str):
+            if isinstance(val, str):
                 try:
                     val = load_nbar(val)
                 except Exception as e:
@@ -134,6 +135,9 @@ class TheoryParams(object):
         self.__dict__['_name'] = None
         self.__dict__['options'] = []
     
+    def copy(self):
+        return copy.copy(self)
+        
     @property
     def name(self):
         """
