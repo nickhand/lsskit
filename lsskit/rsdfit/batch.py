@@ -75,7 +75,6 @@ class RSDFitBatch(object):
     
     def __init__(self, comm, 
                        cpus_per_worker,
-                       batch_param_file, 
                        command, 
                        task_keys, 
                        task_values, 
@@ -89,11 +88,8 @@ class RSDFitBatch(object):
         cpus_per_worker : int
             the desired number of ranks assigned to each independent
             worker, when iterating over the tasks in parallel
-        batch_param_file : str
-            the name of the configuration file holding the
-            parameters to update
-        command : RSDFitCommand
-            the ``rsdfit`` command instance
+        command : RSDFitBatchCommand
+            the batch ``rsdfit`` command instance
         task_keys : list
             a list of strings specifying the names of the task dimensions -- 
             these specify the string formatting key when updating the config
@@ -120,55 +116,36 @@ class RSDFitBatch(object):
         
         # the parser
         self.parser = rsdfit_parser()
-        
-        # get the batch parameters
-        self.batch_params = lib.read_batch_parameters(batch_param_file)
-        
+                
         # initialize a special string formatter
         self.formatter = string.Formatter()
         self.formatter.parse = lambda l: lib.MyStringParse(self.formatter, l, self.task_keys)
+        
+        # compute the batch params from the command
+        self.batch_params = lib.find_batch_parameters(self.command.config, self.task_keys)
                 
     def task_kwargs(self, itask):
         """
         The dictionary of parameters to update for each task
         """
         return dict(zip(self.task_keys, self.task_values[itask]))
-    
-    def get_command(self, itask):
-        """
-        Copy and update the command for this task
-        """
-        # make a copy of command
-        command = self.command.copy()
         
-        # task dict for this iteration
-        kwargs = self.task_kwargs(itask)
-                
-        # do the string formatting and update the command
-        for p in self.batch_params:
-            d = getattr(command, p.key)
-            v = self.formatter.format(p.value, **kwargs)
-            rsetattr(d, p.subkey, v)
-            
-        return command
-    
     def initialize_driver(self):
         """
         Initialize the `RSDFitDriver` object on all ranks
         """
         # update with first value
         itask = 0
-        task = self.task_values[itask]
 
         # master will parse the args
         this_config = None; rsdfit_args = None
         if self.comm.rank == 0:
                   
-            # get the command
-            command = self.get_command(itask)
+            # get the kwargs
+            kwargs = self.task_kwargs(itask)
             
             # this writes out the param file
-            with command:
+            with self.command.update(kwargs, self.formatter) as command:
                 this_config = command.param_file
                 self.logger.debug("creating temporary file: %s" %this_config)
                 rsdfit_args = command.args
@@ -345,14 +322,12 @@ class RSDFitBatch(object):
         update_data = False; update_model = False
         fit_params = self.driver.algorithm.theory.fit_params
         
-        # get the command
-        command = self.get_command(itask)
+        # get the kwargs for this task
+        kwargs = self.task_kwargs(itask)
         
         # update the attributes of the RSDFitDriver
-        with command:
+        with self.command.update(kwargs, self.formatter) as command:
             args = vars(self.parser.parse_args(command.args))
-            print "TASK = ", self.task_values[itask]
-            print "args = ", args
             for k in args:
                 setattr(self.driver, k, args[k])
             
@@ -362,16 +337,16 @@ class RSDFitBatch(object):
                 # the updated value
                 v = rgetattr(getattr(command, p.key), p.subkey)
                             
+                # driver param
                 if p.key == 'driver':
-                    print "setting driver param: ", p.subkey, v
                     self.driver.algorithm.params.add(p.subkey, value=v)
+                # data param
                 elif p.key == 'data':
-                    print "setting data param: ", p.subkey, v
                     self.driver.algorithm.data.params.add(p.subkey, value=v)
                     update_data = True
+                # theory param
                 elif p.key == 'theory':
                     
-                    print "setting theory param: ", p.subkey, v
                     name = p.subkey.split('.')[0]
                     if name not in fit_params:
                         raise ValueError("cannot update value of theory parameter '%s'; does not exist" %name)
@@ -380,12 +355,11 @@ class RSDFitBatch(object):
                     fit_params[name].fiducial = v
                     update_model = True
                         
-                
-        # re-initialize the data
+        # update the data?
         if update_data:
             self.driver.algorithm.data.initialize()
             
-        # update the model values        
+        # update the model?        
         if update_model:
             fit_params.update_values()
             self.driver.algorithm.theory.update_model()
