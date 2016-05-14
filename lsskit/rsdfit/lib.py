@@ -17,131 +17,7 @@ import copy
 from . import DriverParams, BaseTheoryParams
 from . import PkmuDataParams, PoleDataParams
 from . import RSDFIT_BIN, RSDFIT_PARAMS
-
-class RSDFitCommand(object):
-    """
-    Class to represent a ``rsdfit`` command
-    """
-    def __init__(self, config, stat, kmax, 
-                    theory_options=[], options=[], tag="", executable=None):
-        """    
-        Parameters
-        ----------
-        config : str
-            the name of the file holding the configuration parameters, from which the
-            the parameter file for ``rsdfit`` will be initialized
-        stat : str, {`pkmu`, `poles`}
-            either `pkmu` or `poles` -- the mode of the RSD fit
-        kmax : list
-            the kmax values to use
-        theory_options : list
-            list of options to apply the theory model, i.e., `mu_corr` or `so_corr`
-        options : list
-            list of additional options to pass to the ``rsdfit`` command
-        tag : str
-            the name of the tag to append to the output directory
-        executable : str
-            the executable command to call
-
-        """    
-        # initialize the driver, theory, and data parameter objects
-        self.driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
-        self.theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
-        if stat == 'pkmu':
-            self.data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
-        else:
-            self.data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
-            
-        # apply any options to the theory model
-        if theory_options is not None:
-            self.theory.apply_options(*theory_options)
-        
-        # set the kmax
-        self.data.kmax = kmax
-        
-        # store the rest
-        self.tag = tag
-        self.executable = executable
-        self.input_options = options
-        if self.executable is None: self.executable = RSDFIT_BIN
-        
-        # initialize the components
-        self.output_dir = None
-        self.param_file = None
-        self.args       = None
-    
-    def copy(self):
-        return copy.copy(self)    
-    
-    @property
-    def initialized(self):
-        """
-        Whether the commmand has been properly initialized
-        """
-        return self.param_file is not None
-    
-    def __enter__(self):
-        """
-        Initialize the temporary file and write the parameters
-        """
-        # write out the parameters to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as ff:
-            self.param_file = ff.name
-        
-            # write out the parameters to the specified output
-            self.driver.to_file(ff)
-            self.data.to_file(ff)
-            self.theory.to_file(ff)
-            
-        # get the output name
-        tags = [x.name for x in [self.data, self.theory, self.driver] if x.name]
-        if self.tag: tags.append(self.tag)
-        self.output_dir = os.path.join(self.driver.output, self.driver.solver_type + '_' + "_".join(tags))
-    
-        # copy the options
-        self.args = list(self.input_options)
-        
-        # now add the rest of the options
-        self.args += ['run', '-o', self.output_dir, '-p', self.param_file]
-        
-        # add the model?
-        if self.driver.model_file is not None:
-            if all(x not in self.args for x in ['-m', '--model']):
-                self.args += ['-m', self.driver.model_file]
-
-        # add extra param file?
-        if all(x not in self.args for x in ['-xp', '--extra_params']):
-            xparams = os.path.join(RSDFIT_PARAMS, 'general', 'extra.params')
-            if os.path.isfile(xparams):
-                self.args += ['-xp', xparams]
-
-        # return
-        return self
-        
-    def __exit__(self, *args):
-        """
-        Reset the command
-        """
-        # reset
-        self.output_dir = None
-        self.param_file = None
-        self.args       = None
-
-    def __str__(self):
-        """
-        The string representation of the command
-        """
-        return " ".join(self.__call__())
-    
-    def __call__(self):
-        """
-        Return the `split` command as a list
-        """
-        if not self.initialized:
-            raise ValueError("``rsdfit`` command not currently initialized")
-        
-        return self.executable.split() + self.args
-
+from .command import RSDFitCommand
 
 def write_rsdfit_params(mode, config, output, theory_options=[]):
     """
@@ -330,7 +206,7 @@ def make_temp_config(config, key, value):
         
     return fname
     
-def read_batch_parameters(fname):
+def find_batch_parameters(config, keys):
     """
     Read the parameters that will be updated for each iteration in 
     batch mode, from a template configuration file
@@ -349,7 +225,7 @@ def read_batch_parameters(fname):
     BatchParam = namedtuple('BatchParam', ['key', 'subkey', 'value'])
     
     toret = []
-    lines = open(fname, 'r').readlines()
+    lines = config.split("\n")
     for line in lines:
         
         li = line.strip()
@@ -359,9 +235,12 @@ def read_batch_parameters(fname):
                 
                 names = fields[0].strip().split('.')
                 subkey = '.'.join(names[1:])
-                value = eval(fields[1].strip())
+                value = fields[1].strip()
                 
-                tup = BatchParam(key=names[0], subkey=subkey, value=value)
-                toret.append(tup)
+                # check if this is valid key
+                if any("{%s}" %k in value for k in keys):
+                    value = eval(value)
+                    tup = BatchParam(key=names[0], subkey=subkey, value=value)
+                    toret.append(tup)
                 
     return toret
