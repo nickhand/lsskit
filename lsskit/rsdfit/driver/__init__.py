@@ -32,7 +32,10 @@ class DriverParams(object):
         ns = {'driver':self}
         for name in ignore:
             ns[name] = AttrDict()
-        execfile(filename, ns)
+        if hasattr(filename, 'read'):
+            execfile(filename, ns)
+        else:
+            exec(filename, ns)
         
     @classmethod
     def from_file(cls, filename, **kwargs):

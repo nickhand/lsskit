@@ -276,7 +276,10 @@ class TheoryParams(object):
         ns = {'theory':self, 'model': self.model}
         for name in ignore:
             ns[name] = AttrDict()
-        execfile(filename, ns)
+        if hasattr(filename, 'read'):
+            execfile(filename, ns)
+        else:
+            exec(filename, ns)
         
     @classmethod
     def from_file(cls, filename, **kwargs):
