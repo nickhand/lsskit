@@ -5,6 +5,7 @@ import tempfile
 from mpi4py import MPI
 
 from lsskit.rsdfit import lib, batch, RSDFIT_BATCH
+from lsskit.rsdfit.command import RSDFitBatchCommand
 
 # setup the logging
 rank = MPI.COMM_WORLD.rank
@@ -32,8 +33,8 @@ def main():
             worker, when iterating over the tasks in parallel""" 
     parser.add_argument('cpus_per_worker', type=int, help=h)
     
-    h = 'the name of the file holding the batch parameters to update'
-    parser.add_argument('batch_param_file', type=str, help=h)
+    h = 'the name of the file holding the template configuration parameters'
+    parser.add_argument('config_template', type=str, help=h)
     
     h = 'the executable command to call, i.e, ``rsdfit`` or ``mpirun -n 2 rsdfit``'
     parser.add_argument('--command', type=str, help=h)
@@ -50,9 +51,6 @@ def main():
     
     # required named arguments
     group = parser.add_argument_group('rsdfit configuration')
-    
-    h = 'the name of the base configuration file'
-    group.add_argument('-c', '--config', dest='base_config', type=str, required=True, help=h)
     
     h = 'the statistic; either pkmu or poles'
     group.add_argument('--stat', choices=['pkmu', 'poles'], required=True, help=h)
@@ -119,17 +117,15 @@ def main():
     kws['theory_options'] = ns.theory_options
     kws['tag'] = ns.tag
     kws['executable'] = ns.command
-    # kws['nodes'] = ns.nodes
-    # kws['partition'] = ns.partition
-    command = lib.RSDFitCommand(ns.base_config, ns.stat, ns.kmax, **kws)
+    command = RSDFitBatchCommand(ns.config_template, ns.stat, ns.kmax, **kws)
         
+    # format the tasks
     task_values = [line.split() for line in tasks]
     task_keys = task_values[0]
     task_values = task_values[1:]
 
     # initialize the task manager
-    args = (MPI.COMM_WORLD, ns.cpus_per_worker, ns.batch_param_file, 
-            command, task_keys, task_values)
+    args = (MPI.COMM_WORLD, ns.cpus_per_worker, command, task_keys, task_values)
     manager = batch.RSDFitBatch(*args, log_level=ns.log_level)
     
     # and run!
