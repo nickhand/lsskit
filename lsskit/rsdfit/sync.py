@@ -120,7 +120,7 @@ def sync_params(host, dry_run=False):
     # get the data directory
     with NERSCConnection(host) as nersc:
         remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT'")
-
+        
     # the command + options 
     cmd = RSYNC
     if dry_run: cmd += ' --dry-run'
