@@ -49,6 +49,9 @@ def main():
     h = 'the partition to submit the job to'
     parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
     
+    h = 'just print the output file and exit'
+    parser.add_argument('-o', '--output', dest='print_output', action='store_true', help=h)
+    
     # required named arguments
     group = parser.add_argument_group('rsdfit configuration')
     
@@ -80,7 +83,7 @@ def main():
         tasks = MPI.COMM_WORLD.bcast(tasks)
 
     # submit the job, instead of running
-    if ns.nodes is not None or ns.partition is not None:
+    if not ns.print_output and ns.nodes is not None or ns.partition is not None:
         if ns.nodes is None or ns.partition is None:
             raise ValueError("both `nodes` and `partition` must be given to submit job")
 
@@ -126,7 +129,7 @@ def main():
 
     # initialize the task manager
     args = (MPI.COMM_WORLD, ns.cpus_per_worker, command, task_keys, task_values)
-    manager = batch.RSDFitBatch(*args, log_level=ns.log_level)
+    manager = batch.RSDFitBatch(*args, log_level=ns.log_level, print_output=ns.print_output)
     
     # and run!
     manager.run_all()

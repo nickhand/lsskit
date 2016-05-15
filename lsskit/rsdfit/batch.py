@@ -78,7 +78,8 @@ class RSDFitBatch(object):
                        command, 
                        task_keys, 
                        task_values, 
-                       log_level=logging.INFO):
+                       log_level=logging.INFO,
+                       print_output=False):
         """
         Parameters
         ----------
@@ -100,8 +101,11 @@ class RSDFitBatch(object):
         log_level : int, optional
             an integer specifying the logging level to use -- default
             is the `INFO` level
+        print_output : bool, optional
+            just print the intended output directory and exit
         """
         self.logger.setLevel(log_level)
+        self.print_output    = print_output
         
         self.cpus_per_worker = cpus_per_worker
         self.command         = command
@@ -214,6 +218,16 @@ class RSDFitBatch(object):
         """
         Run all of the tasks
         """    
+        # just print the output directories and return
+        if self.print_output:
+            if self.rank == 0:
+                for i in range(len(self.task_values)):
+                    self._print_output(i)
+                return 
+            else:
+                return 
+        
+        
         # define MPI message tags
         tags = enum('READY', 'DONE', 'EXIT', 'START')
         status = MPI.Status()
@@ -276,7 +290,10 @@ class RSDFitBatch(object):
         
                     # do the work here
                     if tag == tags.START:
-                        result = self.run_rsdfit(itask)
+                        if self.print_output:
+                            result = self._print_output(itask)
+                        else:
+                            result = self.run_rsdfit(itask)
                         self.pool_comm.Barrier() # wait for everyone
                         if self.pool_comm.rank == 0:
                             self.comm.send(result, dest=0, tag=tags.DONE) # done this task
@@ -307,6 +324,22 @@ class RSDFitBatch(object):
                 if os.path.exists(self.temp_config): 
                     self.logger.debug("removing temporary file: %s" %self.temp_config)
                     os.remove(self.temp_config)
+    
+    def _print_output(self, itask):
+        """
+        Just print the output
+        """
+        # get the kwargs for this task
+        kwargs = self.task_kwargs(itask)
+        
+        # update the attributes of the RSDFitDriver
+        with self.command.update(kwargs, self.formatter) as command:
+            
+            # just print the output and return
+            print command.output_dir
+            if os.path.exists(command.param_file):
+               os.remove(command.param_file)
+            return
     
     def run_rsdfit(self, itask):
         """
