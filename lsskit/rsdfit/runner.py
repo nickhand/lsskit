@@ -1,6 +1,54 @@
 import argparse
 import os
 import textwrap as tw
+import sys
+import subprocess
+import time
+
+def get_modified_time(o):
+    return "last modified: %s" % time.ctime(os.path.getmtime(o))
+    
+    
+class OutputAction(argparse.Action):
+    """
+    Action similar to ``help`` to print out 
+    the output directories and the last modified times
+    """
+    def __init__(self,
+                 option_strings,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help=None):
+        super(OutputAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        
+        print "Output directories\n" + "-"*20
+        for i, command in enumerate(RSDFitRunner.commands):
+            
+            command += " --output"
+            
+            # print test number first
+            toprint = "%d:\n" %i
+            
+            # get the output directories
+            output = RSDFitRunner._execute(command, output_only=True)
+            for o in output: 
+                s = " "*4 + o + "\n"
+                if os.path.isdir(o):
+                    s += " "*8 + get_modified_time(o) + '\n'
+                else:
+                    s += " "*8 + "does not exist yet" + '\n'
+                toprint += s
+                
+            print toprint
+            
+        parser.exit()
 
 class InfoAction(argparse.Action):
     """
@@ -50,16 +98,29 @@ class RSDFitRunner(object):
         """
         # parse and get the command
         ns = cls.parse_args()
-        command = cls.commands[ns.testno]
+        cls._execute(cls.commands[ns.testno])
+            
+    @classmethod
+    def _execute(cls, command, output_only=False):
+        """
+        Internal function to execute the command
+        """        
+        # extract the relevant output directories
+        if output_only:
+            with open(os.devnull, 'w') as FNULL:
+                out = subprocess.check_output(command, shell=True, stderr=FNULL)
+            return [o for o in out.split("\n") if o]
+        # just run the command
+        else:
         
-        # print the command
-        c = tw.dedent(command).strip()
-        c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
-        print "executing:\n%s" %c
+            # print the command
+            c = tw.dedent(command).strip()
+            c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
+            print "executing:\n%s" %c
         
-        # execute
-        os.system(command)
-    
+            # execute
+            os.system(command)
+
     @classmethod
     def parse_args(cls):
         """
@@ -73,6 +134,9 @@ class RSDFitRunner(object):
         
         h = 'print out the various commands'
         parser.add_argument('-i', '--info', action=InfoAction, help=h)
+        
+        h = 'print out the output directories and last modified timees for each registerd command'
+        parser.add_argument('-o', '--output', action=OutputAction, help=h)
         
         ns = parser.parse_args()
         
