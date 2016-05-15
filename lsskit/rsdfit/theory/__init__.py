@@ -1,4 +1,4 @@
-from .. import AttrDict
+from .. import AttrDict, os
 import copy
 
 def load_nbar(val):
@@ -276,7 +276,7 @@ class TheoryParams(object):
         ns = {'theory':self, 'model': self.model}
         for name in ignore:
             ns[name] = AttrDict()
-        if hasattr(filename, 'read'):
+        if os.path.isfile(filename):
             execfile(filename, ns)
         else:
             exec(filename, ns)

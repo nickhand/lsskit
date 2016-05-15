@@ -1,4 +1,4 @@
-from .. import AttrDict
+from .. import AttrDict, os
 import numpy as np
 import copy
 
@@ -36,7 +36,7 @@ class DataParams(object):
         ns = {'data':self}
         for name in ignore:
             ns[name] = AttrDict()
-        if hasattr(filename, 'read'):
+        if os.path.isfile(filename):
             execfile(filename, ns)
         else:
             exec(filename, ns)

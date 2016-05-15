@@ -1,4 +1,4 @@
-from .. import AttrDict
+from .. import AttrDict, os
 import copy
 
 class DriverParams(object):
@@ -32,7 +32,7 @@ class DriverParams(object):
         ns = {'driver':self}
         for name in ignore:
             ns[name] = AttrDict()
-        if hasattr(filename, 'read'):
+        if os.path.isfile(filename):
             execfile(filename, ns)
         else:
             exec(filename, ns)
