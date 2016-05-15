@@ -217,7 +217,7 @@ class DataParams(object):
     def name(self):
         
         if 'qpm' in self.covariance.lower():
-            if 'diagonal' in self.covariance_lower():
+            if 'diagonal' in self.covariance.lower():
                 return 'qpmcov_diag'
             else:
                 return 'qpmcov'
