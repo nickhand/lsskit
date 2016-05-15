@@ -16,7 +16,6 @@ import copy
 
 from . import DriverParams, BaseTheoryParams
 from . import PkmuDataParams, PoleDataParams
-from . import RSDFIT_BIN, RSDFIT_PARAMS
 from .command import RSDFitCommand
 
 def write_rsdfit_params(mode, config, output, theory_options=[]):

@@ -1,7 +1,7 @@
 from paramiko import SSHClient, SSHConfig
 import os
 
-from . import RSDFIT_MODELS, RSDFIT_DATA, RSDFIT_FITS
+from . import RSDFIT, RSDFIT_MODELS, RSDFIT_DATA, RSDFIT_FITS
 
 RSYNC = "rsync -e ssh -avzl --progress --delete"
 
@@ -84,7 +84,7 @@ def sync_models(host, dry_run=False):
 
 def sync_data(host, dry_run=False):
     """
-    Sync the RSD data to NERSC
+    Sync the RSDFit ``data`` directory to NERSC
     
     Parameters
     ----------
@@ -100,9 +100,58 @@ def sync_data(host, dry_run=False):
     # the command + options 
     cmd = RSYNC
     if dry_run: cmd += ' --dry-run'
+    cmd += " --exclude='.*'"
     
     # add the directories and run the command
     cmd += " %s nhand@%s:%s" %(RSDFIT_DATA, host, remote_dir)
+    ret = os.system(cmd)
+        
+def sync_params(host, dry_run=False):
+    """
+    Sync the RSDFit ``params`` directory to NERSC
+    
+    Parameters
+    ----------
+    host : {'cori', 'edison'}
+        the name of the remote host
+    dry_run : bool, optional
+        whether to do a dry-run
+    """
+    # get the data directory
+    with NERSCConnection(host) as nersc:
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT'")
+
+    # the command + options 
+    cmd = RSYNC
+    if dry_run: cmd += ' --dry-run'
+    cmd += " --exclude='.*'"
+    
+    # add the directories and run the command
+    cmd += " %s/params/ nhand@%s:%s/params" %(RSDFIT, host, remote_dir)
+    ret = os.system(cmd)
+    
+def sync_run(host, dry_run=False):
+    """
+    Sync the RSDFit ``run`` directory to NERSC
+    
+    Parameters
+    ----------
+    host : {'cori', 'edison'}
+        the name of the remote host
+    dry_run : bool, optional
+        whether to do a dry-run
+    """
+    # get the data directory
+    with NERSCConnection(host) as nersc:
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT'")
+
+    # the command + options 
+    cmd = RSYNC
+    if dry_run: cmd += ' --dry-run'
+    cmd += " --exclude='.*'"
+    
+    # add the directories and run the command
+    cmd += " %s/run/ nhand@%s:%s/run" %(RSDFIT, host, remote_dir)
     ret = os.system(cmd)
 
 def sync_fits(direction, host, path=None, dry_run=False):

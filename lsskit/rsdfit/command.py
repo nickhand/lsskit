@@ -2,7 +2,7 @@ import tempfile
 import string
 import os
 
-from . import RSDFIT_BIN, RSDFIT_BATCH, RSDFIT_PARAMS
+from . import RSDFIT_BIN, RSDFIT_BATCH, RSDFIT
 from . import DriverParams, BaseTheoryParams
 from . import PkmuDataParams, PoleDataParams
 
@@ -71,7 +71,7 @@ class BaseCommand(object):
 
         # add extra param file?
         if all(x not in self.args for x in ['-xp', '--extra_params']):
-            xparams = os.path.join(RSDFIT_PARAMS, 'general', 'extra.params')
+            xparams = os.path.join(RSDFIT, 'params', 'general', 'extra.params')
             if os.path.isfile(xparams):
                 self.args += ['-xp', xparams]
 

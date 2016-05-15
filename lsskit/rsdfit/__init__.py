@@ -17,7 +17,7 @@ from .run_rsdfit import run_rsdfit
 
 import os
 
-__config__ = ['RSDFIT_BIN', 'RSDFIT', 'RSDFIT_FITS', 'RSDFIT_DATA', 'RSDFIT_MODELS', 'RSDFIT_PARAMS', 'RSDFIT_BATCH']
+__config__ = ['RSDFIT_BIN', 'RSDFIT', 'RSDFIT_FITS', 'RSDFIT_DATA', 'RSDFIT_MODELS', 'RSDFIT_BATCH']
 
 # default values are `None`
 for c in __config__:

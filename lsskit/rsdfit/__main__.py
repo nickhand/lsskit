@@ -171,40 +171,44 @@ def iter_rsdfit():
     # write to stdout
     sys.stdout.writelines(toret)
     
-#------------------------------------------------------------------------------
-# SYNCING UTILITIES
-#------------------------------------------------------------------------------
-def sync_rsdfit_models():
+def sync_rsdfit():
     """
     Sync the ``rsdfit`` models, using `rsync`
     """
-    desc = "sync the ``rsdfit`` models stored in ``RSDFIT_MODELS``, using `rsync`"
+    # the main parser
+    desc = "sync the ``rsdfit`` directory structure using `rsync`"
     parser = argparse.ArgumentParser(description=desc)
+    subparsers = parser.add_subparsers(dest='subparser_name')
     
+    # setup the parent
+    parent = argparse.ArgumentParser(add_help=False)
     h = 'the remote host; either `cori` or `edison`'
-    parser.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
-    
+    parent.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
     h = 'show what would have been transferred'
-    parser.add_argument('-n', '--dry-run', action='store_true', help=h)
+    parent.add_argument('-n', '--dry-run', action='store_true', help=h)
     
+    # models
+    h = 'sync the `$RSDFIT_MODELS` directory'
+    models = subparsers.add_parser('models', parents=[parent], help=h)
+    models.set_defaults(func=sync.sync_models)
+    
+    # data
+    h = 'sync the `$RSDFIT_DATA` directory'
+    data = subparsers.add_parser('data', parents=[parent], help=h)
+    data.set_defaults(func=sync.sync_data)
+    
+    # params
+    h = 'sync the `$RSDFIT/params` directory'
+    data = subparsers.add_parser('params', parents=[parent], help=h)
+    data.set_defaults(func=sync.sync_params)
+    
+    # run
+    h = 'sync the `$RSDFIT/run` directory'
+    data = subparsers.add_parser('run', parents=[parent], help=h)
+    data.set_defaults(func=sync.sync_run)
+
     ns = parser.parse_args()
-    sync.sync_models(ns.host, dry_run=ns.dry_run)
-    
-def sync_rsdfit_data():
-    """
-    Sync the ``rsdfit`` data, using `rsync`
-    """
-    desc = "sync the ``rsdfit`` data stored in ``RSDFIT_DATA``, using `rsync`"
-    parser = argparse.ArgumentParser(description=desc)
-    
-    h = 'the remote host; either `cori` or `edison`'
-    parser.add_argument('host', type=str, choices=['cori', 'edison'], help=h)
-    
-    h = 'show what would have been transferred'
-    parser.add_argument('-n', '--dry-run', action='store_true', help=h)
-    
-    ns = parser.parse_args()
-    sync.sync_data(ns.host, dry_run=ns.dry_run)
+    ns.func(ns.host, dry_run=ns.dry_run)
     
 def sync_rsdfit_fits():
     """
