@@ -86,7 +86,7 @@ def run_rsdfit(config, stat, kmax,
     # make the call signature
     kws = {}
     kws['theory_options'] = theory_options
-    kws['options'] = rsdfit_options, 
+    kws['options'] = rsdfit_options 
     kws['tag'] = tag
     kws['executable'] = command
     
