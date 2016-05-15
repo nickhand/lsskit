@@ -7,8 +7,15 @@
     __desc__   : apply various options to the parameter set
 """
 
-valid_theory_options = ['mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas']
+valid_theory_options = ['mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
 
+def use_fixed_alphas(params):
+    """
+    Set alphas to 1 and do not vary
+    """
+    params.alpha_perp.update(vary=False, fiducial=1.0)
+    params.alpha_par.update(vary=False, fiducial=1.0)
+    
 def use_mu_corr(params):
     """
     Use the mu2, mu4 corrections
