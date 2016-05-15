@@ -15,6 +15,7 @@ def use_fixed_alphas(params):
     """
     params.alpha_perp.update(vary=False, fiducial=1.0)
     params.alpha_par.update(vary=False, fiducial=1.0)
+    params.options.append('fixed_alphas')
     
 def use_mu_corr(params):
     """
