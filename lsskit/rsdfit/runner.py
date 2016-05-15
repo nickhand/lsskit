@@ -142,7 +142,7 @@ class RSDFitRunner(object):
         parser.add_argument('-i', '--info', action=InfoAction, help=h)
         
         h = 'print out the output directories and last modified timees for each registerd command'
-        parser.add_argument('-r', '--report', dest='outpu', action=OutputAction, help=h)
+        parser.add_argument('-o', '--output', action=OutputAction, help=h)
         
         ns = parser.parse_args()
         
