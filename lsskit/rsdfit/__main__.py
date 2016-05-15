@@ -70,7 +70,7 @@ def run_rsdfit():
     group.add_argument('--kmax', type=float, nargs='*', required=True, help=h)
     
     h = 'additional options to apply the theory model, i.e., `mu_corr` or `so_corr`'
-    group.add_argument('-th', '--theory_options', type=str, nargs='*', help=h)
+    group.add_argument('-th', '--theory_options', type=str, choices=valid_theory_options, nargs='*', help=h)
     
     h = 'additional tag to append to the output directory'
     group.add_argument('--tag', type=str, default="", help=h)
