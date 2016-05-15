@@ -11,10 +11,6 @@ class AttrDict(dict):
        
 # load the important modules`
 import os
-from .theory.base import BaseTheoryParams
-from .data import PkmuDataParams, PoleDataParams
-from .driver import DriverParams
-from .runner import RSDFitRunner
 
 __config__ = ['RSDFIT_BIN', 'RSDFIT', 'RSDFIT_FITS', 'RSDFIT_DATA', 'RSDFIT_MODELS', 'RSDFIT_BATCH']
 
@@ -62,6 +58,11 @@ def _check_missing():
 _load_from_rc()
 _load_from_env()
 _check_missing()
+
+from .theory.base import BaseTheoryParams
+from .data import PkmuDataParams, PoleDataParams
+from .driver import DriverParams
+from .runner import RSDFitRunner
 
 
             

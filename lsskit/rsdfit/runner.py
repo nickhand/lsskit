@@ -4,11 +4,16 @@ import textwrap as tw
 import sys
 import subprocess
 import time
+from . import RSDFIT_FITS
 
 def get_modified_time(o):
     return "last modified: %s" % time.ctime(os.path.getmtime(o))
     
+def format_output(o):
     
+    relpath = os.path.relpath(o, RSDFIT_FITS)
+    return os.path.join("$RSDFIT_FITS", relpath)
+        
 class OutputAction(argparse.Action):
     """
     Action similar to ``help`` to print out 
@@ -39,7 +44,8 @@ class OutputAction(argparse.Action):
             # get the output directories
             output = RSDFitRunner._execute(command, output_only=True)
             for o in output: 
-                s = " "*4 + o + "\n"
+                o_ = format_output(o)
+                s = " "*4 + o_ + "\n"
                 if os.path.isdir(o):
                     s += " "*8 + get_modified_time(o) + '\n'
                 else:
@@ -136,7 +142,7 @@ class RSDFitRunner(object):
         parser.add_argument('-i', '--info', action=InfoAction, help=h)
         
         h = 'print out the output directories and last modified timees for each registerd command'
-        parser.add_argument('-o', '--output', action=OutputAction, help=h)
+        parser.add_argument('-r', '--report', dest='outpu', action=OutputAction, help=h)
         
         ns = parser.parse_args()
         
