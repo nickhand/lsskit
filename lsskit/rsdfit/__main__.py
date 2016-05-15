@@ -57,6 +57,9 @@ def run_rsdfit():
     h = 'the number of nodes to use when submitting the job'
     parser.add_argument('-N', '--nodes', type=int, help=h)
     
+    h = 'just print the output file and exit'
+    parser.add_argument('-o', '--output', action='store_true', help=h)
+    
     h = 'the partition to submit the job to'
     parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
     
@@ -86,6 +89,7 @@ def run_rsdfit():
     kws['command'] = ns.command
     kws['nodes'] = ns.nodes
     kws['partition'] = ns.partition
+    kws['print_output'] = ns.output
 
     # can accept input ``box`` values to loop over
     if not sys.stdin.isatty():

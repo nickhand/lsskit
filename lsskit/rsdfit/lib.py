@@ -53,7 +53,7 @@ def write_rsdfit_params(mode, config, output, theory_options=[]):
        
 def run_rsdfit(config, stat, kmax, 
                 theory_options=[], rsdfit_options=[], tag="", 
-                command=None, nodes=None, partition=None):
+                command=None, nodes=None, partition=None, print_output=False):
     """
     Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
     parameter file the from input arguments.
@@ -74,14 +74,20 @@ def run_rsdfit(config, stat, kmax,
         either `pkmu` or `poles` -- the mode of the RSD fit
     kmax : list
         the kmax values to use
-    theory_options : list
+    theory_options : list, optional
         list of options to apply the theory model, i.e., `mu_corr` or `so_corr`
-    rsdfit_options : list
+    rsdfit_options : list, optional
         list of additional options to pass to the ``rsdfit`` command
-    tag : str
+    tag : str, optional
         the name of the tag to append to the output directory
-    command : str
+    command : str, optional
         the executable command to call
+    nodes : int, optional
+        the number of nodes to ask for when submitting the job
+    partition : str, optional
+        the partition to submit the job to
+    print_output : bool, optional
+        just print the intended output directory and exit
     """
     # make the call signature
     kws = {}
@@ -93,6 +99,13 @@ def run_rsdfit(config, stat, kmax,
     # create the command
     with RSDFitCommand(config, stat, kmax, **kws) as command:
     
+        # just print the output and return
+        if print_output:
+            print command.output_dir
+            if os.path.exists(command.param_file):
+               os.remove(command.param_file)
+            return
+        
         # run the command
         if nodes is None and partition is None:
             try:
