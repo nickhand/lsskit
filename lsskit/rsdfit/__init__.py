@@ -10,12 +10,11 @@ class AttrDict(dict):
             return AttrDict()
        
 # load the important modules`
+import os
 from .theory.base import BaseTheoryParams
 from .data import PkmuDataParams, PoleDataParams
 from .driver import DriverParams
-from .run_rsdfit import run_rsdfit
-
-import os
+from .runner import RSDFitRunner
 
 __config__ = ['RSDFIT_BIN', 'RSDFIT', 'RSDFIT_FITS', 'RSDFIT_DATA', 'RSDFIT_MODELS', 'RSDFIT_BATCH']
 
