@@ -112,15 +112,19 @@ class RSDFitRunner(object):
         """
         # parse and get the command
         ns = cls.parse_args()
-        cls._execute(cls.commands[ns.testno])
+        cls._execute(cls.commands[ns.testno], clean=ns.clean)
             
     @classmethod
-    def _execute(cls, command, output_only=False):
+    def _execute(cls, command, output_only=False, clean=False):
         """
         Internal function to execute the command
         """        
         # extract the relevant output directories
-        if output_only:
+        if output_only or clean:
+            
+            if "--output" not in command:
+                command += " --output"
+                
             with tempfile.TemporaryFile() as stderr:
                 try:
                     out = subprocess.check_output(command, shell=True, stderr=stderr)
@@ -137,8 +141,15 @@ class RSDFitRunner(object):
                             error = error.split("\n")
                             error = "\n".join([indent + l for l in error])
                             return ["warning: unknown exception raised:\n%s" %error]
-
-            return [o for o in out.split("\n") if o]
+                            
+            dirs = [o for o in out.split("\n") if o]
+            if not clean:
+                return dirs
+            else:
+                for d in dirs:
+                    p = os.path.join(d, '*')
+                    os.system("rm -i -r %s" %p)
+                
             
         # just run the command
         else:
@@ -167,6 +178,9 @@ class RSDFitRunner(object):
         
         h = 'print out the output directories and last modified timees for each registerd command'
         parser.add_argument('-o', '--output', action=OutputAction, help=h)
+        
+        h = 'remove all files from the specified output directory'
+        parser.add_argument('--clean', action='store_true', help=h)
         
         ns = parser.parse_args()
         
