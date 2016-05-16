@@ -132,6 +132,10 @@ class RSDFitRunner(object):
                     stderr.seek(0)
                     error = stderr.read()
                     if len(error):
+                        
+                        if clean:
+                            raise ValueError("cannot clean specified output directory due to exception")
+                        
                         if '`start_from`' in error:
                             return ["warning: `start_from` variable does not currently exist"]
                         elif "the input configuration file does not exist" in error:
@@ -147,8 +151,9 @@ class RSDFitRunner(object):
                 return dirs
             else:
                 for d in dirs:
-                    p = os.path.join(d, '*')
-                    os.system("rm -i -r %s" %p)
+                    if os.path.isdir(d):
+                        p = os.path.join(d, '*')
+                        os.system("rm -i -r %s" %p)
                 
             
         # just run the command
