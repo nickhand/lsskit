@@ -112,10 +112,11 @@ def run_rsdfit(config, stat, kmax,
                 ret = subprocess.call(command())
                 if ret: raise
             except Exception as e:
+                if e is None: e = Exception ()
                 if not isinstance(e, KeyboardInterrupt):        
                     msg = "error calling ``rsdfit``:\n" + "-"*20 + "\n"
                     msg += "\toriginal command:\n\t\t%s\n" %(command)
-                    msg += "\toriginal exception: %s\n" %e.msg
+                    msg += "\toriginal exception: %s\n" %str(e)
                     e.msg = msg
                 raise e
             finally:
