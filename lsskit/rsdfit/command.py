@@ -13,6 +13,10 @@ class BaseCommand(object):
     def __init__(self, config, stat, kmax, 
                     theory_options=[], options=[], tag="", executable=None):
     
+        # make sure the config file exists
+        if not os.path.isfile(config):
+            raise ValueError("the input configuration file does not exist")
+    
         # just store the options
         self.config         = config
         self.stat           = stat
