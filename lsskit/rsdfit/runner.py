@@ -4,6 +4,8 @@ import textwrap as tw
 import sys
 import subprocess
 import time
+import tempfile
+
 from . import RSDFIT_FITS
 
 def get_modified_time(o):
@@ -44,12 +46,18 @@ class OutputAction(argparse.Action):
             # get the output directories
             output = RSDFitRunner._execute(command, output_only=True)
             for o in output: 
-                o_ = format_output(o)
+                if 'warning' not in o:
+                    o_ = format_output(o)
+                else:
+                    o_ = "warning: no output directory information"
+
                 s = " "*4 + o_ + "\n"
                 if os.path.isdir(o):
                     s += " "*8 + get_modified_time(o) + '\n'
-                else:
+                elif 'warning' not in o:
                     s += " "*8 + "does not exist yet" + '\n'
+                else:
+                    s += " "*8 + o[8:] + '\n'
                 toprint += s
                 
             print toprint
@@ -113,9 +121,25 @@ class RSDFitRunner(object):
         """        
         # extract the relevant output directories
         if output_only:
-            with open(os.devnull, 'w') as FNULL:
-                out = subprocess.check_output(command, shell=True, stderr=FNULL)
+            with tempfile.TemporaryFile() as stderr:
+                try:
+                    out = subprocess.check_output(command, shell=True, stderr=stderr)
+                except subprocess.CalledProcessError as e:
+                    stderr.seek(0)
+                    error = stderr.read()
+                    if len(error):
+                        if '`start_from`' in error:
+                            return ["warning: `start_from` variable does not currently exist"]
+                        elif "the input configuration file does not exist" in error:
+                            return ["warning: the specified configuration file does not exist"]
+                        else:
+                            indent = " "*14
+                            error = error.split("\n")
+                            error = "\n".join([indent + l for l in error])
+                            return ["warning: unknown exception raised:\n%s" %error]
+
             return [o for o in out.split("\n") if o]
+            
         # just run the command
         else:
         
