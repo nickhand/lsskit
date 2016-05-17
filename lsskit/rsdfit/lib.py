@@ -165,8 +165,13 @@ def submit_rsdfit_job(command, nodes, partition, time):
     N=$(($CPUS_PER_NODE * $SLURM_NNODES))
     srun -n $N %s
     """
+    # get the slurm output dir
+    output_dir = os.path.join(os.path.abspath(os.path.curdir), 'output')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
     batch_file = batch_file %command
-    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time]
+    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time, '-o', '%s/slurm-%j.out' %output_dir]
     
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
