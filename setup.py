@@ -7,7 +7,6 @@ setup(
     author='Nick Hand',
     author_email='nicholas.adam.hand@gmail.com',
     packages=find_packages(),
-    #scripts=['bin/' + script for script in os.listdir('bin')],
     description='general utilities module for large scale structure analysis',
     entry_points={
         'console_scripts': [
@@ -32,5 +31,9 @@ setup(
             'iter_rsdfit = lsskit.rsdfit.__main__:iter_rsdfit',
             'run_batch_rsdfit = lsskit.rsdfit.run_batch_rsdfit:main'
         ]
+    options={
+        'build_scripts': {
+            'executable': '/usr/bin/env python',
+        },
     },
 )
