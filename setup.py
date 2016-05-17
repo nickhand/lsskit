@@ -27,6 +27,7 @@ setup(
             'gal_to_halo_samples = lsskit.catio.__main__:gal_to_halo_samples',
             'run_rsdfit = lsskit.rsdfit.__main__:run_rsdfit',
             'write_rsdfit_params = lsskit.rsdfit.__main__:write_rsdfit_params',
+            'sync_rsdfit_fits = lsskit.rsdfit.__main__:sync_rsdfit_fits',
             'sync_rsdfit = lsskit.rsdfit.__main__:sync_rsdfit',
             'iter_rsdfit = lsskit.rsdfit.__main__:iter_rsdfit',
             'run_batch_rsdfit = lsskit.rsdfit.run_batch_rsdfit:main'
