@@ -160,7 +160,7 @@ def submit_rsdfit_job(command, nodes, partition, time):
     batch_file = """#!/bin/bash
     
     source /project/projectdirs/m779/python-mpi/nersc/activate.sh
-    source activate $CONDA_DEFAULT_ENV
+    bcast -v $TAR_DIR/$NERSC_HOST/conda*
     bcast -v $TAR_DIR/$NERSC_HOST/pyRSD*
     
     N=$(($CPUS_PER_NODE * $SLURM_NNODES))
