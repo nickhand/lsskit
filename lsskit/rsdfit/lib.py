@@ -169,9 +169,10 @@ def submit_rsdfit_job(command, nodes, partition, time):
     output_dir = os.path.join(os.path.abspath(os.path.curdir), 'output')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    o = output_dir + os.sep + "slurm-%j.out"
     
     batch_file = batch_file %command
-    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time, '-o', '%s/slurm-%j.out' %output_dir]
+    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time, '-o', o]
     
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
