@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
-import os
+import os, subprocess, sys
+
+sys.executable = subprocess.check_output(["which", "python"])
+
 
 setup(
     name='lsskit',
@@ -31,9 +34,5 @@ setup(
             'iter_rsdfit = lsskit.rsdfit.__main__:iter_rsdfit',
             'run_batch_rsdfit = lsskit.rsdfit.run_batch_rsdfit:main'
         ]
-    options={
-        'build_scripts': {
-            'executable': '/usr/bin/env python',
-        },
     },
 )
