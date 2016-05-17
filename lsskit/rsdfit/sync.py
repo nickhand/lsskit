@@ -175,7 +175,7 @@ def sync_fits(direction, host, path=None, dry_run=False):
         remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT_FITS'")
 
     # the command + options 
-    cmd = [RSYNC]
+    cmd = [RSYNC.split('--delete')[0]]
     if dry_run: cmd.append('--dry-run')
     
     # add the directories and run the command
