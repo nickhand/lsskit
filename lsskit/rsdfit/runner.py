@@ -195,11 +195,13 @@ class RSDFitRunner(object):
         h = 'remove all files from the specified output directory'
         parser.add_argument('--clean', action='store_true', help=h)
         
+        # nersc related options
+        nersc = parser.add_argument_group("NERSC-related options")
         h = 'the number of nodes to request'
-        parser.add_argument('-N', '--nodes', type=int, help=h)
+        nersc.add_argument('-N', '--nodes', type=int, help=h)
         
         h = 'the NERSC partition to submit to'
-        parser.add_argument('-p', '--partition', type=str, help=h)
+        nersc.add_argument('-p', '--partition', type=str, help=h)
         
         ns = parser.parse_args()
         
