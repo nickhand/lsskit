@@ -6,7 +6,6 @@ import subprocess
 import time
 import tempfile
 
-from . import lib
 from . import RSDFIT_FITS
 
 def get_modified_time(o):
@@ -205,7 +204,7 @@ class RSDFitRunner(object):
         nersc.add_argument('-p', '--partition', type=str, help=h)
         
         h = 'the requested amount of time'
-        nersc.add_argument('-t', '--time', type=lib.slurm_time, help=h)
+        nersc.add_argument('-t', '--time', type=str, help=h)
         
         ns = parser.parse_args()
         
