@@ -1,8 +1,5 @@
 from setuptools import setup, find_packages
-import os, subprocess, sys
-
-sys.executable = subprocess.check_output(["which", "python"])
-
+import os
 
 setup(
     name='lsskit',
