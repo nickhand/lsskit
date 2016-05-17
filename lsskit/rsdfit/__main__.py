@@ -54,14 +54,19 @@ def run_rsdfit():
     h = 'the executable command to call, i.e, ``rsdfit`` or ``mpirun -n 2 rsdfit``'
     parser.add_argument('--command', type=str, help=h)
     
-    h = 'the number of nodes to use when submitting the job'
-    parser.add_argument('-N', '--nodes', type=int, help=h)
-    
     h = 'just print the output file and exit'
     parser.add_argument('-o', '--output', action='store_true', help=h)
     
+    nersc = parser.add_argument_group("NERSC-related options")
+    
+    h = 'the number of nodes to use when submitting the job'
+    nersc.add_argument('-N', '--nodes', type=int, help=h)    
+    
+    h = 'the requested amount of time'
+    nersc.add_argument('-t', '--time', type=lib.slurm_time, help=h)
+    
     h = 'the partition to submit the job to'
-    parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
+    nersc.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
     
     # required named arguments
     group = parser.add_argument_group('configuration arguments')
@@ -85,15 +90,16 @@ def run_rsdfit():
     ns, other = parser.parse_known_args()
 
     # get the kwargs
-    kws = {}
+    kws                   = {}
     kws['rsdfit_options'] = other
     kws['theory_options'] = ns.theory_options
-    kws['tag'] = ns.tag
-    kws['command'] = ns.command
-    kws['nodes'] = ns.nodes
-    kws['partition'] = ns.partition
-    kws['print_output'] = ns.output
-    kws['start'] = ns.start
+    kws['tag']            = ns.tag
+    kws['command']        = ns.command
+    kws['print_output']   = ns.output
+    kws['start']          = ns.start
+    kws['nodes']          = ns.nodes
+    kws['partition']      = ns.partition
+    kws['time']           = ns.time
 
     # can accept input ``box`` values to loop over
     if not sys.stdin.isatty():

@@ -43,14 +43,20 @@ def main():
     parser.add_argument('--debug', help=h, action="store_const", dest="log_level", 
                         const=logging.DEBUG, default=logging.INFO)
         
-    h = 'the number of nodes to use when submitting the job'
-    parser.add_argument('-N', '--nodes', type=int, help=h)
-
-    h = 'the partition to submit the job to'
-    parser.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
-    
     h = 'just print the output file and exit'
     parser.add_argument('-o', '--output', dest='print_output', action='store_true', help=h)
+    
+    # NERSC-related options
+    nersc = parser.add_argument_group("NERSC-related options")
+    
+    h = 'the number of nodes to use when submitting the job'
+    nersc.add_argument('-N', '--nodes', type=int, help=h)    
+    
+    h = 'the requested amount of time'
+    nersc.add_argument('-t', '--time', type=lib.slurm_time, help=h)
+    
+    h = 'the partition to submit the job to'
+    nersc.add_argument('-p', '--partition', type=str, choices=['debug', 'regular'], help=h)
     
     # required named arguments
     group = parser.add_argument_group('rsdfit configuration')
@@ -66,6 +72,9 @@ def main():
     
     h = 'additional tag to append to the output directory'
     group.add_argument('--tag', type=str, default="", help=h)
+    
+    h = 'the directory to start from'
+    group.add_argument('--start', type=str, help=h)
     
     # parse known and unknown arguments
     ns, other = parser.parse_known_args()
@@ -83,9 +92,9 @@ def main():
         tasks = MPI.COMM_WORLD.bcast(tasks)
 
     # submit the job, instead of running
-    if not ns.print_output and ns.nodes is not None or ns.partition is not None:
-        if ns.nodes is None or ns.partition is None:
-            raise ValueError("both `nodes` and `partition` must be given to submit job")
+    if not ns.print_output and ns.nodes is not None or ns.partition is not None or ns.time is not None:
+        if ns.nodes is None or ns.partition is None or ns.time is None:
+            raise ValueError("`nodes`, `partition`, and `time` must all be given to submit job")
 
         if MPI.COMM_WORLD.rank == 0:            
             args = sys.argv[1:]
@@ -93,7 +102,8 @@ def main():
             # remove the nodes and partition arguments
             i = args.index('-N') if '-N' in args else args.index('--nodes')
             j = args.index('-p') if '-p' in args else args.index('--partition')
-            for ii in reversed([i, j]):
+            k = args.index('-t') if '-t' in args else args.index('--time')
+            for ii in reversed([i, j, k]):
                 args.pop(ii+1)
                 args.pop(ii)
                     
@@ -110,7 +120,7 @@ def main():
         
             # submit the job and return
             command = " ".join(call_signature)
-            lib.submit_rsdfit_job(command, ns.nodes, ns.partition)
+            lib.submit_rsdfit_job(command, ns.nodes, ns.partition, ns.time)
         
         return 
         
@@ -120,6 +130,7 @@ def main():
     kws['theory_options'] = ns.theory_options
     kws['tag'] = ns.tag
     kws['executable'] = ns.command
+    kws['start_from'] = ns.start
     command = RSDFitBatchCommand(ns.config_template, ns.stat, ns.kmax, **kws)
         
     # format the tasks
