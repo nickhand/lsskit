@@ -112,7 +112,15 @@ class RSDFitRunner(object):
         """
         # parse and get the command
         ns = cls.parse_args()
-        cls._execute(cls.commands[ns.testno], clean=ns.clean)
+        
+        # append any NERSC-related options
+        command = cls.commands[ns.testno]
+        if ns.nodes is not None and ns.parition is not None:
+            print "submitting job: requesting %d nodes on '%s' queue" %(ns.nodes, ns.partition)
+            command += " -N %d -p %s" %(ns.nodes, ns.partition)
+        
+        # execute
+        cls._execute(, clean=ns.clean)
             
     @classmethod
     def _execute(cls, command, output_only=False, clean=False):
@@ -186,6 +194,12 @@ class RSDFitRunner(object):
         
         h = 'remove all files from the specified output directory'
         parser.add_argument('--clean', action='store_true', help=h)
+        
+        h = 'the number of nodes to request'
+        parser.add_argument('-N', '--nodes', type=int, help=h)
+        
+        h = 'the NERSC partition to submit to'
+        parser.add_argument('-p', '--partition', type=str, help=h)
         
         ns = parser.parse_args()
         
