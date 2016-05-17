@@ -6,6 +6,7 @@ import subprocess
 import time
 import tempfile
 
+from . import lib
 from . import RSDFIT_FITS
 
 def get_modified_time(o):
@@ -115,9 +116,9 @@ class RSDFitRunner(object):
         
         # append any NERSC-related options
         command = cls.commands[ns.testno]
-        if ns.nodes is not None and ns.parition is not None:
-            print "submitting job: requesting %d nodes on '%s' queue" %(ns.nodes, ns.partition)
-            command += " -N %d -p %s" %(ns.nodes, ns.partition)
+        if ns.nodes is not None and ns.partition is not None and ns.time is not None:
+            print "submitting job: requesting %d nodes for time %s on '%s' queue" %(ns.nodes, ns.time, ns.partition)
+            command += " -N %d -p %s, -t %s" %(ns.nodes, ns.partition, ns.time)
         
         # execute
         cls._execute(command, clean=ns.clean)
@@ -202,6 +203,9 @@ class RSDFitRunner(object):
         
         h = 'the NERSC partition to submit to'
         nersc.add_argument('-p', '--partition', type=str, help=h)
+        
+        h = 'the requested amount of time'
+        nersc.add_argument('-t', '--time', type=lib.slurm_time, help=h)
         
         ns = parser.parse_args()
         
