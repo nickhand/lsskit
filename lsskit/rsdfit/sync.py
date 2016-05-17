@@ -176,7 +176,7 @@ def sync_fits(direction, host, path=None, dry_run=False):
 
     # the command + options 
     cmd = [RSYNC.split('--delete')[0]]
-    cmd.append("--exclude='info'")
+    cmd += ["--exclude='info'", "--exclude='plots'"]
     if dry_run: cmd.append('--dry-run')
     
     # add the directories and run the command
