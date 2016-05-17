@@ -148,7 +148,7 @@ def sync_run(host, dry_run=False):
     # the command + options 
     cmd = RSYNC
     if dry_run: cmd += ' --dry-run'
-    cmd += " --exclude='.*'"
+    cmd += " --exclude='.*' --exclude='output'"
     
     # add the directories and run the command
     cmd += " %s/run/ nhand@%s:%s/run" %(RSDFIT, host, remote_dir)
