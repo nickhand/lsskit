@@ -112,7 +112,7 @@ class RSDFitCommand(BaseCommand):
     """
     Class to represent a ``rsdfit`` command
     """
-    def __init__(self, config, stat, kmax, 
+    def __init__(self, config, stat, kmax, start_from=None,
                     theory_options=[], options=[], tag="", executable=None):
         """    
         Parameters
@@ -166,7 +166,7 @@ class RSDFitBatchCommand(BaseCommand):
     """
     Class to represent a ``rsdfit`` command in batch mode
     """
-    def __init__(self, config, stat, kmax, 
+    def __init__(self, config, stat, kmax, start_from=None,
                     theory_options=[], options=[], tag="", executable=None):
         """    
         Parameters
