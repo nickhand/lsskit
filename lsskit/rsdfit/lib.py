@@ -170,12 +170,15 @@ def submit_rsdfit_job(command, nodes, partition, time):
     output_dir = os.path.join(os.path.abspath(os.path.curdir), 'output')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    o = output_dir + os.sep + "slurm-$NERSC_HOST-%j.out"
+        
+    # first figure out the NERSC host
+    host = subprocess.check_output(["printenv", "NERSC_HOST"]).strip()
+    o = output_dir + os.sep + "slurm-{0}-%j.out".format(host)
     
     batch_file = batch_file %command
     sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time, '-o', o]
     
-    p = subprocess.Popen(sbatch_cmd, shell=True, stdin=subprocess.PIPE)
+    p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
     
 def MyStringParse(formatter, s, keys):
