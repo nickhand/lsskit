@@ -120,7 +120,7 @@ class RSDFitRunner(object):
             command += " -N %d -p %s" %(ns.nodes, ns.partition)
         
         # execute
-        cls._execute(, clean=ns.clean)
+        cls._execute(command, clean=ns.clean)
             
     @classmethod
     def _execute(cls, command, output_only=False, clean=False):
