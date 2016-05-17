@@ -18,6 +18,13 @@ from . import DriverParams, BaseTheoryParams
 from . import PkmuDataParams, PoleDataParams
 from .command import RSDFitCommand
 
+def slurm_time(s):
+    """
+    Format the input minutes to hours:minutes:seconds
+    """
+    hours, minutes = divmod(int(s), 60)
+    return "%02d:%02d:00" %(hours, minutes)
+
 def write_rsdfit_params(mode, config, output, theory_options=[]):
     """
     Write a parameter file for ``rsdfit`` from a configuration file
@@ -53,7 +60,7 @@ def write_rsdfit_params(mode, config, output, theory_options=[]):
        
 def run_rsdfit(config, stat, kmax, 
                 theory_options=[], rsdfit_options=[], tag="", start=None,
-                command=None, nodes=None, partition=None, print_output=False):
+                command=None, nodes=None, partition=None, time=None, print_output=False):
     """
     Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
     parameter file the from input arguments.
@@ -88,6 +95,8 @@ def run_rsdfit(config, stat, kmax,
         the number of nodes to ask for when submitting the job
     partition : str, optional
         the partition to submit the job to
+    time : str, optional
+        the amount of time to request for the job
     print_output : bool, optional
         just print the intended output directory and exit
     """
@@ -110,7 +119,7 @@ def run_rsdfit(config, stat, kmax,
             return
         
         # run the command
-        if nodes is None and partition is None:
+        if nodes is None and partition is None and time is None:
             try:
                 ret = subprocess.call(command())
                 if ret: raise
@@ -128,12 +137,12 @@ def run_rsdfit(config, stat, kmax,
         
         # submit the job
         else:
-            if nodes is None or partition is None:
-                raise ValueError("both `nodes` and `partition` must be given to submit job")
+            if nodes is None or partition is None or time is None:
+                raise ValueError("`nodes`, `partition`, and `time` must all be given to submit job")
 
-            submit_rsdfit_job(str(command), nodes, partition)
+            submit_rsdfit_job(str(command), nodes, partition, time)
 
-def submit_rsdfit_job(command, nodes, partition):
+def submit_rsdfit_job(command, nodes, partition, time):
     """
     Submit a ``rsdfit`` job via the SLURM batch scheduling system
     
@@ -145,6 +154,8 @@ def submit_rsdfit_job(command, nodes, partition):
         the number of nodes to request
     partition : str
         the queue to submit the job to
+    time : str
+        the amount of time to request in format `hours:minutes:seconds`
     """
     batch_file = """#!/bin/bash
     
@@ -155,7 +166,7 @@ def submit_rsdfit_job(command, nodes, partition):
     srun -n $N %s
     """
     batch_file = batch_file %command
-    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition]
+    sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time]
     
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file)
