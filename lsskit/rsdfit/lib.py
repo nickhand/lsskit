@@ -52,7 +52,7 @@ def write_rsdfit_params(mode, config, output, theory_options=[]):
     theory.to_file(output)
        
 def run_rsdfit(config, stat, kmax, 
-                theory_options=[], rsdfit_options=[], tag="", 
+                theory_options=[], rsdfit_options=[], tag="", start=None,
                 command=None, nodes=None, partition=None, print_output=False):
     """
     Run ``rsdfit``, or the return the call signature. This constructs the ``rsdfit``
@@ -80,6 +80,8 @@ def run_rsdfit(config, stat, kmax,
         list of additional options to pass to the ``rsdfit`` command
     tag : str, optional
         the name of the tag to append to the output directory
+    start : str,optional
+        set ``start_from`` to this value, if not `None`
     command : str, optional
         the executable command to call
     nodes : int, optional
@@ -95,6 +97,7 @@ def run_rsdfit(config, stat, kmax,
     kws['options'] = rsdfit_options 
     kws['tag'] = tag
     kws['executable'] = command
+    kws['start_from'] = start
     
     # create the command
     with RSDFitCommand(config, stat, kmax, **kws) as command:

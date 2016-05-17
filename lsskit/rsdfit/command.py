@@ -10,7 +10,7 @@ class BaseCommand(object):
     """
     Base class to represent a ``rsdfit`` command
     """
-    def __init__(self, config, stat, kmax, 
+    def __init__(self, config, stat, kmax, start_from=None,
                     theory_options=[], options=[], tag="", executable=None):
     
         # make sure the config file exists
@@ -24,7 +24,8 @@ class BaseCommand(object):
         self.theory_options = theory_options
         self.input_options  = options
         self.tag            = tag
-        self.executable     = executable            
+        self.executable     = executable   
+        self.start_from     = start_from         
                             
         # initialize the components
         self.output_dir = None
@@ -155,6 +156,11 @@ class RSDFitCommand(BaseCommand):
         # update the executable
         if self.executable is None: 
             self.executable = RSDFIT_BIN
+            
+        # set the start from variable
+        if self.start_from is not None:
+            self.driver.start_from = self.start_from
+    
         
 class RSDFitBatchCommand(BaseCommand):
     """
@@ -233,5 +239,9 @@ class RSDFitBatchCommand(BaseCommand):
         
         # set the kmax
         self.data.kmax = self.kmax
+        
+        # set the start from variable
+        if self.start_from is not None:
+            self.driver.start_from = self.start_from
         
         return self

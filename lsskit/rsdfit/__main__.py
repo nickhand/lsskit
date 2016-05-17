@@ -75,6 +75,9 @@ def run_rsdfit():
     h = 'additional options to apply the theory model, i.e., `mu_corr` or `so_corr`'
     group.add_argument('-th', '--theory_options', type=str, choices=valid_theory_options, nargs='*', help=h)
     
+    h = 'the directory to start from'
+    group.add_argument('--start', type=str, help=h)
+    
     h = 'additional tag to append to the output directory'
     group.add_argument('--tag', type=str, default="", help=h)
     
@@ -90,6 +93,7 @@ def run_rsdfit():
     kws['nodes'] = ns.nodes
     kws['partition'] = ns.partition
     kws['print_output'] = ns.output
+    kws['start'] = ns.start
 
     # can accept input ``box`` values to loop over
     if not sys.stdin.isatty():
