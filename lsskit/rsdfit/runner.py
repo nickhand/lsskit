@@ -118,7 +118,7 @@ class RSDFitRunner(object):
         command = cls.commands[ns.testno]
         if ns.nodes is not None and ns.partition is not None and ns.time is not None:
             print "submitting job: requesting %d nodes for time %s on '%s' queue" %(ns.nodes, ns.time, ns.partition)
-            command += " -N %d -p %s, -t %s" %(ns.nodes, ns.partition, ns.time)
+            command += " -N %d -p %s -t %s" %(ns.nodes, ns.partition, ns.time)
         
         # execute
         cls._execute(command, clean=ns.clean)
