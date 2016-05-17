@@ -135,7 +135,8 @@ class RSDFitCommand(BaseCommand):
 
         """    
         # initial the base class
-        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 'executable':executable}
+        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 
+                'executable':executable, 'start_from':start_from}
         super(RSDFitCommand, self).__init__(config, stat, kmax, **kws)
                     
         # initialize the driver, theory, and data parameter objects
@@ -188,7 +189,8 @@ class RSDFitBatchCommand(BaseCommand):
             the executable command to call
         """    
         # initial the base class
-        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 'executable':executable}
+        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 
+                'executable':executable, 'start_from':start_from}
         super(RSDFitBatchCommand, self).__init__(config, stat, kmax, **kws)
         
         # read the template file into a string and store
