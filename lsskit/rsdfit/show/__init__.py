@@ -23,3 +23,5 @@ def get_model():
 rsd_model = get_model()
 
 from .core import FittingSet
+from .plot import *
+from . import table
