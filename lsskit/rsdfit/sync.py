@@ -153,6 +153,29 @@ def sync_run(host, dry_run=False):
     # add the directories and run the command
     cmd += " %s/run/ nhand@%s:%s/run" %(RSDFIT, host, remote_dir)
     ret = os.system(cmd)
+    
+def sync_notebooks(host, dry_run=False):
+    """
+    Sync the RSDFit ``notebooks`` directory to NERSC
+    
+    Parameters
+    ----------
+    host : {'cori', 'edison'}
+        the name of the remote host
+    dry_run : bool, optional
+        whether to do a dry-run
+    """
+    # get the data directory
+    remote_dir = "/global/project/projectdirs/m779/www/nhand/rsdfit/"
+
+    # the command + options 
+    cmd = RSYNC
+    if dry_run: cmd += ' --dry-run'
+    cmd += " --exclude='.*'"
+    
+    # add the directories and run the command
+    cmd += " %s/notebooks/ nhand@%s:%s/notebooks/" %(RSDFIT, host, remote_dir)
+    ret = os.system(cmd)
 
 def sync_fits(direction, host, path=None, dry_run=False, delete=False):
     """

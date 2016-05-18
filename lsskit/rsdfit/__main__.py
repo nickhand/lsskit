@@ -220,6 +220,11 @@ def sync_rsdfit():
     h = 'sync the `$RSDFIT/run` directory'
     data = subparsers.add_parser('run', parents=[parent], help=h)
     data.set_defaults(func=sync.sync_run)
+    
+    # notebooks
+    h = 'sync the `$RSDFIT/notebooks` directory'
+    data = subparsers.add_parser('notebooks', parents=[parent], help=h)
+    data.set_defaults(func=sync.sync_notebooks)
 
     ns = parser.parse_args()
     ns.func(ns.host, dry_run=ns.dry_run)
