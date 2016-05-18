@@ -243,7 +243,10 @@ def sync_rsdfit_fits():
     h = 'show what would have been transferred'
     parser.add_argument('-n', '--dry-run', action='store_true', help=h)
     
+    h = 'add the --delete tag'
+    parser.add_argument('--delete', action='store_true', help=h)
+    
     ns = parser.parse_args()
-    sync.sync_fits(ns.direction, ns.host, path=ns.dir, dry_run=ns.dry_run)
+    sync.sync_fits(ns.direction, ns.host, path=ns.dir, dry_run=ns.dry_run, delete=ns.delete)
     
     

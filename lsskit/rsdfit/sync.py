@@ -154,7 +154,7 @@ def sync_run(host, dry_run=False):
     cmd += " %s/run/ nhand@%s:%s/run" %(RSDFIT, host, remote_dir)
     ret = os.system(cmd)
 
-def sync_fits(direction, host, path=None, dry_run=False):
+def sync_fits(direction, host, path=None, dry_run=False, delete=False):
     """
     Sync the RSD fits to/from NERSC
     
@@ -169,13 +169,18 @@ def sync_fits(direction, host, path=None, dry_run=False):
         a subpath from the ``RSDFIT_FITS`` directory
     dry_run : bool, optional
         whether to do a dry-run
+    delete : bool, optional
+        whether to delete files when syncing 
     """
     # get the fits directory
     with NERSCConnection(host) as nersc:
         remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT_FITS'")
 
     # the command + options 
-    cmd = [RSYNC.split('--delete')[0]]
+    if not delete:
+        cmd = [RSYNC.split('--delete')[0]]
+    else:
+        cmd = [RSYNC]
     cmd += ["--exclude='info'", "--exclude='plots'", "--exclude='.*'"]
     if dry_run: cmd.append('--dry-run')
     
