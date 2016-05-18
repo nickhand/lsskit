@@ -161,10 +161,14 @@ class FittingResult(object):
         try:
             return self._bestfit
         except AttributeError:
+            
+            self.driver.set_fit_results()
+            meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
+            
             if self.fit_type == 'mcmc':
-                self._bestfit = BestfitParameterSet.from_mcmc(self.result)
+                self._bestfit = BestfitParameterSet.from_mcmc(self.result, **meta)
             else:
-                self._bestfit = BestfitParameterSet.from_nlopt(self.result)
+                self._bestfit = BestfitParameterSet.from_nlopt(self.result, **meta)
             
             # scale
             cols = ['best_fit', 'median', 'lower_1sigma', 'upper_1sigma', 
