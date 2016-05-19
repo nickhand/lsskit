@@ -6,11 +6,12 @@ config_filename = os.path.join(os.path.curdir, 'fits.rc')
 if not os.path.isfile(config_filename):
     raise ValueError("please specify configuration file: '%s'" %config_filename)
 
-# load the files
+# load the configuration
+model_kmax = None
 execfile(config_filename, globals())
 
 
-def get_model():
+def rsd_model():
     """
     Load and return the RSD model
     """
@@ -19,11 +20,6 @@ def get_model():
         raise ValueError("no such model file: '%s'" %model_path)
                 
     return np.load(model_path).tolist()
-            
-rsd_model = get_model()
-model_kmax = None
-if 'model_kmax' in globals():
-    rsd_model.kmax = model_kmax
 
 from .core import FittingSet
 from .plot import *

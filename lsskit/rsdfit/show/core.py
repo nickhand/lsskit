@@ -136,7 +136,7 @@ class FittingResult(object):
         except AttributeError:
             d = self.fitting_dir
             r = self.result
-            self._driver = FittingDriver.from_directory(d, results_file=r, model_file=rsd_model)
+            self._driver = FittingDriver.from_directory(d, results_file=r, model_file=rsd_model())
             
             if model_kmax is not None:
                 self._driver.theory.model.kmax = model_kmax
