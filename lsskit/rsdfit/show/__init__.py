@@ -21,6 +21,8 @@ def get_model():
     return np.load(model_path).tolist()
             
 rsd_model = get_model()
+if 'model_kmax' in globals():
+    rsd_model.kmax = model_kmax
 
 from .core import FittingSet
 from .plot import *
