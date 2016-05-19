@@ -31,7 +31,10 @@ def compare_theory_fits(ax, x, y, labels=["", ""]):
 
     # plot x first and save the normalization
     x.driver.set_fit_results()
-    norm = plot.pkmu_normalization(x.driver)
+    if x.driver.mode == 'pkmu':
+        norm = plot.pkmu_normalization(x.driver)
+    else:
+        norm = plot.poles_normalization(x.driver)
     plot.plot_normalized_theory(ax, x.driver, offset=offset, color=colors, ls='--', label=labels[0])
     
     # plot y second
