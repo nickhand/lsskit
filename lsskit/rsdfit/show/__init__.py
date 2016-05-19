@@ -15,11 +15,16 @@ def rsd_model():
     """
     Load and return the RSD model
     """
+    if '_rsd_model' in globals():
+        return globals()['_rsd_model']
+            
     model_path = os.path.join(os.environ['RSDFIT_MODELS'], model_name)
     if not os.path.exists(model_path):
         raise ValueError("no such model file: '%s'" %model_path)
                 
-    return np.load(model_path).tolist()
+    global _rsd_model
+    _rsd_model = np.load(model_path).tolist()
+    return _rsd_model
 
 from .core import FittingSet
 from .plot import *
