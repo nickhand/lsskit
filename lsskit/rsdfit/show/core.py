@@ -8,7 +8,8 @@ from pyRSD.rsdfit.results import EmceeResults, LBFGSResults
 from pyRSD.rsdfit.analysis import BestfitParameterSet, to_comparison_table
 
 from lsskit.specksis import utils
-from . import fitting_home, rsd_model
+from . import fitting_home, rsd_model, model_kmax
+
 
 def load_results(filename):
     """
@@ -136,6 +137,9 @@ class FittingResult(object):
             d = self.fitting_dir
             r = self.result
             self._driver = FittingDriver.from_directory(d, results_file=r, model_file=rsd_model)
+            
+            if model_kmax is not None:
+                self._driver.theory.model.kmax = model_kmax
             return self._driver
             
     @property

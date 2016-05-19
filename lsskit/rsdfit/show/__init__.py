@@ -21,6 +21,7 @@ def get_model():
     return np.load(model_path).tolist()
             
 rsd_model = get_model()
+model_kmax = None
 if 'model_kmax' in globals():
     rsd_model.kmax = model_kmax
 
