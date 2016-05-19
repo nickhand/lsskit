@@ -85,6 +85,46 @@ class FittingSet(xr.DataArray):
             data.append(bf)
         
         return to_comparison_table(names, data, params=params, fmt='ipynb')
+        
+    def kdeplot(self, param1, param2, labels=[], cmaps=['Blues', 'Reds', 'Greens'], **kwargs):
+        """
+        Plot 2D KDE plots for the specified parameters, for a single dimension
+        """
+        import seaborn as sns
+        
+        if len(self.dims) != 1:
+            raise ValueError("exactly one dimension must be specified to plot")
+        else:
+            dim = self.dims[0]  
+        vals = self[dim].values.tolist()
+        
+        # check cmap size
+        if len(cmaps) and len(vals) > len(cmaps):
+            raise ValueError("please specify %d color maps in ``cmaps`` keyword" %len(vals))
+        
+        # check labels
+        if len(labels) and len(labels) != len(vals):
+            raise ValueError("please specify %d labels" %len(vals))
+        
+        # loop over the dimension
+        for i, val in enumerate(vals):
+
+            # select
+            d = self.sel(**{dim:val}).values
+        
+            # plot
+            if len(cmaps): kwargs['cmap'] = cmaps[i]
+            ax = d.result.kdeplot_2d(param1, param2, **kwargs)
+        
+        # add the legend proxies
+        if len(labels):
+            xmin, xmax = ax.get_xlim()
+            ymin, ymax = ax.get_ylim()
+            xcen, ycen = (xmin+xmax)/2, (ymin+ymax)/2
+            for i, label in enumerate(labels):
+                color = sns.color_palette(cmaps[i])[-2]
+                line = sns.plt.fill([xcen, xcen], [ycen, ycen], facecolor=color, label=label, ec='none')
+        return ax
     
 class FittingResult(object):
     """
