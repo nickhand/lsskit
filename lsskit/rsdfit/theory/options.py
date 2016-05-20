@@ -24,6 +24,22 @@ def use_mu_corr(params):
     params.model.correct_mu2 = True
     params.model.correct_mu4 = True
     params.options.append('mucorr')
+    
+def use_mu2_corr(params):
+    """
+    Use the mu2 corrections
+    """
+    params.model.correct_mu2 = True
+    params.model.correct_mu4 = False
+    params.options.append('mu2corr')
+    
+def use_mu4_corr(params):
+    """
+    Use the mu4 corrections
+    """
+    params.model.correct_mu2 = False
+    params.model.correct_mu4 = True
+    params.options.append('mu4corr')
 
 def use_so_corr(params):
     """
