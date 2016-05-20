@@ -27,7 +27,7 @@ class FittingSet(xr.DataArray):
     A subclass of ``xarray.DataArray`` to hold a set of fitting results
     """
     @classmethod
-    def from_results(cls, stat, basename, coords, dims):
+    def from_results(cls, stat, basename, coords, dims, method='median'):
         """
         Initialize the FittingSet from a set of result directories
         """
@@ -39,12 +39,12 @@ class FittingSet(xr.DataArray):
     
         # loop over all the directories
         for i, f in utils.enum_files(result_dir, basename, dims, coords, ignore_missing=False):
-            data[i] = FittingResult(stat, f)
+            data[i] = FittingResult(stat, f, method=method)
     
         # initialize the base class
         return cls(data, coords=coords, dims=dims)
         
-    def plot(self):
+    def plot(self, method='median'):
         """
         Plot the input FittingSet results over one dimension
         """
@@ -62,7 +62,7 @@ class FittingSet(xr.DataArray):
             d = self.sel(**{dim:val}).values
         
             # plot
-            d.driver.set_fit_results()
+            d.driver.set_fit_results(method=method)
             d.driver.plot() 
             pfy.show()
             
@@ -130,13 +130,16 @@ class FittingResult(object):
     """
     A class to handle reading fitting results
     """
-    def __init__(self, stat, fitting_dir):
+    def __init__(self, stat, fitting_dir, method='median'):
         
         # either 'pkmu' or 'poles'
         self.stat = stat
                 
         # the results directory
         self.fitting_dir = fitting_dir
+        
+        # which fit results to use
+        self.method = method
         
     @property
     def result(self):
@@ -206,7 +209,7 @@ class FittingResult(object):
             return self._bestfit
         except AttributeError:
             
-            self.driver.set_fit_results()
+            self.driver.set_fit_results(method=self.method)
             meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
             
             if self.fit_type == 'mcmc':
