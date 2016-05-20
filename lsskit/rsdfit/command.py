@@ -160,6 +160,7 @@ class RSDFitCommand(BaseCommand):
             
         # set the start from variable
         if self.start_from is not None:
+            self.driver.init_from = 'result'
             self.driver.start_from = self.start_from
     
         
@@ -244,6 +245,7 @@ class RSDFitBatchCommand(BaseCommand):
         
         # set the start from variable
         if self.start_from is not None:
+            self.driver.init_from = 'result'
             self.driver.start_from = self.start_from
         
         return self
