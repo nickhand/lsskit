@@ -500,7 +500,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             return self._halo_biases
         except:
             if filename is None:
-                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins.pickle")
+                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins_original.pickle")
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
