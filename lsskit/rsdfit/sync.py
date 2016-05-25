@@ -166,7 +166,7 @@ def sync_notebooks(host, dry_run=False):
         whether to do a dry-run
     """
     # get the data directory
-    remote_dir = "/global/project/projectdirs/m779/www/nhand/rsdfit/"
+    remote_dir = "/global/project/projectdirs/m779/www/nhand/notebooks/rsdfit/"
 
     # the command + options 
     cmd = RSYNC
