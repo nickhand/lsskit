@@ -106,7 +106,11 @@ class RunPBHaloMomentum(PowerSpectraLoader):
                     for key, P in toret[i].nditer():
                         
                         subkey = {k:key[k] for k in key if k in toret[0].dims}
-                        P0 = toret[0].sel(**subkey).values
+                        P0 = toret[0].sel(**subkey)
+                        if P0.isnull():
+                            continue
+                        else:
+                            P0 = P0.values
                         P0['power'] += P.values['power']
             toret = toret[0]
             
