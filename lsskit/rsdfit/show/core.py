@@ -66,7 +66,7 @@ class FittingSet(xr.DataArray):
             d.driver.plot() 
             pfy.show()
             
-    def table(self, name_formatter, params=None):
+    def table(self, name_formatter, params=None, fmt='ipynb', **kwargs):
         """
         Return a jupyter notebook comparison table
         """
@@ -84,7 +84,7 @@ class FittingSet(xr.DataArray):
             names.append(name_formatter(val))
             data.append(bf)
         
-        return to_comparison_table(names, data, params=params, fmt='ipynb')
+        return to_comparison_table(names, data, params=params, fmt=fmt, **kwargs)
         
     def kdeplot(self, param1, param2, labels=[], cmaps=['Blues', 'Reds', 'Greens'], **kwargs):
         """
