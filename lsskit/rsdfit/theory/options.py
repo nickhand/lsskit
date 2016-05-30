@@ -6,9 +6,18 @@
     __email__  : nhand@berkeley.edu
     __desc__   : apply various options to the parameter set
 """
+from .. import AttrDict
+valid_theory_options = ['vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
 
-valid_theory_options = ['mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
-
+def use_vary_sigmav(params):
+    """
+    Vary sigma_v
+    """
+    params.valid_params.append('sigma_v')
+    params.sigma_v = AttrDict(vary=True, fiducial=4.5, prior='normal', mu=4.5, sigma=0.3)
+    params.model.vel_disp_from_sims = False
+    params.options.append('vary_sigmav')
+    
 def use_fixed_alphas(params):
     """
     Set alphas to 1 and do not vary

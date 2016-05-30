@@ -108,7 +108,7 @@ class TheoryParams(object):
         self.sigma_s  = AttrDict(vary=False, fiducial=4.0, prior='uniform', lower=2., upper=10.)
         self.sigma_sA = AttrDict(vary=False, fiducial=3.5)
         self.sigma_sB = AttrDict(vary=False, fiducial=5)
-
+    
         # amplitude
         self.NcBs  = AttrDict(vary=False, fiducial=4.5e4)
         self.NsBsB = AttrDict(vary=False, fiducial=9.45e4)
