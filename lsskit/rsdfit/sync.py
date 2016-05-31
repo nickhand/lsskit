@@ -208,11 +208,16 @@ def sync_fits(direction, host, path=None, dry_run=False, delete=False):
     if dry_run: cmd.append('--dry-run')
     
     # add the directories and run the command
-    dirs = [RSDFIT_FITS, "nhand@%s:%s" %(host, remote_dir)]
+    dirs = [RSDFIT_FITS, remote_dir]
     if path is not None:
         dirs[0] += path
         dirs[1] += path
-            
+        
+        # append a backslash
+        for i, d in enumerate(dirs):
+            dirs[i] = os.path.abspath(d) + os.sep
+    
+    dirs[1] = "nhand@%s:%s" %(host, dirs[1])
     if direction == 'from':
         dirs = dirs[::-1]
     cmd += dirs    
