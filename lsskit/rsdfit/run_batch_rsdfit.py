@@ -2,18 +2,24 @@ import argparse
 import sys
 import logging
 import tempfile
-from mpi4py import MPI
 
 from lsskit.rsdfit import lib, batch, RSDFIT_BATCH
 from lsskit.rsdfit.command import RSDFitBatchCommand
 
-# setup the logging
-rank = MPI.COMM_WORLD.rank
-name = MPI.Get_processor_name()
-logging.basicConfig(level=logging.DEBUG,
-                    format='rank %d on %s: '%(rank,name) + \
-                            '%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
+
+def add_console_logger():
+    """
+    Add a console logger
+    """
+    from mpi4py import MPI
+    
+    # setup the logging
+    rank = MPI.COMM_WORLD.rank
+    name = MPI.Get_processor_name()
+    logging.basicConfig(level=logging.DEBUG,
+                        format='rank %d on %s: '%(rank,name) + \
+                                '%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
+                        datefmt='%m-%d %H:%M')
 
 def main():
     """
@@ -79,71 +85,82 @@ def main():
     # parse known and unknown arguments
     ns, other = parser.parse_known_args()
 
-    # get the tasks
-    if ns.tasks is not None:
-        tasks = open(ns.tasks, 'r').readlines()
-    else:
-        if MPI.COMM_WORLD.rank == 0:
-            tasks = sys.stdin.readlines()
-        else:
-            tasks = None
-        # respect the root rank stdin only;
-        # on some systems, the stdin is only redirected to the root rank.
-        tasks = MPI.COMM_WORLD.bcast(tasks)
-
     # submit the job, instead of running
     if not ns.print_output and ns.nodes is not None or ns.partition is not None or ns.time is not None:
         if ns.nodes is None or ns.partition is None or ns.time is None:
             raise ValueError("`nodes`, `partition`, and `time` must all be given to submit job")
 
-        if MPI.COMM_WORLD.rank == 0:            
-            args = sys.argv[1:]
-        
-            # remove the nodes and partition arguments
-            i = args.index('-N') if '-N' in args else args.index('--nodes')
-            j = args.index('-p') if '-p' in args else args.index('--partition')
-            k = args.index('-t') if '-t' in args else args.index('--time')
-            for ii in reversed([i, j, k]):
-                args.pop(ii+1)
-                args.pop(ii)
-                    
-            # write out the iterating values to a temp file
-            with tempfile.NamedTemporaryFile(delete=False) as ff:
-                fname = ff.name
-                ff.write("".join(tasks))
-            call_signature = [fname] + args
-        
-            # add the executable
-            if ns.command is None: 
-                ns.command = RSDFIT_BATCH
-            call_signature = ns.command.split() + call_signature
-        
-            # submit the job and return
-            command = " ".join(call_signature)
-            lib.submit_rsdfit_job(command, ns.nodes, ns.partition, ns.time)
+        args = sys.argv[1:]
+    
+        # get the tasks
+        if ns.tasks is not None:
+            tasks = open(ns.tasks, 'r').readlines()
+        else:
+            tasks = sys.stdin.readlines()
+    
+        # remove the nodes and partition arguments
+        i = args.index('-N') if '-N' in args else args.index('--nodes')
+        j = args.index('-p') if '-p' in args else args.index('--partition')
+        k = args.index('-t') if '-t' in args else args.index('--time')
+        for ii in reversed([i, j, k]):
+            args.pop(ii+1)
+            args.pop(ii)
+                
+        # write out the iterating values to a temp file
+        with tempfile.NamedTemporaryFile(delete=False) as ff:
+            fname = ff.name
+            ff.write("".join(tasks))
+        call_signature = [fname] + args
+    
+        # add the executable
+        if ns.command is None: 
+            ns.command = RSDFIT_BATCH
+        call_signature = ns.command.split() + call_signature
+    
+        # submit the job and return
+        command = " ".join(call_signature)
+        lib.submit_rsdfit_job(command, ns.nodes, ns.partition, ns.time)
         
         return 
         
-    # make the command
-    kws = {}
-    kws['options'] = other
-    kws['theory_options'] = ns.theory_options
-    kws['tag'] = ns.tag
-    kws['executable'] = ns.command
-    kws['start_from'] = ns.start
-    command = RSDFitBatchCommand(ns.config_template, ns.stat, ns.kmax, **kws)
+    else:
+        from mpi4py import MPI
         
-    # format the tasks
-    task_values = [line.split() for line in tasks]
-    task_keys = task_values[0]
-    task_values = task_values[1:]
+        # add the console logger
+        add_console_logger()
+        
+        # get the tasks
+        if ns.tasks is not None:
+            tasks = open(ns.tasks, 'r').readlines()
+        else:
+            if MPI.COMM_WORLD.rank == 0:
+                tasks = sys.stdin.readlines()
+            else:
+                tasks = None
+            # respect the root rank stdin only;
+            # on some systems, the stdin is only redirected to the root rank.
+            tasks = MPI.COMM_WORLD.bcast(tasks)
+        
+        # make the command
+        kws = {}
+        kws['options'] = other
+        kws['theory_options'] = ns.theory_options
+        kws['tag'] = ns.tag
+        kws['executable'] = ns.command
+        kws['start_from'] = ns.start
+        command = RSDFitBatchCommand(ns.config_template, ns.stat, ns.kmax, **kws)
+        
+        # format the tasks
+        task_values = [line.split() for line in tasks]
+        task_keys = task_values[0]
+        task_values = task_values[1:]
 
-    # initialize the task manager
-    args = (MPI.COMM_WORLD, ns.cpus_per_worker, command, task_keys, task_values)
-    manager = batch.RSDFitBatch(*args, log_level=ns.log_level, print_output=ns.print_output)
+        # initialize the task manager
+        args = (MPI.COMM_WORLD, ns.cpus_per_worker, command, task_keys, task_values)
+        manager = batch.RSDFitBatch(*args, log_level=ns.log_level, print_output=ns.print_output)
     
-    # and run!
-    manager.run_all()
+        # and run!
+        manager.run_all()
     
 if __name__ == '__main__':
     main()
