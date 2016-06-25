@@ -162,6 +162,8 @@ class SpectraSet(xr.DataArray):
         """
         p1 = p2 = None
         for coord, power in self.nditer():
+            if power.isnull(): continue
+            
             power = power.values
             if 'error' in power: continue
             if power_x1 is not None:
