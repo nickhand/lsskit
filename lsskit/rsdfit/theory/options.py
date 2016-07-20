@@ -23,11 +23,10 @@ def use_b2_00(params):
         if b not in params.valid_params:
             params.valid_params.append(b)
         
-    params.b2_00__0 = AttrDict(vary=True, fiducial=-0.63, prior='normal', mu=-0.63, sigma=0.2)
-    params.b2_00__2 = AttrDict(vary=True, fiducial=0.32, prior='normal', mu=0.32, sigma=0.15)
-    params.b2_00__4 = AttrDict(vary=True, fiducial=0.03, prior='normal', mu=0.03, sigma=0.05)
-    
-    
+    params.b2_00__0 = AttrDict(vary=True, fiducial=-0.6, prior='normal', mu=-0.6, sigma=0.2)
+    params.b2_00__2 = AttrDict(vary=True, fiducial=0.03, prior='normal', mu=0.03, sigma=0.1)
+    params.b2_00__4 = AttrDict(vary=True, fiducial=0.05, prior='normal', mu=0.05, sigma=0.05)
+        
     params.b2_00_a = AttrDict(vary=False, expr="[b2_00__4, 0., b2_00__2, 0., b2_00__0]")
     params.b2_00_b = AttrDict(vary=False, expr="b2_00_a")
     params.b2_00_c = AttrDict(vary=False, expr="b2_00_a")
