@@ -62,7 +62,7 @@ class FittingSet(xr.DataArray):
             d = self.sel(**{dim:val}).values
         
             # plot
-            with d.driver.use_fit_results(method=method)
+            with d.driver.use_fit_results(method=method):
                 d.driver.plot() 
             plt.show()
             
