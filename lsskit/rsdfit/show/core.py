@@ -48,7 +48,7 @@ class FittingSet(xr.DataArray):
         """
         Plot the input FittingSet results over one dimension
         """
-        import plotify as pfy
+        from matplotlib import pyplot as plt
         
         if len(self.dims) != 1:
             raise ValueError("exactly one dimension must be specified to plot")
@@ -62,9 +62,9 @@ class FittingSet(xr.DataArray):
             d = self.sel(**{dim:val}).values
         
             # plot
-            d.driver.set_fit_results(method=method)
-            d.driver.plot() 
-            pfy.show()
+            with d.driver.use_fit_results(method=method)
+                d.driver.plot() 
+            plt.show()
             
     def table(self, name_formatter, params=None, fmt='ipynb', **kwargs):
         """
@@ -209,13 +209,12 @@ class FittingResult(object):
             return self._bestfit
         except AttributeError:
             
-            self.driver.set_fit_results(method=self.method)
-            meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
-            
-            if self.fit_type == 'mcmc':
-                self._bestfit = BestfitParameterSet.from_mcmc(self.result, **meta)
-            else:
-                self._bestfit = BestfitParameterSet.from_nlopt(self.result, **meta)
+            with self.driver.use_fit_results(method=self.method):
+                meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
+                if self.fit_type == 'mcmc':
+                    self._bestfit = BestfitParameterSet.from_mcmc(self.result, **meta)
+                else:
+                    self._bestfit = BestfitParameterSet.from_nlopt(self.result, **meta)
             
             # scale
             cols = ['best_fit', 'median', 'lower_1sigma', 'upper_1sigma', 
