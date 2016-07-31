@@ -62,7 +62,7 @@ class FittingSet(xr.DataArray):
             d = self.sel(**{dim:val}).values
         
             # plot
-            with d.driver.restore_state():
+            with d.driver.preserve():
                 d.driver.set_fit_results(method=method)
                 d.driver.plot() 
             plt.show()
@@ -211,7 +211,7 @@ class FittingResult(object):
         except AttributeError:
             
             # restore the state
-            with self.driver.restore_state():
+            with self.driver.preserve():
                 
                 self.driver.set_fit_results(method=self.method)
                 meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
