@@ -62,7 +62,9 @@ def update_progress(free_pars, sampler, niters, nwalkers, last=10):
         acc_frac = sampler.acceptance_fraction
         acor = sampler.acor
     except:
-        acc_frac = np.array([np.nan])        
+        acc_frac = np.array([np.nan]) 
+        acor = np.zeros(len(free_pars))
+               
     text += ["      acceptance_fraction ({}->{} (median {}))".format(acc_frac.min(), acc_frac.max(), np.median(acc_frac))]      
     for i, name in enumerate(free_pars):
         pos = chain[:,-last:,i].ravel()

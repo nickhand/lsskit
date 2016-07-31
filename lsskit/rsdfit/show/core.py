@@ -62,7 +62,8 @@ class FittingSet(xr.DataArray):
             d = self.sel(**{dim:val}).values
         
             # plot
-            with d.driver.use_fit_results(method=method):
+            with d.driver.restore_state():
+                d.driver.set_fit_results(method=method)
                 d.driver.plot() 
             plt.show()
             
@@ -209,7 +210,10 @@ class FittingResult(object):
             return self._bestfit
         except AttributeError:
             
-            with self.driver.use_fit_results(method=self.method):
+            # restore the state
+            with self.driver.restore_state():
+                
+                self.driver.set_fit_results(method=self.method)
                 meta = {'Np':self.driver.Np, 'Nb':self.driver.Nb, 'min_minus_lkl':-self.driver.lnprob()}
                 if self.fit_type == 'mcmc':
                     self._bestfit = BestfitParameterSet.from_mcmc(self.result, **meta)
