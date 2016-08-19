@@ -9,7 +9,7 @@
 
 import os, sys
 import tempfile
-import subprocess
+from subprocess import Popen, PIPE
 import string
 from collections import namedtuple
 import copy
@@ -121,8 +121,9 @@ def run_rsdfit(config, stat, kmax,
         # run the command
         if nodes is None and partition is None and time is None:
             try:
-                ret = subprocess.call(command())
-                if ret: raise
+                p = Popen(command(), stdout=PIPE)
+                output = p.communicate()[0]
+                if p.returncode: raise
             except Exception as e:
                 if e is None: e = Exception ()
                 if not isinstance(e, KeyboardInterrupt):        
