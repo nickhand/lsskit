@@ -70,7 +70,7 @@ def sync_models(host, dry_run=False):
     """
     # get the models directory
     with NERSCConnection(host) as nersc:
-        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT_MODELS'")
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print(rsdfit.RSDFIT_MODELS)'")
 
     # the command + options 
     cmd = RSYNC
@@ -95,7 +95,7 @@ def sync_data(host, dry_run=False):
     """
     # get the data directory
     with NERSCConnection(host) as nersc:
-        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT_DATA'")
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print(rsdfit.RSDFIT_DATA)'")
 
     # the command + options 
     cmd = RSYNC
@@ -119,7 +119,7 @@ def sync_params(host, dry_run=False):
     """
     # get the data directory
     with NERSCConnection(host) as nersc:
-        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT'")
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print(rsdfit.RSDFIT)'")
         
     # the command + options 
     cmd = RSYNC
@@ -143,7 +143,7 @@ def sync_run(host, dry_run=False):
     """
     # get the data directory
     with NERSCConnection(host) as nersc:
-        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT'")
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print(rsdfit.RSDFIT)'")
 
     # the command + options 
     cmd = RSYNC
@@ -197,7 +197,7 @@ def sync_fits(direction, host, path=None, dry_run=False, delete=False):
     """
     # get the fits directory
     with NERSCConnection(host) as nersc:
-        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print rsdfit.RSDFIT_FITS'")
+        remote_dir = nersc.run("python -c 'from lsskit import rsdfit; print(rsdfit.RSDFIT_FITS)'")
 
     # the command + options 
     if not delete:
