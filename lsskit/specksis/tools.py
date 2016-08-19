@@ -22,7 +22,7 @@ def unstack_multipoles_one(pole, ells, new_column):
     """
     Unstack a single `DataSet`
     """
-    old_columns, ells = zip(*ells)    
+    old_columns, ells = list(zip(*ells))
     new_poles = []
     
     for old_column, ell in zip(old_columns, ells):
@@ -58,7 +58,7 @@ def unstack_multipoles(poles, ells, new_column):
         this_pole = poles.sel(**key).values
         all_data.append(unstack_multipoles_one(this_pole, ells, new_column))
 
-    old_columns, ells = zip(*ells)
+    old_columns, ells = list(zip(*ells))
     all_data = np.reshape(all_data, poles.shape + (len(ells),))
     coords = [poles.coords[dim].values for dim in poles.dims] + [np.array(ells)]
     return SpectraSet(all_data, coords, poles.dims+('ell',))
@@ -325,7 +325,7 @@ def isnull(arr, broadcast=False):
     if is_structured(arr):
         
         # the return stuctured array
-        dtype = zip(arr.dtype.names, [np.dtype('bool')]*len(arr.dtype))
+        dtype = list(zip(arr.dtype.names, [np.dtype('bool')]*len(arr.dtype)))
         toret = np.empty(arr.shape, dtype=dtype)
         
         # loop over each field

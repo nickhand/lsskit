@@ -79,7 +79,7 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
     `coords`
     """
     # shape of data
-    shape = map(len, coords)
+    shape = list(map(len, coords))
     
     # compute the list of dicts for string formatting
     ndims = len(dims)
@@ -211,7 +211,7 @@ def load_data_from_file(filename, dims, shape):
     # make the coords and return a DataArray
     coords = [keys]
     if len(dims) > 1:
-        coords = zip(*keys)
+        coords = list(zip(*keys))
         coords = [np.unique(x) for x in coords]
         b1 = np.array(b1).reshape(shape)
     return xr.DataArray(b1, coords, dims)

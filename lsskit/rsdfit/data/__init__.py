@@ -213,7 +213,7 @@ class DataParams(object):
         
     @property
     def fitting_range(self):
-        return zip(self.kmin, self.kmax)
+        return list(zip(self.kmin, self.kmax))
         
     @property
     def name(self):

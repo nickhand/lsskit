@@ -52,7 +52,7 @@ def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
     dk = 0.005
     lower = data[:,0]-dk/2.
     upper = data[:,0]+dk/2.
-    edges = np.array(zip(lower, upper))
+    edges = np.array(list(zip(lower, upper)))
     edges = np.concatenate([edges.ravel()[::2], [edges[-1,-1]]])
 
     toret = []

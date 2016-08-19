@@ -263,7 +263,7 @@ class MockCatalog(object):
         """        
         # sort the fields we are reading by the column numbers (the values of info_dict)
         sorted_info = sorted(info_dict.items(), key=operator.itemgetter(1))
-        col_names, col_nums = map(list, zip(*sorted_info))
+        col_names, col_nums = [list(m) for m in zip(*sorted_info)]
 
         # use pandas to efficiently read the data into a data frame
         kwargs = {}

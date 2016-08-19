@@ -1606,7 +1606,7 @@ class PoleMeasurement(PowerMeasurement):
             index = Index(ks, name='k')    
 
             # now make the data frame
-            vals, errs = map(np.array, zip(*[pole[k] for k in ks]))
+            vals, errs = [np.array(x) for x in zip(*[pole[k] for k in ks])]
             self._data = DataFrame(data=np.vstack((vals, errs**2)).T, index=index, columns=['power', 'variance'])
             
             # remove power if it's zero
