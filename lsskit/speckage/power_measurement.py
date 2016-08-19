@@ -234,7 +234,7 @@ class PowerMeasurement(tsal.TSAL):
         self.space = kwargs.pop('space', None)
 
         # any other keywords we want to save
-        for k, v in kwargs.iteritems(): 
+        for k, v in kwargs.items(): 
             try:
                 setattr(self, k, v)        
             except:
@@ -602,7 +602,7 @@ class PowerMeasurement(tsal.TSAL):
         """
         Update the attributes 
         """
-        for k, v in kwargs.iteritems(): setattr(self, k, v)
+        for k, v in kwargs.items(): setattr(self, k, v)
     
     #---------------------------------------------------------------------------
     # Properties
@@ -1594,7 +1594,7 @@ class PoleMeasurement(PowerMeasurement):
         
         pole = {}
         tags = {0 : 'mono', 2 : 'quad', 4 : 'hexadec', 6 : 'tetrahexadec'}
-        for key, val in self.pars.iteritems():
+        for key, val in self.pars.items():
 
             k = float(key.split('_')[-1])
             if tags[self.order] in key:

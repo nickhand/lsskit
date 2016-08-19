@@ -394,14 +394,14 @@ def compute_multipoles():
         for i, (key, spec) in enumerate(pkmu.nditer()):
             if i % size != rank:
                 continue    
-            key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.iteritems()])
+            key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.items()])
             print("rank %d: processing %s ..." %(rank, key_str))
         
             # compute the multipoles
             spec = spec.values
             poles = spec.to_multipoles(*args.ell)
         
-            valid = {k:v for k,v in key.iteritems() if k in str_kwargs}
+            valid = {k:v for k,v in key.items() if k in str_kwargs}
             for iell , ell in enumerate(args.ell):
                 valid['pole'] = pole_names[ell]
                 filename = args.output.format(**valid)

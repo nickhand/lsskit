@@ -334,7 +334,7 @@ class groupFinder(object):
             passes += 1
             
         n_groups = 0
-        for gr_num, gr in self.groups.iteritems(): 
+        for gr_num, gr in self.groups.items(): 
             if gr.size > 1: n_groups += 1
             
         print("number of groups with size > 1 = ", n_groups)

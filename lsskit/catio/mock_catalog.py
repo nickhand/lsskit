@@ -58,7 +58,7 @@ class MockCatalog(object):
         # subsample indices
         self.subsample_indices = None
         
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             setattr(self, k, v)
             self._metadata.append(k)
 
@@ -183,7 +183,7 @@ class MockCatalog(object):
         if N > self._sample_total:
             msg = "Cannot select subsample of size %d from galaxy sample of size %d" %(N, self._sample_total)
             raise ValueError(msg)
-        self.subsample_indices = sorted(np.random.choice(xrange(self._sample_total), N, replace=False))
+        self.subsample_indices = sorted(np.random.choice(range(self._sample_total), N, replace=False))
     
     def clear_subsample(self):
         """

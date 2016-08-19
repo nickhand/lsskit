@@ -289,7 +289,7 @@ class KDTree_MP(tree):
         # allocate shared memory for x and result 
         nx = x.shape[0] 
         shmem_x = mp.RawArray(ctypes.c_double, nx*self.m) 
-        shmem_d = mp.Manager().list(xrange(nx))
+        shmem_d = mp.Manager().list(range(nx))
         
         # view shared memory as ndarrays 
         _x = shmem_as_ndarray(shmem_x).reshape((nx, self.m)) 

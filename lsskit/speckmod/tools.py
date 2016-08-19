@@ -108,7 +108,7 @@ def compare_bestfits(mode, **kwargs):
     
     # get the key dictionary and print out what we are selecting
     key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(select))
-    msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
+    msg = ", ".join("%s = %s" %(k,v) for k,v in key.items())
     print("selecting " + msg)
     
     # select the bestfit
@@ -121,11 +121,11 @@ def compare_bestfits(mode, **kwargs):
         args = tuple(df.loc[select, col] for col in kwargs['interp_cols'])
         bestfits = gp.to_dict(*args)
         print("gp bestfit values:\n-------------")
-        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems()))
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.items()))
         
         actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
         print("actual bestfit values:\n-------------")
-        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems()))
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.items()))
     
     # load the spline table
     elif mode == 'spline':    
@@ -135,11 +135,11 @@ def compare_bestfits(mode, **kwargs):
         b1 = df.loc[select, 'b1']
         bestfits = table(s8_z, b1)
         print("spline table bestfit values:\n-------------")
-        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems()))
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.items()))
         
         actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
         print("actual bestfit values:\n-------------")
-        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems()))
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.items()))
         
     elif mode == 'params':
         bestfits = {k:df.loc[select, k] for k in kwargs['model'].param_names}

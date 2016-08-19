@@ -52,7 +52,7 @@ def compute_PB_Pkmu(infile, options={}, show_help=False, stdout=None):
         else:
             calling_signature = [executable]
             
-        for k, v in options.iteritems():
+        for k, v in options.items():
             calling_signature += ["--%s" %k, str(v)]
     
         # call the code
@@ -104,7 +104,7 @@ def compute_PB_poles(infile, options={}, show_help=False, stdout=None):
         else:
             calling_signature = [executable]
             
-        for k, v in options.iteritems():
+        for k, v in options.items():
             calling_signature += ["--%s" %k, str(v)]
     
         # call the code
