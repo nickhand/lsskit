@@ -50,7 +50,7 @@ class BaseCommand(object):
         Initialize the temporary file and write the parameters
         """
         # write out the parameters to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as ff:
+        with tempfile.NamedTemporaryFile(delete=False, mode='w') as ff:
             self.param_file = ff.name
         
             # write out the parameters to the specified output

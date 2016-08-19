@@ -238,7 +238,7 @@ class PowerMeasurement(tsal.TSAL):
             try:
                 setattr(self, k, v)        
             except:
-                print k, v
+                print(k, v)
         
         # the load the data as a tsal
         if tsal_file is not None: self._data_from_tsal(tsal_file)

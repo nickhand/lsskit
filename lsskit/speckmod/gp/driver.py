@@ -112,7 +112,7 @@ def hyperparams_from_mcmc(ns, X, Y, Yerr=None):
         conditions = [niter < 10, niter < 50 and niter % 2 == 0,  niter < 500 and niter % 10 == 0, niter % 100 == 0]
         return any(conditions)
 
-    print "running burn-in"
+    print("running burn-in")
     for i, _ in enumerate(sampler.sample(p0, iterations=ns.burnin)):
         if update_progress(i):
             progress_report(sampler, ns.burnin, ns.nwalkers)
@@ -120,7 +120,7 @@ def hyperparams_from_mcmc(ns, X, Y, Yerr=None):
     p0 = sampler.chain[:,-1,:] 
     sampler.reset()
 
-    print "running production chain"
+    print("running production chain")
     for i, _ in enumerate(sampler.sample(p0, iterations=ns.iterations)):
         if update_progress(i):
             progress_report(sampler, ns.iterations, ns.nwalkers)
@@ -130,8 +130,8 @@ def hyperparams_from_mcmc(ns, X, Y, Yerr=None):
     bestfit = np.exp(chain.reshape(-1, len(kernel)).mean(axis=0))
     gp.kernel.pars = bestfit
     
-    print "best-fit hyperparameters = ", bestfit
-    print "maximum likelihood = ", gp.lnlikelihood(y_scaled)
+    print("best-fit hyperparameters = ", bestfit)
+    print("maximum likelihood = ", gp.lnlikelihood(y_scaled))
     
     # write the output
     np.savez(ns.output, chain=sampler.chain, bestfit=bestfit)
@@ -146,8 +146,8 @@ def nll(gp, y, p, rank=0):
     gp.kernel.pars = np.exp(p)
     ll = gp.lnlikelihood(y, quiet=True)
 
-    print "rank %d: parameters = " %rank, gp.kernel.pars
-    print "rank %d log likelihood = " %rank, ll
+    print("rank %d: parameters = " %rank, gp.kernel.pars)
+    print("rank %d log likelihood = " %rank, ll)
     # The scipy optimizer doesn't play well with infinities.
     return -ll if np.isfinite(ll) else 1e25
 
@@ -218,13 +218,13 @@ def hyperparams_from_ml(ns, X, Y, Yerr):
             log_theta0 = np.random.uniform(-3, 1.5, size=len(kernel))
             
         gp.kernel.pars = np.exp(log_theta0)
-        print "rank %d: on random start %d, starting with " %(rank, i), gp.kernel.pars
+        print("rank %d: on random start %d, starting with " %(rank, i), gp.kernel.pars)
         
         # compute once
         gp.compute(X_scaler.transform(X), yerr=Yerr / Y_scaler.scale_)
     
         # print the initial ln-likelihood.
-        print "rank %d: initial log likelihood = " %rank, gp.lnlikelihood(y_scaled)
+        print("rank %d: initial log likelihood = " %rank, gp.lnlikelihood(y_scaled))
 
         # run the optimization routine
         p0 = gp.kernel.vector
@@ -236,8 +236,8 @@ def hyperparams_from_ml(ns, X, Y, Yerr):
         # Update the kernel and print the final log-likelihood.
         gp.kernel.pars = np.exp(results.x)
         best_lnlike = gp.lnlikelihood(y_scaled)
-        print "rank %d: final log likelihood = " %rank, best_lnlike
-        print "rank %d: final parameters = "%rank, gp.kernel.pars
+        print("rank %d: final log likelihood = " %rank, best_lnlike)
+        print("rank %d: final parameters = "%rank, gp.kernel.pars)
         lnlikes.append(best_lnlike)
         params.append(gp.kernel.pars)
         
@@ -255,7 +255,7 @@ def hyperparams_from_ml(ns, X, Y, Yerr):
         params = np.concatenate(params)
         index = lnlikes.argmax()
         
-        print "maximum log likelihood = ", lnlikes[index]
-        print "best parameters = ", params[index]
+        print("maximum log likelihood = ", lnlikes[index])
+        print("best parameters = ", params[index])
         
         np.savez(ns.output, lnlike=lnlikes, params=params)

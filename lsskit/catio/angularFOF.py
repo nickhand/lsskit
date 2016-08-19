@@ -230,7 +230,7 @@ class groupFinder(object):
             pandas DataFrame containing information for galaxies to run FOF
             algorithm on
         """
-        print "adding galaxies..."
+        print("adding galaxies...")
         bar = utilities.initializeProgressBar(len(galaxy_df))
         
         # add the 'host' column
@@ -305,10 +305,10 @@ class groupFinder(object):
 
         # initialize the parallel kdtree
         tree = kdtree.KDTreeSources(sources, fields=self.coord_keys, angular=False, nprocs=self.nprocs)
-        print "kd-tree size = %d" %tree.size
+        print("kd-tree size = %d" %tree.size)
             
         # get ALL the neighbors, using cartesian radius
-        print "finding all neighbors..."
+        print("finding all neighbors...")
         self.neighbor_lists = tree.range(sources, radius, radius_type='cartesian')
                 
         # now loop over each list of neighbors
@@ -317,7 +317,7 @@ class groupFinder(object):
         while self.redundantGroupsExist:
             
             self.redundantGroupsExist = False
-            print "merging groups, pass #%d..." %passes
+            print("merging groups, pass #%d..." %passes)
 
             # initialize the progress bar
             bar = utilities.initializeProgressBar(tree.size)
@@ -337,7 +337,7 @@ class groupFinder(object):
         for gr_num, gr in self.groups.iteritems(): 
             if gr.size > 1: n_groups += 1
             
-        print "number of groups with size > 1 = ", n_groups
+        print("number of groups with size > 1 = ", n_groups)
         return self.groups
     #end findGroups
     

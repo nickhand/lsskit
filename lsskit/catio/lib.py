@@ -34,7 +34,7 @@ def compute_fiber_collisions(**kwargs):
         # load the mock
         mock = HODMock.from_hdf(params['mock_file'])
         
-        print "computing collision groups..."
+        print("computing collision groups...")
         mock.compute_collision_groups(params['radius'], 
                                         params['radius_units'], 
                                         coord_keys=params['coordinate_keys'], 
@@ -49,7 +49,7 @@ def compute_fiber_collisions(**kwargs):
         # load the mock
         mock = HODMock.from_hdf(params['mock_file'])
         
-        print "assigning fibers..."
+        print("assigning fibers...")
         mock.assign_fibers(params['resolution_fraction'])
                 
         # now save the file

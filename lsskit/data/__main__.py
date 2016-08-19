@@ -34,7 +34,7 @@ def save_runPB_galaxy_stats():
     info = collections.defaultdict(list)
     for mock_num in range(N_mocks):
         
-        print "processing mock #%d..." %mock_num
+        print("processing mock #%d..." %mock_num)
         mock = HODMock.from_hdf(mock_base %mock_num)
 
         # get the total number

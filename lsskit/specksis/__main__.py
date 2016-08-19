@@ -344,7 +344,7 @@ def compare_mcmc_fits():
         
     kwargs = {'free_only':args.free_only, 'constrained_only':args.constrained_only, 'params':args.params}
     if args.output is None:
-        print bestfit.to_comparison_table(data, args.output, **kwargs)
+        print(bestfit.to_comparison_table(data, args.output, **kwargs))
     else:
         bestfit.to_comparison_table(data, args.output, **kwargs)
         
@@ -395,7 +395,7 @@ def compute_multipoles():
             if i % size != rank:
                 continue    
             key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.iteritems()])
-            print "rank %d: processing %s ..." %(rank, key_str)
+            print("rank %d: processing %s ..." %(rank, key_str))
         
             # compute the multipoles
             spec = spec.values

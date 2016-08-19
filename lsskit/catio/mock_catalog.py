@@ -274,10 +274,10 @@ class MockCatalog(object):
         kwargs['usecols']          = col_nums
         kwargs['names']            = col_names 
         
-        print "reading ascii file..."
+        print("reading ascii file...")
         data = pd.read_csv(filename, **kwargs)
         data.index.name = 'objid'
-        print "  ...done"
+        print("  ...done")
                     
         # store the object type info, if provided
         if object_types is not None:                

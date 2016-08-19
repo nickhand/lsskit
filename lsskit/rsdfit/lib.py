@@ -113,7 +113,7 @@ def run_rsdfit(config, stat, kmax,
     
         # just print the output and return
         if print_output:
-            print command.output_dir
+            print(command.output_dir)
             if os.path.exists(command.param_file):
                os.remove(command.param_file)
             return

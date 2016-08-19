@@ -133,9 +133,9 @@ class RSDFitRunner(object):
             if "--output" not in command:
                 command += " --output"
                 
-            with tempfile.TemporaryFile() as stderr:
+            with tempfile.TemporaryFile(mode='r') as stderr:
                 try:
-                    out = subprocess.check_output(command, shell=True, stderr=stderr)
+                    out = subprocess.check_output(command, shell=True, stderr=stderr).decode("utf-8")
                 except subprocess.CalledProcessError as e:
                     stderr.seek(0)
                     error = stderr.read()
@@ -144,7 +144,7 @@ class RSDFitRunner(object):
                         if clean:
                             raise ValueError("cannot clean specified output directory due to exception")
                         
-                        if '`start_from`' in error:
+                        if "`start_from`" in error:
                             return ["warning: `start_from` variable does not currently exist"]
                         elif "the input configuration file does not exist" in error:
                             return ["warning: the specified configuration file does not exist"]

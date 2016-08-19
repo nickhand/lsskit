@@ -69,7 +69,7 @@ class TSAL(object):
             for i in range(N):
                 mat[i,i] = float(ff.readline())
         else:
-            print "Dont recognize matrix"
+            print("Dont recognize matrix")
             stop()
         self.mat=mat
 

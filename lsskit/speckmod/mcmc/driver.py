@@ -63,7 +63,7 @@ class cached_model():
         exists = self.path is not None and os.path.isfile(self.path)
         if exists and not self.ignore:
             try:
-                print "loading cached RSD model from `%s`..." %self.path
+                print("loading cached RSD model from `%s`..." %self.path)
                 ext = os.path.splitext(self.path)[1]
                 if ext == '.npy':
                     self.model = np.load(self.path).tolist()
@@ -71,7 +71,7 @@ class cached_model():
                     self.model = cPickle.load(open(self.path, 'r'))
                 else:
                     raise ValueError("model extension must be `.npy` or `.pickle`")
-                print '...done'
+                print('...done')
             except Exception as e:
                 raise ValueError("error loading cached RSD model: %s" %str(e))
         
@@ -80,7 +80,7 @@ class cached_model():
     def __exit__(self, type, value, traceback):
         
         if self.path is not None and self.save:
-            print "saving new RSD model to `%s`" %self.path
+            print("saving new RSD model to `%s`" %self.path)
             np.save(self.path, self.model)
 
 
@@ -135,7 +135,7 @@ def run_binned_mcmc(args, dims, coords, theory_model, data_loader,
         
         # load
         key = dict(zip(dims, b))
-        print "processing bin: %s..." %(", ".join("%s = %s" %(k, key[k]) for k in dims))
+        print("processing bin: %s..." %(", ".join("%s = %s" %(k, key[k]) for k in dims)))
         data_kws = data_loader(key)
     
         # make the objective function
@@ -143,7 +143,7 @@ def run_binned_mcmc(args, dims, coords, theory_model, data_loader,
 
         # run emcee
         result = emcee_fitter.solve(params, theory_params, objective, init_values=init_values)
-        print result
+        print(result)
         
         # also return some meta information
         extra = {k:data_kws[k] for k in meta}
@@ -190,7 +190,7 @@ def run_global_mcmc(args, theory_model, data_loader):
 
     # run emcee
     result = emcee_fitter.solve(params, theory_params, objective, init_values=init_values)
-    print result
+    print(result)
     
     return result
     

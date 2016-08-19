@@ -33,7 +33,9 @@ class DriverParams(object):
         for name in ignore:
             ns[name] = AttrDict()
         if os.path.isfile(filename):
-            execfile(filename, ns)
+            with open(filename) as f:
+                code = compile(f.read(), filename, 'exec')
+                exec(code, ns)
         else:
             exec(filename, ns)
         

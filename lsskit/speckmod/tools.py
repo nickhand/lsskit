@@ -109,7 +109,7 @@ def compare_bestfits(mode, **kwargs):
     # get the key dictionary and print out what we are selecting
     key = dict((df.index.names[i], df.index.levels[i][v]) for i, v in enumerate(select))
     msg = ", ".join("%s = %s" %(k,v) for k,v in key.iteritems())
-    print "selecting " + msg
+    print("selecting " + msg)
     
     # select the bestfit
     select = tuple(df.index.levels[i][v] for i, v in enumerate(select))
@@ -120,12 +120,12 @@ def compare_bestfits(mode, **kwargs):
         gp = GPModelParams(kwargs['gp_file'])
         args = tuple(df.loc[select, col] for col in kwargs['interp_cols'])
         bestfits = gp.to_dict(*args)
-        print "gp bestfit values:\n-------------"
-        print "\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems())
+        print("gp bestfit values:\n-------------")
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems()))
         
         actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
-        print "actual bestfit values:\n-------------"
-        print "\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems())
+        print("actual bestfit values:\n-------------")
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems()))
     
     # load the spline table
     elif mode == 'spline':    
@@ -134,12 +134,12 @@ def compare_bestfits(mode, **kwargs):
         s8_z = df.loc[select, 's8_z']
         b1 = df.loc[select, 'b1']
         bestfits = table(s8_z, b1)
-        print "spline table bestfit values:\n-------------"
-        print "\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems())
+        print("spline table bestfit values:\n-------------")
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in bestfits.iteritems()))
         
         actual = {k:df.loc[select, k] for k in kwargs['model'].param_names}
-        print "actual bestfit values:\n-------------"
-        print "\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems())
+        print("actual bestfit values:\n-------------")
+        print("\n".join("%s = %s" %(k,str(v)) for k,v in actual.iteritems()))
         
     elif mode == 'params':
         bestfits = {k:df.loc[select, k] for k in kwargs['model'].param_names}

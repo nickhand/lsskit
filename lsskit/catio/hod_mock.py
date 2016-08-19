@@ -248,27 +248,27 @@ class HODMock(mock_catalog.MockCatalog):
         Print out the sample info
         """
         N_tot = self.total_galaxies
-        print "total number of galaxies = %d" %N_tot
-        print "total number of halos = %d" %self.total_halos
-        print 
+        print("total number of galaxies = %d" %N_tot)
+        print("total number of halos = %d" %self.total_halos)
+        print() 
         
         N_c, N_cA, N_cB = self.centrals_totals()
         if N_c > 0:
-            print "centrals"
-            print "----------------------"
-            print "overall fraction = %.3f" %(1.*N_c/N_tot)
-            print "fraction without satellites in same halo = %.3f" %(1.*N_cA/N_c)
-            print "fraction with satellites in same halo = %.3f" %(1.*N_cB/N_c)
-            print 
+            print("centrals")
+            print("----------------------")
+            print("overall fraction = %.3f" %(1.*N_c/N_tot))
+            print("fraction without satellites in same halo = %.3f" %(1.*N_cA/N_c))
+            print("fraction with satellites in same halo = %.3f" %(1.*N_cB/N_c))
+            print() 
         
         N_s, N_sA, N_sB = self.satellites_totals()
         if N_s > 0:
-            print "satellites"
-            print "----------------------"
-            print "overall fraction = %.3f" %(1.*N_s/N_tot)
-            print "fraction without satellites in same halo = %.3f" %(1.*N_sA/N_s)
-            print "fraction with satellites in same halo = %.3f" %(1.*N_sB/N_s)
-            print
+            print("satellites")
+            print("----------------------")
+            print("overall fraction = %.3f" %(1.*N_s/N_tot))
+            print("fraction without satellites in same halo = %.3f" %(1.*N_sA/N_s))
+            print("fraction with satellites in same halo = %.3f" %(1.*N_sB/N_s))
+            print()
           
     def centrals_totals(self):
         """
@@ -486,10 +486,10 @@ class HODMock(mock_catalog.MockCatalog):
         
         # print out the fiber collision fraction    
         f_collision = 1.*self.potentially_collided/self.total_galaxies
-        print "potential collision fraction = %.3f" %f_collision
+        print("potential collision fraction = %.3f" %f_collision)
         
         # now resolve any galaxies
-        print "using resolution fraction = %.3f" %(resolution_fraction)
+        print("using resolution fraction = %.3f" %(resolution_fraction))
         self.resolution_fraction = resolution_fraction
         self._metadata.append('resolution_fraction')
         
@@ -503,7 +503,7 @@ class HODMock(mock_catalog.MockCatalog):
             self._data.loc[self._data.collided == 1, 'resolved'] = new_resolved
                 
         f_collision = 1.*self.total_collided/self.total_galaxies
-        print "final collision fraction = %.3f" %f_collision
+        print("final collision fraction = %.3f" %f_collision)
         
     def clear_fiber_assignments(self):
         """

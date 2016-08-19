@@ -12,7 +12,8 @@ def load_nbar(val):
     if '$' in val[0]:
         val[0] = replace_vars(val[0], {})
         
-    nbar = pickle.load(open(val[0], 'r'))
+    with open(val[0], 'rb') as ff:
+        nbar = pickle.load(ff, encoding='latin1')
     if len(val) > 1:
         sl = dict(eval(val[1]))
         nbar = nbar.sel(**sl)
@@ -70,7 +71,7 @@ class ModelParams(AttrDict):
         super(ModelParams, self).__init__(*args, **kwargs)
         
     def __str__(self):
-        return "\n".join(["model.%s = %s" %(k,repr(v)) for k,v in sorted(self.iteritems())])
+        return "\n".join(["model.%s = %s" %(k,repr(v)) for k,v in sorted(self.items())])
             
 class TheoryParams(object):
     """
@@ -262,7 +263,7 @@ class TheoryParams(object):
             raise KeyError("`%s` is not a valid parameter name for class %s" %args)
         
         # update the dict if the key exists
-        if hasattr(self, key) and isinstance(value, dict):
+        if key in self.__dict__ and isinstance(value, dict):
             att = getattr(self, key)
             att.update(**value)
         # just set it
@@ -277,7 +278,9 @@ class TheoryParams(object):
         for name in ignore:
             ns[name] = AttrDict()
         if os.path.isfile(filename):
-            execfile(filename, ns)
+            with open(filename) as f:
+                code = compile(f.read(), filename, 'exec')
+            exec(code, ns)
         else:
             exec(filename, ns)
         
