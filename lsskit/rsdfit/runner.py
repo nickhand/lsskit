@@ -35,7 +35,7 @@ class OutputAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         
-        print "Output directories\n" + "-"*20
+        print("Output directories\n" + "-"*20)
         for i, command in enumerate(RSDFitRunner.commands):
             
             command += " --output"
@@ -60,7 +60,7 @@ class OutputAction(argparse.Action):
                     s += " "*8 + o[8:] + '\n'
                 toprint += s
                 
-            print toprint
+            print(toprint)
             
         parser.exit()
 
@@ -84,11 +84,11 @@ class InfoAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         
-        print "Registered commands\n" + "-"*20
+        print("Registered commands\n" + "-"*20)
         for i, command in enumerate(RSDFitRunner.commands):
             c = tw.dedent(command).strip()
             c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
-            print "%d:\n%s\n" %(i, c)
+            print("%d:\n%s\n" %(i, c))
             
         parser.exit()
 
@@ -116,7 +116,7 @@ class RSDFitRunner(object):
         # append any NERSC-related options
         command = cls.commands[ns.testno]
         if ns.nodes is not None and ns.partition is not None and ns.time is not None:
-            print "submitting job: requesting %d nodes for time %s on '%s' queue" %(ns.nodes, ns.time, ns.partition)
+            print("submitting job: requesting %d nodes for time %s on '%s' queue" %(ns.nodes, ns.time, ns.partition))
             command += " -N %d -p %s -t %s" %(ns.nodes, ns.partition, ns.time)
         
         # execute
@@ -170,7 +170,7 @@ class RSDFitRunner(object):
             # print the command
             c = tw.dedent(command).strip()
             c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
-            print "executing:\n%s" %c
+            print("executing:\n%s" %c)
         
             # execute
             os.system(command)

@@ -26,7 +26,9 @@ def _load_from_rc():
     
     # if the config rc file exists, load values into globals()
     if os.path.isfile(filename):
-        execfile(filename, globals())
+        with open(filename) as f:
+            code = compile(f.read(), filename, 'exec')
+            exec(code, globals())
         
     
 def _load_from_env():
