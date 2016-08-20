@@ -7,7 +7,7 @@
     __desc__   : apply various options to the parameter set
 """
 from .. import AttrDict
-valid_theory_options = ['vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
+valid_theory_options = ['vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
 valid_theory_options += ['b2_00', 'b2_00_a', 'b2_00_b', 'b2_00_c', 'b2_00_d', 'b2_01_a', 'b2_01_b', 'constrained_b2_01']
 
 def use_b2_00(params):
@@ -254,6 +254,13 @@ def use_vary_f1hcBs(params):
     
     # model params
     params.model.use_so_correction = False  
+    
+def use_vlah_biasing(params):
+    """
+    Use Vlah et al 2013 nonlinear biasing
+    """
+    params.model.use_vlah_biasing = True
+    params.options.append('vlah_biasing')  
 
     
 def use_free_b1cB(params):
