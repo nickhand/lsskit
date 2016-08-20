@@ -56,8 +56,8 @@ class BaseTheoryParams(TheoryParams):
         # nuisance
         self.gamma_b1sA.vary = True
         self.gamma_b1sB.vary = True
-        self.f1h_sBsB.vary = True
-        self.f1h_cBs.vary = True   
+        self.f1h_sBsB.vary   = True
+        self.f1h_cBs.vary    = False  
         
         self.__dict__['_name'] = 'base'
  
