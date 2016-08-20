@@ -323,7 +323,7 @@ def compute_pole_covariance(pole_set,
     arr = tools.stack_multipoles(pole_set, ells=ells)
      
     # get the coordinates from the first box
-    pole_0 = pole_set.isel(**{k:0 for k in pole_set.dims}).values
+    pole_0 = pole_set.isel(**{k:0 for k in pole_set.dims}).get()
     coords = [pole_0.coords['k_cen'], np.asarray(ells, dtype=float)]
     
     # do the work
@@ -378,7 +378,7 @@ def compute_pkmu_covariance(pkmu_set,
     arr = np.rollaxis(arr, 0, arr.ndim)
      
     # get the coordinates from the first box
-    pkmu_0 = pkmu_set[0].values
+    pkmu_0 = pkmu_set[0].get()
     coords = [pkmu_0.coords['k_cen'], pkmu_0.coords['mu_cen']]
     
     # do the work

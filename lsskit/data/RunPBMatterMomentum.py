@@ -109,8 +109,8 @@ class RunPBMatterMomentum(PowerSpectraLoader):
                         if P0.isnull():
                             continue
                         else:
-                            P0 = P0.values
-                        P0['power'] += P.values['power']
+                            P0 = P0.get()
+                        P0['power'] += P.get()['power']
             toret = toret[0]
             
             if add_errors:
@@ -225,7 +225,7 @@ class RunPBMatterMomentum(PowerSpectraLoader):
                     else:
                         subkey['mu'] = mu
                                        
-                    P = poles.sel(**subkey).values
+                    P = poles.sel(**subkey).get()
                     P['error'] = errors[i]
                     
         return poles

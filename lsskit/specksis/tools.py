@@ -55,7 +55,7 @@ def unstack_multipoles(poles, ells, new_column):
     all_data = []    
     for key in poles.ndindex():
 
-        this_pole = poles.sel(**key).values
+        this_pole = poles.sel(**key).get()
         all_data.append(unstack_multipoles_one(this_pole, ells, new_column))
 
     old_columns, ells = list(zip(*ells))
@@ -87,7 +87,7 @@ def stack_multipoles(pole_set, ells=None):
     def stack_one(poles):
         tostack = []
         for ell in ells:
-            p = poles.sel(ell=int(ell)).values
+            p = poles.sel(ell=int(ell)).get()
             tostack.append(p.data)
         return np.vstack(tostack).T
 

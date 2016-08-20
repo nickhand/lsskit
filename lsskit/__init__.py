@@ -47,7 +47,9 @@ def load(filename, namespace=None):
     if path.isdir(filename):
         raise PluginError("can not `load` directory as plugin")
     try:
-        execfile(filename, namespace)
+        with open(filename) as ff:
+            code = compile(ff.read(), filename, "exec")
+            exec(code, namespace)
     except Exception as e:
         raise PluginError("failed to load plugin '%s': %s" % (filename, str(e)))
     return namespace

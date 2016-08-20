@@ -131,9 +131,9 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh_auto = self.get_fof_Phh(space=space)
             for key, cross in Phh.nditer():
                 if cross.isnull(): continue
-                this_cross = cross.values
-                Ph1h1 = Phh_auto.sel(a=key['a'], mass=key['mass1']).values
-                Ph2h2 = Phh_auto.sel(a=key['a'], mass=key['mass2']).values
+                this_cross = cross.get()
+                Ph1h1 = Phh_auto.sel(a=key['a'], mass=key['mass1']).get()
+                Ph2h2 = Phh_auto.sel(a=key['a'], mass=key['mass2']).get()
                 utils.add_power_errors(this_cross, Ph1h1, Ph2h2)
                 
             setattr(self, name, Phh)
@@ -177,10 +177,10 @@ class RunPBHaloPower(PowerSpectraLoader):
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 
                         'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
             for x in crosses:
-                this_cross = Phh.sel(a='0.6452', sample=x).values
+                this_cross = Phh.sel(a='0.6452', sample=x).get()
                 k1, k2 = crosses[x]
-                a = Phh.sel(a='0.6452', sample=k1).values
-                b = Phh.sel(a='0.6452', sample=k2).values
+                a = Phh.sel(a='0.6452', sample=k1).get()
+                b = Phh.sel(a='0.6452', sample=k2).get()
                 utils.add_power_errors(this_cross, a, b)
                 
             setattr(self, name, Phh)
@@ -216,12 +216,12 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_fof_gal_Phh(space=space)
-            Pmm = self.get_Pmm(space=space).sel(a='0.6452').values
+            Pmm = self.get_Pmm(space=space).sel(a='0.6452').get()
             auto_names = ['gg', 'cc', 'cAcA', 'cBcB', 'ss', 'sAsA', 'sBsB']
             keys = dict(zip(samples, auto_names))
             for k in samples:
-                this_cross = Pgal.sel(a='0.6452', sample=k).values
-                Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
+                this_cross = Pgal.sel(a='0.6452', sample=k).get()
+                Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).get()
                 utils.add_power_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return
@@ -386,10 +386,10 @@ class RunPBHaloPower(PowerSpectraLoader):
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 
                         'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
             for x in crosses:
-                this_cross = Phh.sel(a='0.6452', sample=x).values
+                this_cross = Phh.sel(a='0.6452', sample=x).get()
                 k1, k2 = crosses[x]
-                a = Phh.sel(a='0.6452', sample=k1).values
-                b = Phh.sel(a='0.6452', sample=k2).values
+                a = Phh.sel(a='0.6452', sample=k1).get()
+                b = Phh.sel(a='0.6452', sample=k2).get()
                 utils.add_power_errors(this_cross, a, b)
             
             setattr(self, name, Phh)
@@ -425,13 +425,13 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Phh_autos = self.get_so_gal_Phh(space=space)
-            Pmm = self.get_Pmm(space=space).sel(a='0.6452').values
+            Pmm = self.get_Pmm(space=space).sel(a='0.6452').get()
             
             auto_names = ['gg', 'cc', 'cAcA', 'cBcB', 'ss', 'sAsA', 'sBsB']
             keys = dict(zip(samples, auto_names))
             for k in samples:
-                this_cross = Phm.sel(a='0.6452', sample=k).values
-                Phh_auto = Phh_autos.sel(a='0.6452', sample=keys[k]).values
+                this_cross = Phm.sel(a='0.6452', sample=k).get()
+                Phh_auto = Phh_autos.sel(a='0.6452', sample=keys[k]).get()
                 utils.add_power_errors(this_cross, Phh_auto, Pmm)
             
             # set and return

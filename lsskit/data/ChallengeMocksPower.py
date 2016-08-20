@@ -186,12 +186,12 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             
             # take the real part
             for key in Pgal.ndindex():
-                pkmu = (Pgal.loc[key]).values
+                pkmu = (Pgal.loc[key]).get()
                 pkmu['power'] = pkmu['power'].real
                 
             if subtract_shot_noise:
                 for key in Pgal.ndindex():
-                    p = Pgal.loc[key].values
+                    p = Pgal.loc[key].get()
                     p['power'] = p['power'] - p.attrs['volume'] / p.attrs['N1']
                         
             if len(average):
@@ -277,7 +277,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             if subtract_shot_noise:
                 for key in poles.ndindex():
                     if key['ell'] == 0:
-                        p = poles.loc[key].values
+                        p = poles.loc[key].get()
                         p['power'] = p['power'] - p.attrs['volume'] / p.attrs['N1']
 
             # average?
@@ -337,7 +337,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             if subtract_shot_noise:
                 for key in poles.ndindex():
                     if key['ell'] == 0:
-                        p = poles.loc[key].values
+                        p = poles.loc[key].get()
                         p['power'] = p['power'] - p.attrs['shot_noise']
 
             # average?

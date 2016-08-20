@@ -122,7 +122,7 @@ class RunPBMatterPower(PowerSpectraLoader):
                     else:
                         subkey['mu'] = mu
                                        
-                    P = poles.sel(**subkey).values
+                    P = poles.sel(**subkey).get()
                     P['error'] = errors[i]
                     
         return poles
@@ -258,7 +258,7 @@ class RunPBMatterPower(PowerSpectraLoader):
                     Pv2_shot = df.loc[(los,real)]['vpar_2']
                     
                 # get the pole
-                pole = poles.sel(**key).values
+                pole = poles.sel(**key).get()
                 Pshot = pole.attrs['volume'] / pole.attrs['N1']  * Pv2_shot
                 pole['power'] -= pole['k']**2 * Pshot
                 pole.attrs['Pv2_shot'] = Pv2_shot

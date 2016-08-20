@@ -105,11 +105,11 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             for x in crosses:
                 this_cross = Pgal.sel(a='0.6452', sample=x)
                 if this_cross.isnull(): continue
-                this_cross = this_cross.values
+                this_cross = this_cross.get()
                 k1, k2 = crosses[x]
                 
-                a = Pgal.sel(a='0.6452', sample=k1).values
-                b = Pgal.sel(a='0.6452', sample=k2).values 
+                a = Pgal.sel(a='0.6452', sample=k1).get()
+                b = Pgal.sel(a='0.6452', sample=k2).get() 
                 utils.add_power_errors(this_cross, a, b)
                 
             if not Pgal.notnull().sum():
@@ -190,12 +190,12 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
-            Pmm = self.get_Pmm(space=space).sel(a='0.6452').values
+            Pmm = self.get_Pmm(space=space).sel(a='0.6452').get()
             auto_names = ['gg', 'cc', 'cAcA', 'cBcB', 'ss', 'sAsA', 'sBsB']
             keys = dict(zip(self.samples, auto_names))
             for k in self.samples:
-                this_cross = Pgal.sel(a='0.6452', sample=k).values
-                Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).values
+                this_cross = Pgal.sel(a='0.6452', sample=k).get()
+                Pgal_auto = Pgal_autos.sel(a='0.6452', sample=keys[k]).get()
                 utils.add_power_errors(this_cross, Pgal_auto, Pmm)
             
             # set and return

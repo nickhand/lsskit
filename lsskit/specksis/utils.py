@@ -52,7 +52,7 @@ def ndenumerate(dims, coords):
     coords = [coords[d] for d in dims]
        
     # make the array of dicts 
-    shape, ndims = map(len, coords), len(dims)
+    shape, ndims = tuple(len(c) for c in coords), len(dims)
     values = itertools.product(*[coords[i] for i in range(ndims)])
     allargs = np.array([dict(zip(dims, v)) for v in values]).reshape(*shape)
     
@@ -99,10 +99,10 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
             # yield index and filename
             yield idx, f
         
-        except:
+        except Exception as e:
             if not ignore_missing:
                 message = 'no file found for `%s`\n in directory `%s`' %(basename.format(**args), result_dir)
-                raise IOError(message)
+                raise e
             else:
                 yield idx, None
 
@@ -203,9 +203,9 @@ def load_data_from_file(filename, dims, shape):
     biases = pickle.load(open(filename))
         
     # sort keys and values by the keys
-    keys = biases.keys()
-    b1 = biases.values()
-    sorted_lists = sorted(zip(keys, b1), key=lambda x: x[0])
+    keys = list(biases.keys())
+    b1 = list(biases.values())
+    sorted_lists = sorted(list(zip(keys, b1)), key=lambda x: x[0])
     keys, b1 = [[x[i] for x in sorted_lists] for i in range(2)]
 
     # make the coords and return a DataArray

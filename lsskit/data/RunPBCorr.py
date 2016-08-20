@@ -54,7 +54,7 @@ class RunPBCorr(PowerSpectraLoader):
             for a in corr['a'].values:
                 data = []
                 for box in corr['box'].values:
-                    xi = corr.sel(box=box, a=a).values
+                    xi = corr.sel(box=box, a=a).get()
                     data.append(xi['corr'])
                     
                 errs[a] = np.diag(np.cov(np.asarray(data).T))**0.5
@@ -68,7 +68,7 @@ class RunPBCorr(PowerSpectraLoader):
             
             # add the errors
             for key in corr.ndindex():
-                xi = corr.loc[key].values
+                xi = corr.loc[key].get()
                 xi['error'] = errs[key['a']]
     
             setattr(self, name, corr)
@@ -108,7 +108,7 @@ class RunPBCorr(PowerSpectraLoader):
                 
                 data = []
                 for x in xi:
-                    x = x.values
+                    x = x.get()
                     data.append(x['corr'])
                 
                 subkey = (key['a'], key['mass'])
@@ -122,7 +122,7 @@ class RunPBCorr(PowerSpectraLoader):
         
             # add the errors
             for key in corr.ndindex():
-                xi = corr.loc[key].values
+                xi = corr.loc[key].get()
                 xi['error'] = errs[(key['a'], key['mass'])]
 
             setattr(self, name, corr)

@@ -59,7 +59,7 @@ class FittingSet(xr.DataArray):
         for i, val in enumerate(self[dim].values.tolist()):
 
             # select
-            d = self.sel(**{dim:val}).values
+            d = self.sel(**{dim:val}).get()
         
             # plot
             with d.driver.preserve():
@@ -79,7 +79,7 @@ class FittingSet(xr.DataArray):
         for i, val in enumerate(self[dim].values.tolist()):
 
             # select
-            d = self.sel(**{dim:val}).values
+            d = self.sel(**{dim:val}).get()
         
             bf = d.bestfit
             names.append(name_formatter(val))
@@ -111,7 +111,7 @@ class FittingSet(xr.DataArray):
         for i, val in enumerate(vals):
 
             # select
-            d = self.sel(**{dim:val}).values
+            d = self.sel(**{dim:val}).get()
         
             # plot
             if len(cmaps): kwargs['cmap'] = cmaps[i]

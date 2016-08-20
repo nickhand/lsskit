@@ -143,8 +143,8 @@ def compute_fourier_biases():
         tup = squeeze(list(key[k] for k in Pxm.dims))
         subkey = {k:key[k] for k in Pxm.dims if k in Pmm.dims}
         
-        x = Pxm.sel(**key).values
-        y = Pmm.sel(**subkey).values
+        x = Pxm.sel(**key).get()
+        y = Pmm.sel(**subkey).get()
         y_shot = tools.get_Pshot(y)
         
         ratio = x['power']/(y['power'] - y_shot)
@@ -220,8 +220,8 @@ def compute_config_biases():
         tup = squeeze(list(key[k] for k in xi_xm.dims))
         subkey = {k:key[k] for k in xi_xm.dims if k in xi_mm.dims}
         
-        x = xi_xm.sel(**key).values
-        y = xi_mm.sel(**subkey).values
+        x = xi_xm.sel(**key).get()
+        y = xi_mm.sel(**subkey).get()
         
         ratio = x['corr']/y['corr']
         b1 = determine_bias(x['r'], ratio)

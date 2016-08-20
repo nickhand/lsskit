@@ -35,6 +35,16 @@ class SpectraSet(xr.DataArray):
         super(SpectraSet, self).__init__(data, coords=coords, dims=dims, name=name, attrs=attrs, **kwargs)
         
  
+    def get(self):
+        """
+        If a 0-d array, get the actual value
+        """
+        if self.ndim != 0:
+            raise ValueError("can only use `get()` on a 0-dimensional object")
+        
+        return self.values.tolist()
+        
+        
     @classmethod
     def from_files(cls, loader, result_dir, basename, coords, dims=None, ignore_missing=False, args=(), kwargs={}):
         """
@@ -70,12 +80,12 @@ class SpectraSet(xr.DataArray):
         if dims is None:
             if not utils.is_dict_like(coords):
                 raise TypeError("if no `dims` provided, `coords` must be a dict")
-            dims = coords.keys()
-            coords = coords.values()
+            dims = list(coords.keys())
+            coords = list(coords.values())
         if len(dims) != len(coords):
             raise ValueError("shape mismatch between supplied `dims` and `coords`")
             
-        data = np.empty(map(len, coords), dtype=object)
+        data = np.empty(tuple(len(c) for c in coords), dtype=object)
         for i, f in utils.enum_files(result_dir, basename, dims, coords, ignore_missing=ignore_missing):
             try:
                 data[i] = loader(f, *args, **kwargs)
@@ -94,13 +104,13 @@ class SpectraSet(xr.DataArray):
         
         Parameters
         ----------
-        dims : list or basestring, optional
+        dims : list or ste, optional
             A list or single string specifying the dimension names to 
             iterate over
         """
         if dims is None:
             dims = self.dims
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = [dims]
         
         if not len(dims):
@@ -120,22 +130,22 @@ class SpectraSet(xr.DataArray):
         
         Parameters
         ----------
-        dims : list or basestring
+        dims : list or str
             A list or single string specifying the dimension names to 
             iterate over
         """
         if dims is None:
             dims = self.dims
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = [dims]
         
         if not len(dims):
-            key = {k:v.values for k,v in self.coords.items()}
+            key = {k:v.get() for k,v in self.coords.items()}
             yield key, self
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
-                key = {k:v.values for k,v in val.coords.items()}
+                key = {k:v.get() for k,v in val.coords.items()}
                 yield key, val
 
             
@@ -144,7 +154,7 @@ class SpectraSet(xr.DataArray):
         Add correlation function errors to each object in the set
         """
         for coord, corr in self.nditer():
-            corr = corr.values
+            corr = corr.get()
             if 'error' in corr: continue
             DD = (corr['corr']+1)*corr['RR']
             err = (corr['corr']+1)/DD**0.5
@@ -164,14 +174,14 @@ class SpectraSet(xr.DataArray):
         for coord, power in self.nditer():
             if power.isnull(): continue
             
-            power = power.values
+            power = power.get()
             if 'error' in power: continue
             if power_x1 is not None:
                 coord1 = {k:coord[k] for k in power_x1.dims}
-                p1 = power_x1.loc[coord1].values
+                p1 = power_x1.loc[coord1].get()
             if power_x2 is not None:
                 coord2 = {k:coord[k] for k in power_x2.dims}
-                p2 = power_x2.loc[coord2].values
+                p2 = power_x2.loc[coord2].get()
             utils.add_power_errors(power, p1, p2)
             
     def add_power_pole_errors(self, pkmu):
@@ -187,10 +197,10 @@ class SpectraSet(xr.DataArray):
         for key in self.ndindex():
             if 'ell' not in key:
                 raise ValueError("trying to add multipole errors without an `ell` dimension")
-            this_pole = self.sel(**key).values
+            this_pole = self.sel(**key).get()
             ell = key.pop('ell')
             if len(key):
-                this_pkmu = pkmu.sel(**key).values
+                this_pkmu = pkmu.sel(**key).get()
             else:
                 this_pkmu = pkmu
             utils.add_power_pole_errors(this_pole, this_pkmu, ell)
@@ -232,7 +242,7 @@ class SpectraSet(xr.DataArray):
                     t = []
                     for key in self.ndindex(dims=axis):
                         key.update(extra_key)
-                        d = self.loc[key].values
+                        d = self.loc[key].get()
                         t.append(d[weights])
                     weights_ = np.array(t)
                 else:
@@ -247,7 +257,7 @@ class SpectraSet(xr.DataArray):
                 col_data = []
                 for key in self.ndindex(dims=axis):
                     key.update(extra_key)
-                    d = self.loc[key].values
+                    d = self.loc[key].get()
                     col_data.append(d[name])
                 col_data = np.array(col_data)
             
@@ -266,10 +276,10 @@ class SpectraSet(xr.DataArray):
             
             # loop over each coordinate of remaining dimensions
             for key in toret.ndindex():
-                d = first.copy().sel(**key).values
+                d = first.copy().sel(**key).get()
                 toret.loc[key] = compute_mean(d, extra_key=key)
         else:
-            first = first.values
+            first = first.get()
             toret = compute_mean(first)
             
         return toret
@@ -313,7 +323,7 @@ class HaloSpectraSet(xr.Dataset):
         super(HaloSpectraSet, self).__init__(data)
                 
         if len(mass_keys):
-            self.auto_mass_key = mass_keys.keys()[0]
+            self.auto_mass_key = list(mass_keys.keys())[0]
             self.cross_mass_keys = mass_keys[self.auto_mass_key]
             if len(self.cross_mass_keys) != 2:
                 raise ValueError("need exactly 2 keys for cross mass bins")
@@ -357,8 +367,8 @@ class HaloSpectraSet(xr.Dataset):
             if any(x.isnull() for x in [Phh, Phm1, Phm2, Pmm, b1_1, b1_2]):
                 continue
                 
-            Phh, Pmm = Phh.values, Pmm.values
-            Phm1, Phm2, b1_1, b1_2 = Phm1.values, Phm2.values, b1_1.values, b1_2.values
+            Phh, Pmm = Phh.get(), Pmm.get()
+            Phm1, Phm2, b1_1, b1_2 = Phm1.get(), Phm2.get(), b1_1.get(), b1_2.get()
             
             # subtract shot noise
             Phh_noshot = Phh['power'].copy()
