@@ -210,7 +210,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
             
             # load from pickle file
             if os.path.exists(error_file) and not ignore_cache:
-                errors = pickle.load(open(error_file, 'r'))
+                errors = pickle.load(open(error_file, 'rb'), encoding='latin1')
             # compute fresh
             else:
                 if not os.path.exists("/Volumes/Frodo"):
@@ -360,11 +360,11 @@ class RunPBHaloMomentum(PowerSpectraLoader):
         import pandas as pd
         import xarray as xr
         
-        f = os.path.join(self.root, 'meta/halo_mean_vel_powers.hdf')
+        f = os.path.join(self.root, 'meta/halo_mean_vel_powers.pickle')
         if not os.path.exists(f):
             raise ValueError("the file `%s` does not exist" %f)
         
-        stats = pd.read_hdf(f, 'data')
+        stats = pd.read_pickle(f)
         
         # compute sigma sq from the DataFrame
         if not los:
