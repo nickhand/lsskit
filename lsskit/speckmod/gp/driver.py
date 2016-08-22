@@ -28,7 +28,8 @@ def progress_report(sampler, niters, nwalkers, last=10):
         acc_frac = sampler.acceptance_fraction
         acor = sampler.acor
     except:
-        acc_frac = np.array([np.nan])        
+        acc_frac = np.array([np.nan])  
+        acor = np.array([np.nan]*npars)      
     text += ["      acceptance_fraction ({}->{} (median {}))".format(acc_frac.min(), acc_frac.max(), np.median(acc_frac))]      
     for i in range(npars):
         name = 'theta%d' %i
@@ -79,7 +80,7 @@ def hyperparams_from_mcmc(ns, X, Y, Yerr=None):
     if Yerr is None: Yerr = 1e-5*Y
         
     # default burnin is same as number of iterations
-    if ns.burnin is None: ns.burnin = iterations
+    if ns.burnin is None: ns.burnin = ns.iterations
             
     # standardize the data
     if X.ndim == 1: X = X.reshape(-1, 1)
