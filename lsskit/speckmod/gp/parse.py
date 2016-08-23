@@ -1,6 +1,6 @@
 import argparse
 
-def parse_mcmc_gp(desc):
+def parse_mcmc_gp(desc, return_parser=False):
     """
     Return the parsed arguments for the GP fit which uses `emcee` 
     to perform the hyperparameter fit
@@ -29,7 +29,10 @@ def parse_mcmc_gp(desc):
     h = 'whether we want to vary the amplitude of the GP kernel'
     parser.add_argument('--vary-amplitude', action='store_true', help=h)
         
-    return parser.parse_args()
+    if not return_parser:
+        return parser.parse_args()
+    else:
+        return parser
     
     
 def parse_ml_gp(desc):
