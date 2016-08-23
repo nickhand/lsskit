@@ -1,20 +1,6 @@
 import argparse
 
-def add_model_cache(parser):
-    """
-    Adds the necessary parameter options to handle
-    caching of models
-    """
-    h = 'the RSD model path to load'
-    parser.add_argument('--model_path', type=str, help=h)
-    
-    h = 'save the RSD model to the file specified by `model_path`'
-    parser.add_argument('--cache-model', action='store_true', help=h)
-    
-    h = 'ignore any cached models and initialize a new RSD model'
-    parser.add_argument('--ignore-cache', action='store_true', help=h)
-
-def parse_binned_mcmc(desc, dims, coords, return_parser=False, cache_model=True):
+def parse_binned_mcmc(desc, dims, coords, return_parser=False):
     """
     Return the parsed arguments for a set of bins that we will 
     individually run an mcmc on
@@ -35,10 +21,6 @@ def parse_binned_mcmc(desc, dims, coords, return_parser=False, cache_model=True)
     
     h = 'whether to append results to the existing data frame'
     parser.add_argument('--append', action='store_true', default=False, help=h)
-    
-    # model caching
-    if cache_model:
-        add_model_cache(parser)
     
     # add the samples
     for i, (dim, vals) in enumerate(zip(dims, coords)):
@@ -68,9 +50,6 @@ def parse_global_mcmc(desc, return_parser=False):
 
     h = 'the name of the output file to save the results to'
     parser.add_argument('-o', '--output', type=str, required=True, help=h)
-        
-    # model caching
-    add_model_cache(parser)
          
     if not return_parser:
         return parser.parse_args()
