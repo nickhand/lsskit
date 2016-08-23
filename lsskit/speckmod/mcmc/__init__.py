@@ -1,4 +1,4 @@
-from .parse import parse_binned_mcmc, parse_global_mcmc, add_model_cache
-from .driver import run_binned_mcmc, run_global_mcmc, cached_model, setup_mcmc
+from .parse import parse_binned_mcmc, parse_global_mcmc
+from .driver import run_binned_mcmc, run_global_mcmc, setup_mcmc
 from .theory import lnprob
-import emcee_fitter
+from . import emcee_fitter
