@@ -2,7 +2,6 @@ import os
 import logging
 import functools
 import itertools
-import cPickle
 import numpy as np
 from pyRSD.rsdfit.parameters import ParameterSet
 from . import emcee_fitter
@@ -46,44 +45,6 @@ def setup_mcmc(param_file):
     
     return params['driver'], theory_params, init_values
     
-class cached_model():
-    """
-    Context for caching an RSD model
-    """                
-    def __init__(self, model, path, save=True, ignore=False):
-        
-        self.model  = model
-        self.path   = path
-        self.save   = save
-        self.ignore = ignore
-        
-    def __enter__(self):
-        
-        # try to load the model 
-        exists = self.path is not None and os.path.isfile(self.path)
-        if exists and not self.ignore:
-            try:
-                print("loading cached RSD model from `%s`..." %self.path)
-                ext = os.path.splitext(self.path)[1]
-                if ext == '.npy':
-                    self.model = np.load(self.path).tolist()
-                elif ext == '.pickle':
-                    self.model = cPickle.load(open(self.path, 'r'))
-                else:
-                    raise ValueError("model extension must be `.npy` or `.pickle`")
-                print('...done')
-            except Exception as e:
-                raise ValueError("error loading cached RSD model: %s" %str(e))
-        
-        return self.model
-            
-    def __exit__(self, type, value, traceback):
-        
-        if self.path is not None and self.save:
-            print("saving new RSD model to `%s`" %self.path)
-            np.save(self.path, self.model)
-
-
 def run_binned_mcmc(args, dims, coords, theory_model, data_loader, 
                     meta=[], return_eval_kws=False):
     """
