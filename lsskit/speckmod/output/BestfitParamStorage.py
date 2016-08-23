@@ -10,15 +10,20 @@ import pandas as pd
 import itertools
 import os
 import contextlib
+from collections import OrderedDict
 
 class BestfitParamStorage(object):
     """
     Store best-fit parameters and errors to a `pandas.DataFrame`
     """
-    def __init__(self, path, append=False):
+    def __init__(self, path, append=False, **kwargs):
         
         self.path   = path
         self.append = append
+        self.attrs = OrderedDict()
+        for k in kwargs:
+            self.attrs[k] = kwargs[k]
+        
         if self.append and not os.path.exists(self.path):
             raise ValueError("cannot append to non-existing output file `%s`" %self.path)
                 
@@ -44,6 +49,12 @@ class BestfitParamStorage(object):
         if self.append:
             self._output = self._output.drop_duplicates(subset=index_cols, take_last=True)
         self._output.index = range(len(self._output)) # reset index back to 0 - N
+        
+        # attach the dict of metadata
+        self._output._metadata.append('attrs')
+        self._output.attrs = self.attrs
+        
+        # save to pickle
         self._output.to_pickle(self.path)
         
     def write(self, key, result, **extra):
