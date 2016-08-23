@@ -42,7 +42,10 @@ class SpectraSet(xr.DataArray):
         if self.ndim != 0:
             raise ValueError("can only use `get()` on a 0-dimensional object")
         
-        return self.values.tolist()
+        if hasattr(self.values, 'tolist'):
+            return self.values.tolist()
+        else:
+            return self.values
         
         
     @classmethod

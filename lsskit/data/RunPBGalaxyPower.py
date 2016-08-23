@@ -235,6 +235,9 @@ class RunPBGalaxyPower(PowerSpectraLoader):
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
-            stats = pickle.load(open(filename, 'r'))
+            try:
+                stats = pickle.load(open(filename, 'rb'), encoding='latin1')
+            except:
+                stats = pickle.load(open(filename, 'r'))
             setattr(self, '_gal_stats', stats)
             return stats

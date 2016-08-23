@@ -200,7 +200,10 @@ def load_data_from_file(filename, dims, shape):
     import xarray as xr
     
     # load the data
-    biases = pickle.load(open(filename, 'rb'), encoding='latin1')
+    try:
+        biases = pickle.load(open(filename, 'rb'), encoding='latin1')
+    except:
+         biases = pickle.load(open(filename, 'r'))
         
     # sort keys and values by the keys
     keys = list(biases.keys())
