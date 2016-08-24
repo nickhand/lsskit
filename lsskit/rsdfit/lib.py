@@ -175,6 +175,7 @@ def submit_rsdfit_job(command, nodes, partition, time):
         
     # first figure out the NERSC host
     host = subprocess.check_output(["printenv", "NERSC_HOST"]).strip()
+    host = host.decode('utf-8')
     o = output_dir + os.sep + "slurm-{0}-%j.out".format(host)
     
     batch_file = batch_file %command
