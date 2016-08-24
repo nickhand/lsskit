@@ -6,7 +6,7 @@
     __email__  : nhand@berkeley.edu
     __desc__   : tools for dealing with the power spectra data
 """
-from . import PowerSpectraLoader
+from lsskit.data import PowerSpectraLoader
 import argparse
 
 def parse_options(options):
@@ -98,7 +98,7 @@ class StoreDataKeys(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if getattr(namespace, self.dest) is None:
             setattr(namespace, self.dest, {})
-        if isinstance(values, basestring):
+        if isinstance(values, str):
             values = [values]
         for value in values:
             key, val = value.split('=')

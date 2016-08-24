@@ -1,7 +1,6 @@
 import lsskit
 
-class PowerSpectraLoader:
-    __metaclass__ = lsskit.PluginMount
+class PowerSpectraLoader(object, metaclass=lsskit.PluginMount):
 
     name = None
     classes = {}
@@ -17,7 +16,7 @@ class PowerSpectraLoader:
         if spacing is None:
             return spectra
         for key, p in spectra.nditer():
-            spectra.loc[key] = p.values.reindex(dim, spacing, weights=weights, force=True)
+            spectra.loc[key] = p.get().reindex(dim, spacing, weights=weights, force=True)
         return spectra
     
     @classmethod

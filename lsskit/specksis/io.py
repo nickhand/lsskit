@@ -231,14 +231,14 @@ def _write_analysis_file(filename, data, columns, coords, kmin, kmax):
     shape = data.shape
     
     # now output
-    with open(filename, 'w') as ff:
+    with open(filename, 'wb') as ff:
         if len(shape) > 1:
-            ff.write("{:d} {:d}\n".format(*shape))
-            ff.write(" ".join(columns)+"\n")
+            ff.write(("{:d} {:d}\n".format(*shape)).encode())
+            ff.write((" ".join(columns)+"\n").encode())
             np.savetxt(ff, data[columns].ravel(order='F'), fmt='%.5e')
         else:
-            ff.write("{:d}\n".format(*shape))
-            ff.write(" ".join(columns)+"\n")
+            ff.write(("{:d}\n".format(*shape)).encode())
+            ff.write((" ".join(columns)+"\n").encode())
             np.savetxt(ff, data[columns], fmt='%.5e')
             
 def write_analysis_file(kind, 
@@ -288,6 +288,7 @@ def write_analysis_file(kind,
     # case of P(k) or P(k,mu)
     if kind == 'power':
         Pshot = 0. if not subtract_shot_noise else get_Pshot(power)
+        print("subtracting out Pshot = ", Pshot)
         data = power.data.copy() # removes the mask
         data['power'] -= Pshot
         coords = [power['k_cen'], power['mu_cen']]
@@ -301,7 +302,7 @@ def write_analysis_file(kind,
         data = tools.stack_multipoles(power)
         
         # subtract shot noise from monopole
-        p = power[0].values
+        p = power[0].get()
         ells = list(power['ell'].values)
         if 0 in ells and subtract_shot_noise: 
             data['power'][:,ells.index(0)] -= get_Pshot(p)
@@ -322,7 +323,7 @@ def read_analysis_file(filename):
     shape = tuple(map(int, lines[0].split()))
     columns = lines[1].split()
     N = np.prod(shape)
-    data = np.asarray([map(float, line.split()) for line in lines[2:N+2]])
+    data = np.asarray([[float(l) for l in line.split()] for line in lines[2:N+2]])
     
     # return a structured array
     dtype = [(col, 'f8') for col in columns]

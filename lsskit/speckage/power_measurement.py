@@ -216,9 +216,9 @@ class PowerMeasurement(tsal.TSAL):
         # the cosmology
         self.cosmo = kwargs.pop('cosmo', None)
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, (basestring, pygcl.Cosmology)): 
+            if not isinstance(self.cosmo, (str, pygcl.Cosmology)): 
                 raise TypeError("`Cosmo` must be one of [dict, str, pygcl.Cosmology]")
-            if isinstance(self.cosmo, basestring): 
+            if isinstance(self.cosmo, str): 
                 self.cosmo = pygcl.Cosmology(self.cosmo)
 
         # the measurement units
@@ -1297,7 +1297,7 @@ class PkmuMeasurement(PowerMeasurement):
         show_baseline      = kwargs.pop('show_baseline', False)
 
         # check if we need to extract a bias value
-        if isinstance(bias, basestring):
+        if isinstance(bias, str):
             assert exists(bias), "Specified bias TSAL file does not exist"
             bias, bias_err = tools.extract_bias(bias)
             
@@ -1493,7 +1493,7 @@ class PoleMeasurement(PowerMeasurement):
         self._order = kwargs.pop('order', 0)
         assert self._order in [0, 2, 4], "Can only compute multipoles l = 0, 2, 4"
         
-        if isinstance(args[0], basestring):
+        if isinstance(args[0], str):
             assert len(args) == 2, "Must specify two arguments to `PoleMeasurement`"
             super(PoleMeasurement, self).__init__(*args, **kwargs)
         elif isinstance(args[0], PkmuMeasurement):
@@ -1765,7 +1765,7 @@ class PoleMeasurement(PowerMeasurement):
         add_axis_labels    = kwargs.pop('add_axis_labels', True)
 
         # check if we need to extract a bias value
-        if isinstance(bias, basestring):
+        if isinstance(bias, str):
             assert exists(bias), "Specified bias TSAL file does not exist"
             bias, bias_err = tools.extract_bias(bias)
             

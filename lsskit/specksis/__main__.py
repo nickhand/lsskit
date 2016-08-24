@@ -71,7 +71,7 @@ def write_analysis_file():
         args.key[k] = cast(args.key[k])
     try:
         power = data.sel(**args.key)
-        if power.size == 1: power = power.values
+        if power.size == 1: power = power.get()
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
 
@@ -120,7 +120,7 @@ def write_analysis_grid():
             args.key[k] = args.key[k][0]
         try:
             data = data.sel(**args.key)
-            if data.size == 1: data = data.values
+            if data.size == 1: data = data.get()
         except Exception as e:
             raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
     
@@ -253,7 +253,7 @@ def write_data_gaussian_covariance():
         args.key[k] = args.key[k][0]
     try:
         data = data.sel(**args.key)
-        if data.size == 1: data = data.values
+        if data.size == 1: data = data.get()
     except Exception as e:
         raise RuntimeError("error slicing data with key %s: %s" %(str(args.key), str(e)))
     
@@ -398,7 +398,7 @@ def compute_multipoles():
             print("rank %d: processing %s ..." %(rank, key_str))
         
             # compute the multipoles
-            spec = spec.values
+            spec = spec.get()
             poles = spec.to_multipoles(*args.ell)
         
             valid = {k:v for k,v in key.items() if k in str_kwargs}

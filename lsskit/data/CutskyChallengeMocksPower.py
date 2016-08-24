@@ -61,7 +61,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             for ell in poles['ell'].values:
                 data = []
                 for box in poles['box'].values:
-                    p = poles.sel(box=box, ell=ell).values
+                    p = poles.sel(box=box, ell=ell).get()
                     data.append(p['power'])
 
                 errs[ell] = np.diag(np.cov(np.asarray(data).T))**0.5
@@ -72,7 +72,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             if subtract_shot_noise:
                 for key in poles.ndindex():
                     if key['ell'] == 0:
-                        p = poles.loc[key].values
+                        p = poles.loc[key].get()
                         p['power'] = p['power'] - p.attrs['shot_noise']
             
             # average?
@@ -81,7 +81,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
                 
             # add the errors
             for key in poles.ndindex():
-                p = poles.loc[key].values
+                p = poles.loc[key].get()
                 p['error'] = errs[key['ell']]
         
             setattr(self, name, poles)

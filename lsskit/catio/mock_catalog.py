@@ -41,9 +41,9 @@ class MockCatalog(object):
         # the cosmology
         self.cosmo = cosmo
         if self.cosmo is not None:
-            if not isinstance(self.cosmo, (basestring, pygcl.Cosmology)): 
+            if not isinstance(self.cosmo, (str, pygcl.Cosmology)): 
                 raise TypeError("`Cosmo` must be one of [str, pygcl.Cosmology]")
-            if isinstance(self.cosmo, basestring): 
+            if isinstance(self.cosmo, str): 
                 self.cosmo = pygcl.Cosmology(self.cosmo)
             
         # this will be a pandas data frame holding all the info
