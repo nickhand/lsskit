@@ -35,7 +35,7 @@ class NERSCConnection(object):
         
         cmd = "source ~/.bash_profile; " + cmd
         stdin, stdout, stderr = self.ssh_client.exec_command(cmd)
-        return stdout.read().rstrip()
+        return stdout.read().rstrip().decode('utf-8')
     
     def __enter__(self):
         """
