@@ -164,7 +164,6 @@ def submit_rsdfit_job(command, nodes, partition, time):
     module load python/3.5-anaconda
     source /usr/common/contrib/bccp/python-mpi-bcast/nersc/activate.sh
     bcast -v $TAR_DIR/$NERSC_HOST/pyRSD*
-    bcast -v $TAR_DIR/$NERSC_HOST/pandas.tar.gz
     
     N=$(($CPUS_PER_NODE * $SLURM_NNODES))
     srun -n $N %s
