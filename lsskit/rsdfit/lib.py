@@ -121,7 +121,7 @@ def run_rsdfit(config, stat, kmax,
         # run the command
         if nodes is None and partition is None and time is None:
             try:
-                p = Popen(command(), stdout=PIPE)
+                p = subprocess.Popen(command(), stdout=subprocess.PIPE)
                 output = p.communicate()[0]
                 if p.returncode: raise
             except Exception as e:
