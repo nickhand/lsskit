@@ -161,7 +161,7 @@ def submit_rsdfit_job(command, nodes, partition, time):
     batch_file = """#!/bin/bash
     
     module unload python
-    module load python/2.7-anaconda
+    module load python/3.5-anaconda
     source /usr/common/contrib/bccp/python-mpi-bcast/nersc/activate.sh
     bcast -v $TAR_DIR/$NERSC_HOST/pyRSD*
     bcast -v $TAR_DIR/$NERSC_HOST/pandas.tar.gz
