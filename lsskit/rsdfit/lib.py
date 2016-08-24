@@ -9,7 +9,7 @@
 
 import os, sys
 import tempfile
-from subprocess import Popen, PIPE, check_output
+import subprocess
 import string
 from collections import namedtuple
 import copy
