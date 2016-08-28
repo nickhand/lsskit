@@ -180,8 +180,8 @@ class TheoryParams(object):
         self.N     = AttrDict(vary=False, fiducial=0, prior='uniform', lower=0, upper=500, min=0)
 
         # so vs fof
-        self.f_so  = AttrDict(vary=False, fiducial=0.03, prior='normal', mu=0.04, sigma=0.02)
-        self.sigma_so  = AttrDict(vary=False, fiducial=4, prior='uniform', lower=1., upper=7)
+        self.f_so     = AttrDict(vary=False, fiducial=0.03, prior='normal', mu=0.04, sigma=0.02)
+        self.sigma_so = AttrDict(vary=False, fiducial=4, prior='uniform', lower=1., upper=7)
 
         # nuisance
         self.gamma_b1cB = AttrDict(vary=False, fiducial=0.40, prior='normal', mu=0.4, sigma=0.2, min=0., max=1)

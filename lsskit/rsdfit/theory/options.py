@@ -233,9 +233,13 @@ def use_so_corr(params):
     """
     Use SO corrections in the params
     """
+    # vary the log10 of f_so
+    params.valid_params.append("log10_fso")
+    params.log10_fso = AttrDict(vary=True, fiducial=-1.5, prior='uniform', lower=-5, upper=-1)
+    
     # fit params
-    params.sigma_so.update(vary=True, fiducial=3.)
-    params.f_so.update(vary=True, fiducial=0.03)
+    params.sigma_so.update(vary=True, fiducial=2.)
+    params.f_so.update(vary=False, expr="10**log10_fso")
     params.f1h_cBs.update(vary=False, fiducial=1.0)
     params.options.append('socorr')  
     
