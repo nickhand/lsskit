@@ -97,7 +97,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             raise ValueError("`space` should be 'real' or 'redshift'")
         
         scaled_tag = 'scaled' if scaled else 'unscaled'
-        name = '_my_poles_%s' %space + scaled_tag
+        name = '_my_poles_%s_%s' %(space, scaled_tag)
         if average: name += '_mean'
     
         if tag: 
@@ -126,7 +126,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             valid_boxes = []
             for key, p in poles.nditer():
                 if not p.isnull():
-                    valid_boxes.append(key['box'].tolist())
+                    valid_boxes.append(key['box'])
             poles = poles.sel(box=valid_boxes)
         
             # reindex
@@ -147,6 +147,79 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
                 errs[ell] = np.diag(np.cov(np.asarray(data).T))**0.5
                 if average:
                     errs[ell] /= (len(self.boxes))**0.5
+            
+            if subtract_shot_noise:
+                for key in poles.ndindex():
+                    if key['ell'] == 0:
+                        p = poles.loc[key].get()
+                        p['power'] = p['power'] - p.attrs['shot_noise']
+            
+            # average?
+            if average:
+                poles = poles.average(axis='box')
+                
+            # add the errors
+            for key in poles.ndindex():
+                p = poles.loc[key].get()
+                p['error'] = errs[key['ell']]
+        
+            setattr(self, name, poles)
+            return poles
+            
+            
+    def get_subbox_poles(self, which, average=False, subtract_shot_noise=True):
+        """
+        Return the cutsky galaxy multipoles in redshift space, measured
+        for the subboxes
+        """ 
+        name = '_my_poles_subboxes_%s_Mpch' %(which)
+        if average: name += '_mean'
+        
+        try:
+            return getattr(self, name)         
+        except AttributeError:
+        
+            # form the filename and load the data
+            d = self.root
+            basename = 'poles_my_cutskyN1_subbox{box:d}_%s_Mpch_unscaled_no_fkp_dk005.dat' %which
+
+            # read in the data
+            loader = io.load_power
+            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
+            kwargs = {'usecols':usecols, 'mapcols':mapcols}
+            
+            if which == '300':
+                boxes = list(range(94))
+            else:
+                boxes = list(range(24))
+            poles = SpectraSet.from_files(loader, d, basename, [boxes], ['box'], args=('1d',), kwargs=kwargs, ignore_missing=True)
+
+            # remove null
+            valid_boxes = []
+            for key, p in poles.nditer():
+                if not p.isnull():
+                    valid_boxes.append(key['box'])
+            poles = poles.sel(box=valid_boxes)
+        
+            # reindex
+            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            
+            # unstack the poles
+            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
+            poles = tools.unstack_multipoles(poles, ells, 'power')
+            
+            # compute errors
+            errs = {}
+            for ell in poles['ell'].values:
+                data = []
+                for box in poles['box'].values:
+                    p = poles.sel(box=box, ell=ell).get()
+                    data.append(p['power'])
+
+                errs[ell] = np.diag(np.cov(np.asarray(data).T))**0.5
+                if average:
+                    errs[ell] /= (len(boxes))**0.5
             
             if subtract_shot_noise:
                 for key in poles.ndindex():
