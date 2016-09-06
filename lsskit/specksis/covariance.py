@@ -258,7 +258,7 @@ def _covariance_from_data(coords, arr, kmin, kmax):
     # trim and align
     new_coords, arr = tools.trim_and_align_data(coords, arr, kmin=kmin, kmax=kmax)
     sizes = np.isfinite(new_coords[0]).sum(axis=0)
-    new_coords = map(tools.flat_and_nonnull, new_coords)
+    new_coords = list(map(tools.flat_and_nonnull, new_coords))
     mean_arr = tools.mean_structured(arr, axis=-1) # last axis is diff realizations
     
     # flatten the power and remove the NaNs
