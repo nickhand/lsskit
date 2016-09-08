@@ -542,11 +542,11 @@ class HODMock(mock_catalog.MockCatalog):
         Plot the HOD distribution of the sample, showing N_cen and N_sat 
         vs halo mass
         """  
-        import plotify as pfy
-        from utils.utilities import bin
+        from matplotlib import pyplot as plt
+        from .tools import bin
         
         # reindex by haloid
-        frame = self.sample.drop_duplicates(cols=self.halo_id)
+        frame = self.sample.drop_duplicates(self.halo_id)
         frame = frame.set_index(self.halo_id)
         
         # get the masses, N_cen, and N_sat  
@@ -559,18 +559,18 @@ class HODMock(mock_catalog.MockCatalog):
         x, y_sat, err_sat, w_sat = bin(mass, N_sat, nBins=N_bins, log=True)
 
         # plot
-        pfy.errorbar(x, y_cen, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
-        pfy.errorbar(x, y_sat, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='satellite galaxies')
-        pfy.loglog(x, y_cen+y_sat, marker='.', c='k', label='all galaxies')
+        plt.errorbar(x, y_cen, err_cen/np.sqrt(w_cen), marker='.', ls='--', label='central galaxies')
+        plt.errorbar(x, y_sat, err_sat/np.sqrt(w_sat), marker='.', ls='--', label='satellite galaxies')
+        plt.loglog(x, y_cen+y_sat, marker='.', c='k', label='all galaxies')
         
-        ax = pfy.gca()
-        pfy.plt.subplots_adjust(bottom=0.15)  
+        ax = plt.gca()
+        plt.subplots_adjust(bottom=0.15)  
         if self.units == 'relative':
             mass_units = "h^{-1} M_\odot"
         else:
             mass_units = "M_\odot"
-        ax.xlabel.update(r'$M_\mathrm{halo} (%s)$' %mass_units, fontsize=16)
-        ax.ylabel.update(r'$\langle N(M) \rangle$', fontsize=16)
+        ax.set_xlabel(r'$M_\mathrm{halo} (%s)$' %mass_units, fontsize=16)
+        ax.set_ylabel(r'$\langle N(M) \rangle$', fontsize=16)
         
         return ax
         
@@ -578,7 +578,7 @@ class HODMock(mock_catalog.MockCatalog):
         """
         Plot the mass distribution of all galaxies, and satellites only
         """
-        import plotify as pfy
+        from matplotlib import pyplot as plt
         
         # halo masses for all halos
         mass_all = np.asarray(self.sample[mass_col])
@@ -590,18 +590,18 @@ class HODMock(mock_catalog.MockCatalog):
         bins1, pdf1, dM1 = _utils.compute_pdf(mass_all, log=True)
     
         # plot
-        ax = pfy.gca()
-        pfy.bar(bins1[:-1], pdf1, width=dM1, bottom=pdf1*0., color=ax.next_color, alpha=0.5, grid='y')
+        ax = plt.gca()
+        plt.bar(bins1[:-1], pdf1, width=dM1, bottom=pdf1*0., color=ax.next_color, alpha=0.5, grid='y')
 
         # make it look nice
-        pfy.plt.subplots_adjust(bottom=0.15)
-        ax.x_log_scale()
-        ax.ylabel.update("d$p$ / d $\mathrm{log_{10}}M$", fontsize=16)
+        plt.subplots_adjust(bottom=0.15)
+        ax.set_xscale('log')
+        ax.set_ylabel("d$p$ / d $\mathrm{log_{10}}M$", fontsize=16)
         if self.units == 'relative':
             mass_units = "h^{-1} M_\odot"
         else:
             mass_units = "M_\odot"
-        ax.xlabel.update(r"$M_\mathrm{halo} \ (%s)$" %mass_units, fontsize=16)
+        ax.set_xlabel(r"$M_\mathrm{halo} \ (%s)$" %mass_units, fontsize=16)
         ax.legend(loc=0)
 
         return ax        

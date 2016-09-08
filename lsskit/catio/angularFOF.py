@@ -7,13 +7,13 @@
     __desc__   : module to compute angular clustering using a friends-of-friends algorithm
 """
 from . import kdtree, numpy as np
-from utils import utilities, pytools
 from catIO import catalog
 
 import pickle
 import os
 import collections
 import copy
+import contextlib
 
 #-------------------------------------------------------------------------------
 clusteringResult = collections.namedtuple('clusteringResult', ['groups',  
@@ -231,7 +231,7 @@ class groupFinder(object):
             algorithm on
         """
         print("adding galaxies...")
-        bar = utilities.initializeProgressBar(len(galaxy_df))
+        #bar = utilities.initializeProgressBar(len(galaxy_df))
         
         # add the 'host' column
         subsample = galaxy_df[self.coord_keys]
@@ -243,7 +243,7 @@ class groupFinder(object):
         # now make the groups
         for cnt, gal in enumerate(info):
         
-            bar.update(cnt+1)
+            #bar.update(cnt+1)
             
             # make a new group and add to end of self.groups
             newgr = Group(len(self.groups)) 
@@ -320,12 +320,12 @@ class groupFinder(object):
             print("merging groups, pass #%d..." %passes)
 
             # initialize the progress bar
-            bar = utilities.initializeProgressBar(tree.size)
+            #bar = utilities.initializeProgressBar(tree.size)
             
             # recursively merge groups
             for source_num, neighbor_list in enumerate(self.neighbor_lists):
                 
-                bar.update(source_num+1)
+                #bar.update(source_num+1)
                 
                 # do the recursive merging here
                 this_group_num = tree.objects[source_num].host
@@ -346,7 +346,7 @@ class groupFinder(object):
         """
         Save the groups that have been made
         """
-        with pytools.ignored(OSError):
+        with contextlib.suppress(OSError):
             os.makedirs('catalogs')
                                                         
         # remove groups with size < min_size

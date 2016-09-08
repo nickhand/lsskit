@@ -11,7 +11,7 @@ import operator
 
 # Note: operator here gives the function needed to go from 
 # `absolute` to `relative` units
-variables = {"wavenumber" : {'operator': operator.div, 'power' : 1}, \
+variables = {"wavenumber" : {'operator': operator.truediv, 'power' : 1}, \
              "distance"   : {'operator': operator.mul, 'power' : 1}, \
              "volume"     : {'operator': operator.mul, 'power' : 3}, \
              "power"      : {'operator': operator.mul, 'power' : 3} }

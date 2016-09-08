@@ -11,6 +11,10 @@ from pyRSD import pygcl
 import pandas as pd
 import operator
 
+def decode_column(x):
+    try: return x.decode('utf')
+    except: return x
+
 class MockCatalog(object):
     """
     Base class to represent an mock catalog of objects in a simulation cube
@@ -86,6 +90,7 @@ class MockCatalog(object):
                 raise ValueError("`%s` must be provided as a keyword" %k)
         mock = cls(meta.pop('redshift'), meta.pop('box_size'), meta.pop('units'), **meta)
         mock._data = data
+        mock._data.type = mock._data.type.map(decode_column)
         return mock
     
     @classmethod
@@ -98,9 +103,15 @@ class MockCatalog(object):
         filename : str
             the name of the HDF5 file
         """
+        import pickle
         with pd.HDFStore(filename) as store:
             df = store['data']
             meta = store.get_storer('data').attrs.metadata
+        
+        if not isinstance(meta, dict):
+            meta = pickle.loads(meta)
+            meta.pop('restrictions', None)
+            meta.pop('cosmo', None)
         
         return cls.from_dataframe(df, **meta)
         
@@ -112,7 +123,7 @@ class MockCatalog(object):
         ----------
         filename : str
             the name of the file to save the MockCatalog instance to
-        """
+        """        
         meta = {k:getattr(self,k) for k in self._metadata if hasattr(self, k)}
         store = pd.HDFStore(filename)
         store.put('data', self._data)

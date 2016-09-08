@@ -15,7 +15,7 @@ import scipy.spatial
 if hasattr(scipy.spatial, 'cKDTree') and hasattr(scipy.spatial.cKDTree, 'query_ball_tree'):
     tree = scipy.spatial.cKDTree
 else:
-    print "Warning: scipy.spatial.cKDTree outdated; operations will be slower"
+    print("Warning: scipy.spatial.cKDTree outdated; operations will be slower")
     tree = scipy.spatial.KDTree
 
 #-------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ class Scheduler(object):
     
     def __init__(self, ndata, nprocs, chunk=None, schedule='guided'):
         if not schedule in ['guided', 'dynamic', 'static']:
-            raise ValueError, 'unknown scheduling strategy'
+            raise ValueError('unknown scheduling strategy')
         
         self._ndata = mp.RawValue(ctypes.c_int, ndata)
         self._start = mp.RawValue(ctypes.c_int, 0)
@@ -265,8 +265,7 @@ class KDTree_MP(tree):
         for p in pool: p.join() 
         
         if ierr.value != 0: 
-            raise RuntimeError, ('%d errors in worker processes. Last one reported:\n%s' 
-                                    % (ierr.value, err_msg.value)) 
+            raise RuntimeError('%d errors in worker processes. Last one reported:\n%s' %(ierr.value, err_msg.value)) 
 
         # return results (private memory) 
         if k == 1:
@@ -320,8 +319,7 @@ class KDTree_MP(tree):
         for p in pool: p.join() 
         
         if ierr.value != 0: 
-            raise RuntimeError, ('%d errors in worker processes. Last one reported:\n%s' 
-                                    % (ierr.value, err_msg.value)) 
+            raise RuntimeError('%d errors in worker processes. Last one reported:\n%s' %(ierr.value, err_msg.value)) 
 
         # return results (private memory)     
         return copy.copy(list(shmem_d))
