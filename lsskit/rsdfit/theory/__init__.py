@@ -111,7 +111,7 @@ class ModelParams(AttrDict):
                 'cosmo_filename' : None,
                 'include_2loop' : False,
                 'transfer_fit' : 'CLASS', 
-                'vel_disp_from_sims' : True,
+                'vel_disp_from_sims' : False,
                 'use_mean_bias' : False,
                 'fog_model' : 'modified_lorentzian', 
                 'use_tidal_bias' : False,
@@ -126,7 +126,8 @@ class ModelParams(AttrDict):
                 'max_mu' : 4,
                 'interpolate' : True,
                 'use_so_correction' : False, 
-                'enhance_wiggles' : False}
+                'enhance_wiggles' : False, 
+                'use_vlah_biasing' : True}
                 
     def __init__(self, *args, **kwargs):
         for name in self.defaults:
