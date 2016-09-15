@@ -253,7 +253,7 @@ def use_vary_f1hcBs(params):
     params.sigma_so.update(vary=False, fiducial=0.)
     params.f_so.update(vary=False, fiducial=0.0)
     params.f1h_cBs.update(vary=True, fiducial=1.0)
-    params.options.append('vary_f1hcBs')  
+    params.options.append('f1hcBs')  
     
     # model params
     params.model.use_so_correction = False  
