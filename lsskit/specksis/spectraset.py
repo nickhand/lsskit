@@ -40,6 +40,7 @@ class SpectraSet(xr.DataArray):
         If a 0-d array, get the actual value
         """
         if self.ndim != 0:
+            print(self)
             raise ValueError("can only use `get()` on a 0-dimensional object")
         
         if hasattr(self.values, 'tolist'):

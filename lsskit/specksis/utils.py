@@ -102,7 +102,7 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
         except Exception as e:
             if not ignore_missing:
                 message = 'no file found for `%s`\n in directory `%s`' %(basename.format(**args), result_dir)
-                raise e
+                raise ValueError(message)
             else:
                 yield idx, None
 

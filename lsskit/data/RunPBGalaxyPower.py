@@ -63,6 +63,8 @@ class RunPBGalaxyPower(PowerSpectraLoader):
         """
         Return galaxy component spectra
         """
+        add_extra = space == 'redshift' and Nmu == 5 and spacing == 'dk005'
+        
         # format the name options
         if spacing: spacing = "_"+spacing
         colls_tag = "" if not collisions else "_collisions"
@@ -86,13 +88,17 @@ class RunPBGalaxyPower(PowerSpectraLoader):
                 mode = '2d'
                 
             # load the data from file
-            coords = [self.a, self.spectra]
+            spectra = self.spectra
+            if add_extra:
+                spectra += ['cAsA', 'cAsB', 'cBsA', 'cBsB']
+
+            coords = [self.a, spectra]
             dims = ['a', 'sample']
             
             loader = io.load_power
             kw = {'force_index_match':True, 'sum_only':['modes']}
             if columns is not None: kw['columns'] = columns
-            Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=(mode,), kwargs=kw)
+            Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=False, args=(mode,), kwargs=kw)
             
             # reindex
             Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
@@ -101,6 +107,12 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             Pgal.add_power_errors()
             crosses = {'cAcB':['cAcA', 'cBcB'], 'cs':['cc', 'ss'], 'cAs':['cAcA', 'ss'], 
                         'cBs':['cBcB', 'ss'], 'sAsB':['sAsA', 'sBsB']}
+                        
+            if add_extra:
+                crosses['cAsA'] = ['cAcA', 'sAsA']
+                crosses['cAsB'] = ['cAcA', 'sBsB']
+                crosses['cBsA'] = ['cBcB', 'sAsA']
+                crosses['cBsB'] = ['cBcB', 'sBsB']
                         
             for x in crosses:
                 this_cross = Pgal.sel(a='0.6452', sample=x)
