@@ -16,6 +16,7 @@ class PowerSpectraLoader(object, metaclass=lsskit.PluginMount):
         if spacing is None:
             return spectra
         for key, p in spectra.nditer():
+            if p.isnull(): continue
             spectra.loc[key] = p.get().reindex(dim, spacing, weights=weights, force=True)
         return spectra
     
