@@ -327,13 +327,13 @@ class HaloSpectraSet(xr.Dataset):
         super(HaloSpectraSet, self).__init__(data)
                 
         if len(mass_keys):
-            self.auto_mass_key = list(mass_keys.keys())[0]
-            self.cross_mass_keys = mass_keys[self.auto_mass_key]
-            if len(self.cross_mass_keys) != 2:
+            self.attrs['auto_mass_key'] = list(mass_keys.keys())[0]
+            self.attrs['cross_mass_keys'] = mass_keys[self.attrs['auto_mass_key']]
+            if len(self.attrs['cross_mass_keys']) != 2:
                 raise ValueError("need exactly 2 keys for cross mass bins")
         else:
-            self.auto_mass_key = None
-            self.cross_mass_keys = []
+            self.attrs['auto_mass_key'] = None
+            self.attrs['cross_mass_keys'] = []
                 
     def to_lambda(self, stoch_type):
         """
@@ -359,9 +359,9 @@ class HaloSpectraSet(xr.Dataset):
             Pmm = self.loc[idx]['Pmm']
             b1  = self.loc[idx]['b1']
                              
-            if self.auto_mass_key is not None:
-                key1 = {self.auto_mass_key:idx[self.cross_mass_keys[0]]}
-                key2 = {self.auto_mass_key:idx[self.cross_mass_keys[-1]]}
+            if self.attrs['auto_mass_key'] is not None:
+                key1 = {self.attrs['auto_mass_key']:idx[self.attrs['cross_mass_keys'][0]]}
+                key2 = {self.attrs['auto_mass_key']:idx[self.attrs['cross_mass_keys'][-1]]}
                 Phm1, Phm2 = Phm.loc[key1], Phm.loc[key2]
                 b1_1, b1_2 = b1.loc[key1], b1.loc[key2]
             else:
@@ -371,12 +371,12 @@ class HaloSpectraSet(xr.Dataset):
             if any(x.isnull() for x in [Phh, Phm1, Phm2, Pmm, b1_1, b1_2]):
                 continue
                 
-            Phh, Pmm = Phh.get(), Pmm.get()
-            Phm1, Phm2, b1_1, b1_2 = Phm1.get(), Phm2.get(), b1_1.get(), b1_2.get()
+            Phh, Pmm = Phh.values.tolist(), Pmm.values.tolist()
+            Phm1, Phm2, b1_1, b1_2 = Phm1.values.tolist(), Phm2.values.tolist(), b1_1.values.tolist(), b1_2.values.tolist()
             
             # subtract shot noise
             Phh_noshot = Phh['power'].copy()
-            if self.auto_mass_key is None:
+            if self.attrs['auto_mass_key'] is None:
                 Phh_noshot -= tools.get_Pshot(Phh)
             Pmm_noshot = Pmm['power'].copy() - tools.get_Pshot(Pmm)
             

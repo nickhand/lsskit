@@ -9,8 +9,7 @@ class RunPBHaloPower(PowerSpectraLoader):
     """
     name = "RunPBHaloPower"
     a = ['0.5000', '0.5714', '0.6061', '0.6452', '0.6667', '0.6897', '0.7143', '0.8000', '0.9091', '1.0000']
-    mass = range(8)
-    box = ['%02d' %i for i in range(10)]
+    mass = list(range(8))
     
     def __init__(self, root, realization='10mean', dk=None):
         
@@ -242,16 +241,16 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             columns = None
             if space == 'real':
-                basename = 'pk_hm{mass}_runPB_PB{box}_{a}.dat'
+                basename = 'pk_hm{mass}_runPB_%s_{a}.dat' %self.tag
                 mode = '1d'
                 columns = ['k', 'power', 'modes']
             else:
-                basename = 'pkmu_hm{mass}_runPB_PB{box}_{a}_Nmu5.dat'
+                basename = 'pkmu_hm{mass}_runPB_%s_{a}_Nmu5.dat' %self.tag
                 mode = '2d'
             d = os.path.join(self.root, 'halo-matter/fourier', space, 'power')
                 
-            coords = [self.a, self.mass, self.box]
-            dims = ['a', 'mass', 'box']
+            coords = [self.a, self.mass]
+            dims = ['a', 'mass']
             
             # load
             loader = io.load_power
