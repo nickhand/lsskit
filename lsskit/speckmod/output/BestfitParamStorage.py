@@ -57,10 +57,19 @@ class BestfitParamStorage(object):
         # save to pickle
         self._output.to_pickle(self.path)
         
-    def write(self, key, result, **extra):
+    def write(self, key, result, save_maxprob=False, **extra):
         """
         Append a row to the output DataFrame, given 
         the bin `key` and mcmc `result`
+        
+        Parameters
+        ==========
+        key : dict
+            the dictionary of keys specifying the bin we are saving
+        result : EmceeResults
+            the mcmc fitting result object
+        save_maxprob : bool, optional
+            save the max probability
         """
         index_cols = key.keys()
         with self.open(index_cols) as output:
@@ -69,8 +78,13 @@ class BestfitParamStorage(object):
             names = result.free_names
             columns = list(itertools.chain(*[(k, k+"_err") for k in names]))
             
+            if save_maxprob:
+                best = dict(zip(result.free_names, result.max_lnprob_values()))
+                vals = [(result[k].median, result[k].stderr) for k in names]
+            else:
+                vals = [(result[k].median, result[k].stderr) for k in names]
+                
             # data values
-            vals = [(result[k].median, result[k].stderr) for k in names]
             data = tuple(itertools.chain(*vals))
             
             # make a new dataframe and save
