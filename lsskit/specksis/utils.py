@@ -203,7 +203,7 @@ def load_data_from_file(filename, dims, shape):
     try:
         biases = pickle.load(open(filename, 'rb'), encoding='latin1')
     except:
-         biases = pickle.load(open(filename, 'r'))
+        biases = pickle.load(open(filename, 'r'))
         
     # sort keys and values by the keys
     keys = list(biases.keys())
@@ -217,5 +217,10 @@ def load_data_from_file(filename, dims, shape):
         coords = list(zip(*keys))
         coords = [np.unique(x) for x in coords]
         b1 = np.array(b1).reshape(shape)
+        
+    for i, coord in enumerate(coords):
+        if coord.dtype.char == 'S':
+            coords[i] = coord.astype('U')
+            
     return xr.DataArray(b1, coords, dims)
 
