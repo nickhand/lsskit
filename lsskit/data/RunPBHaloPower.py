@@ -491,7 +491,7 @@ class RunPBHaloPower(PowerSpectraLoader):
     #--------------------------------------------------------------------------
     # auxiliary data
     #--------------------------------------------------------------------------
-    def get_fof_halo_biases(self, filename=None):
+    def get_fof_halo_biases(self, kind='original', filename=None):
         """
         Return the linear biases of each halo mass bin 
         """
@@ -499,7 +499,13 @@ class RunPBHaloPower(PowerSpectraLoader):
             return self._halo_biases
         except:
             if filename is None:
-                filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins_original.pickle")
+                
+                if kind == 'original':
+                    filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins_original.pickle")
+                elif kind == 'new':
+                    filename = os.path.join(os.environ['PROJECTS_DIR'], "RSD-Modeling/RunPBMocks/data/biases_halo_mass_bins.pickle")
+                else:
+                    raise ValueError("'kind' should be 'original' or 'new'")
                 if not os.path.exists(filename):
                     raise ValueError("no file at `%s`, please specify as keyword argument" %filename)
                     
