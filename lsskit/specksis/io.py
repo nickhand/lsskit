@@ -57,7 +57,7 @@ def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
 
     toret = []
     columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-    meta = {'edges':edges, 'sum_only':['modes'], 'force_index_match':True}
+    meta = {'edges':edges}
     d = data[:,[1, 2, 3, 4, -1]]
     
     return Power1dDataSet.from_nbkit(d, meta, columns=columns, **kwargs)
@@ -182,7 +182,7 @@ def load_power(filename, mode, usecols=[], mapcols={}, **kwargs):
 #------------------------------------------------------------------------------
 # writers
 #------------------------------------------------------------------------------ 
-def write_plaintext(data, filename):
+def write_plaintext(data, filename, header=False):
     """
     Write a 1D or 2D `DataSet` instance as a plaintext file
     
