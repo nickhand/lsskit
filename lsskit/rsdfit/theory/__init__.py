@@ -170,8 +170,7 @@ class TheoryParams(object):
 
         # sigmas
         self.sigma_c  = AttrDict(vary=False, fiducial=1., prior='uniform', lower=0., upper=3.)
-        self.sigma_s  = AttrDict(vary=False, fiducial=4.0, prior='uniform', lower=2., upper=10.)
-        self.sigma_sA = AttrDict(vary=False, fiducial=3.5)
+        self.sigma_sA  = AttrDict(vary=False, fiducial=3.5, prior='uniform', lower=2., upper=6.)
         self.sigma_sB = AttrDict(vary=False, fiducial=5)
     
         # amplitude
