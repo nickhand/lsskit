@@ -145,7 +145,7 @@ class TheoryParams(object):
         cosmo        = ['sigma8_z', 'f', 'alpha_perp', 'alpha_par']
         biases       = ['b1_cA', 'b1_cB', 'b1_sA', 'b1_sB']
         fractions    = ['fcB', 'fsB', 'fs', 'Nsat_mult', 'f_so']
-        sigmas       = ['sigma_c', 'sigma_s', 'sigma_sA', 'sigma_sB', 'sigma_so']
+        sigmas       = ['sigma_c', 'sigma_sA', 'sigma_sB', 'sigma_so']
         amplitudes   = ['NcBs', 'NsBsB', 'nbar', 'N']
         nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs']
         self.__dict__['valid_params'] = cosmo + biases + fractions + sigmas + amplitudes + nuisance
