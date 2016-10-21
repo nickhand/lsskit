@@ -280,7 +280,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            biases = self.get_fof_halo_biases(bias_file)
+            biases = self.get_fof_halo_biases(filename=bias_file)
             data = HaloSpectraSet(self.get_fof_Phh(space), self.get_fof_Phm(space), self.get_Pmm(space), biases)
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
@@ -296,7 +296,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            biases = self.get_fof_halo_biases(bias_file)
+            biases = self.get_fof_halo_biases(filename=bias_file)
             mass_keys = {'mass':['mass1', 'mass2']}
             
             a = self.get_fof_Phh_cross(space)
@@ -482,7 +482,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             return getattr(self, name)
         except AttributeError:
 
-            biases = self.get_so_halo_biases(bias_file)
+            biases = self.get_so_halo_biases(filename=bias_file)
             data = HaloSpectraSet(self.get_so_Phh(space), self.get_so_Phm(space), self.get_Pmm(space), biases)
             lam = data.to_lambda(kind)
             setattr(self, name, lam)
