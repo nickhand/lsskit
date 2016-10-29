@@ -166,12 +166,12 @@ class TheoryParams(object):
         self.fcB        = AttrDict(vary=False, fiducial=0.089, min=0, max=1)
         self.fsB        = AttrDict(vary=False, fiducial=0.400, prior='uniform', lower=0., upper=1., min=0., max=1)
         self.fs         = AttrDict(vary=False, fiducial=0.104, prior='uniform', lower=0., upper=0.25, min=0., max=1)
-        self.Nsat_mult  = AttrDict(vary=False, fiducial=2.400, prior='normal', mu=2.4, sigma=0.1, min=2.)
+        self.Nsat_mult  = AttrDict(vary=False, fiducial=2.400, prior='normal', mu=2.4, sigma=0.2, min=2.)
 
         # sigmas
         self.sigma_c  = AttrDict(vary=False, fiducial=1., prior='uniform', lower=0., upper=3.)
-        self.sigma_sA  = AttrDict(vary=False, fiducial=3.5, prior='uniform', lower=2., upper=6.)
-        self.sigma_sB = AttrDict(vary=False, fiducial=5)
+        self.sigma_sA = AttrDict(vary=False, fiducial=3.5, prior='uniform', lower=2., upper=8.)
+        self.sigma_sB = AttrDict(vary=False, fiducial=5, prior='uniform', lower=3., upper=10.)
     
         # amplitude
         self.NcBs  = AttrDict(vary=False, fiducial=4.5e4)
@@ -190,9 +190,9 @@ class TheoryParams(object):
 
         self.delta_sigsA = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
         self.delta_sigsB = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
-
-        self.f1h_sBsB = AttrDict(vary=False, fiducial=4.0, prior='normal', mu=4.0, sigma=1.0, min=0.)
-        self.f1h_cBs  = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.5, sigma=0.75 , min=0)
+        
+        self.f1h_sBsB  = AttrDict(vary=False, fiducial=0.1, prior='normal', mu=0.1, sigma=0.03, min=0.)
+        self.f1h_cBs   = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.5, sigma=0.75 , min=0)
         
         # model parameters
         self.__dict__['model'] = ModelParams()
