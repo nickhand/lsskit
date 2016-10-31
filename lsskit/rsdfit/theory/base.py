@@ -50,7 +50,7 @@ class BaseTheoryParams(TheoryParams):
 
         # amplitudes
         self.NcBs.update(vary=False, expr="f1h_cBs / (fcB*(1 - fs)*nbar)")
-        self.NsBsB.update(vary=False, expr="f1h_sBsB / (fsB**2 * fs**2 * nbar)")
+        self.NsBsB.update(vary=False, expr="f1h_sBsB / (fsB**2 * fs**2 * nbar) * (fcB*(1 - fs) - fs*(1-fsB))")
         
         # nuisance
         self.gamma_b1sA.vary = True
