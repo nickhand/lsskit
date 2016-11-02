@@ -7,7 +7,7 @@
     __desc__   : apply various options to the parameter set
 """
 from .. import AttrDict
-valid_theory_options = ['vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'free_b1cB', 'delta_sigmas', 'fixed_alphas']
+valid_theory_options = ['vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'delta_sigmas', 'fixed_alphas']
 valid_theory_options += ['b2_00', 'b2_00_a', 'b2_00_b', 'b2_00_c', 'b2_00_d', 'b2_01_a', 'b2_01_b', 'constrained_b2_01']
 
 def use_b2_00(params):
@@ -234,12 +234,13 @@ def use_so_corr(params):
     Use SO corrections in the params
     """
     # vary the log10 of f_so
-    params.valid_params.append("log10_fso")
-    params.log10_fso = AttrDict(vary=True, fiducial=-1.5, prior='uniform', lower=-5, upper=-1)
+    #params.valid_params.append("log10_fso")
+    #params.log10_fso = AttrDict(vary=True, fiducial=-1.5, prior='uniform', lower=-5, upper=-1)
     
     # fit params
-    params.sigma_so.update(vary=True, fiducial=3.)
-    params.f_so.update(vary=False, expr="10**log10_fso")
+    params.sigma_so.update(vary=True, fiducial=5.)
+    params.f_so.update(vary=True, fiducial=0.04)
+    #params.f_so.update(vary=False, expr="10**log10_fso")
     params.options.append('socorr')  
     
     # model params
@@ -264,16 +265,6 @@ def use_vlah_biasing(params):
     """
     params.model.use_vlah_biasing = True
     params.options.append('vlah_biasing')  
-
-    
-def use_free_b1cB(params):
-    """
-    Vary b1_cB from between b1_sA and b1_sB
-    """
-    params.b1_cB.update(vary=False, expr="b1_sA + gamma_b1cB * (b1_s - b1_sA)")
-    params.gamma_b1cB.update(vary=True, fiducial=0.4, prior='normal', mu=0.4, sigma=0.2, min=0., max=1)
-    params.options.append('free_b1cB')    
-
     
 def use_delta_sigmas(params):
     """
