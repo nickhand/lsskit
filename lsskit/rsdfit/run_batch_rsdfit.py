@@ -16,7 +16,7 @@ def add_console_logger():
     # setup the logging
     rank = MPI.COMM_WORLD.rank
     name = MPI.Get_processor_name()
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         format='rank %d on %s: '%(rank,name) + \
                                 '%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M')
