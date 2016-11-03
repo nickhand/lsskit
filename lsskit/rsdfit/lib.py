@@ -166,7 +166,7 @@ def submit_rsdfit_job(command, nodes, partition, time):
     bcast -v $TAR_DIR/$NERSC_HOST/pyRSD*
     
     N=$(($CPUS_PER_NODE * $SLURM_NNODES))
-    srun -n $N %s
+    %s
     """
     # get the slurm output dir
     output_dir = os.path.join(os.path.abspath(os.path.curdir), 'output')
@@ -178,8 +178,17 @@ def submit_rsdfit_job(command, nodes, partition, time):
     host = host.decode('utf-8')
     o = output_dir + os.sep + "slurm-{0}-%j.out".format(host)
     
+    if host == 'edison':
+        command = "srun -n $N %s" %command
+    elif host == 'cori':
+        command = "srun -n $N -c 2 %s" %command
+    else:
+        raise ValueError("host '%s' not understood" %host)
+    
     batch_file = batch_file %command
     sbatch_cmd = ['sbatch', '-N', str(nodes), '-p', partition, '-t', time, '-o', o]
+    if host == 'cori':
+        sbatch_cmd += ['-C', 'haswell']
     
     p = subprocess.Popen(sbatch_cmd, stdin=subprocess.PIPE)
     p.communicate(batch_file.encode())
