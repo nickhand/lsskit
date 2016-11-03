@@ -336,7 +336,7 @@ class RSDFitBatch(object):
         with self.command.update(kwargs, self.formatter) as command:
             
             # just print the output and return
-            print command.output_dir
+            print(command.output_dir)
             if os.path.exists(command.param_file):
                os.remove(command.param_file)
             return
