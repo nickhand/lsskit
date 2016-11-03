@@ -7,8 +7,16 @@
     __desc__   : apply various options to the parameter set
 """
 from .. import AttrDict
-valid_theory_options = ['vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'delta_sigmas', 'fixed_alphas']
+valid_theory_options = ['free_sigma_sB', 'vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'delta_sigmas', 'fixed_alphas']
 valid_theory_options += ['b2_00', 'b2_00_a', 'b2_00_b', 'b2_00_c', 'b2_00_d', 'b2_01_a', 'b2_01_b', 'constrained_b2_01']
+
+def use_free_sigma_sB(params):
+    """
+    Allow sigma_sB to vary freely
+    """
+    params.sigma_sB.update(vary=True, expr=None)
+    params.options.append('free_sigma_sB')
+    
 
 def use_b2_00(params):
     """
@@ -47,6 +55,7 @@ def use_b2_00(params):
     params.b2_00_d__2 = AttrDict(vary=False, expr="b2_00__2")
     params.b2_00_d__4 = AttrDict(vary=False, expr="b2_00__4")
         
+    params.model.use_vlah_biasing = False
     params.options.append('b2_00')
 
 
@@ -67,6 +76,8 @@ def use_b2_00_a(params):
     params.b2_00_a__2 = AttrDict(vary=True, fiducial=0.42, prior='normal', mu=0.42, sigma=0.15)
     params.b2_00_a__4 = AttrDict(vary=True, fiducial=0.008, prior='normal', mu=0.008, sigma=0.05)
     
+    
+    params.model.use_vlah_biasing = False
     params.options.append('b2_00_a')
     
 def use_b2_00_b(params):
@@ -86,6 +97,7 @@ def use_b2_00_b(params):
     params.b2_00_b__2 = AttrDict(vary=True, fiducial=0.32, prior='normal', mu=0.32, sigma=0.15)
     params.b2_00_b__4 = AttrDict(vary=True, fiducial=0.03, prior='normal', mu=0.03, sigma=0.05)
     
+    params.model.use_vlah_biasing = False
     params.options.append('b2_00_b')
     
 def use_b2_00_c(params):
@@ -105,6 +117,7 @@ def use_b2_00_c(params):
     params.b2_00_c__2 = AttrDict(vary=True, fiducial=0.03, prior='normal', mu=0.03, sigma=0.1)
     params.b2_00_c__4 = AttrDict(vary=True, fiducial=0.05, prior='normal', mu=0.05, sigma=0.05)
     
+    params.model.use_vlah_biasing = False
     params.options.append('b2_00_c')
     
 def use_b2_00_d(params):
@@ -124,6 +137,7 @@ def use_b2_00_d(params):
     params.b2_00_d__2 = AttrDict(vary=True, fiducial=-0.5, prior='normal', mu=-0.5, sigma=0.2)
     params.b2_00_d__4 = AttrDict(vary=True, fiducial=0.10, prior='normal', mu=0.10, sigma=0.05)
     
+    params.model.use_vlah_biasing = False
     params.options.append('b2_00_d')
     
 def use_b2_01_a(params):
@@ -143,6 +157,7 @@ def use_b2_01_a(params):
     params.b2_01_a__1 = AttrDict(vary=True, fiducial=-1.5, prior='normal', mu=-1.5, sigma=0.5)
     params.b2_01_a__2 = AttrDict(vary=True, fiducial=0.7, prior='normal', mu=0.7, sigma=0.2)
     
+    params.model.use_vlah_biasing = False
     params.options.append('b2_01_a')
 
 def use_constrained_b2_01(params):
@@ -168,6 +183,7 @@ def use_constrained_b2_01(params):
     params.b2_01_b__1 = AttrDict(vary=False, expr="b2_01_a__1")
     params.b2_01_b__2 = AttrDict(vary=False, expr="b2_01_a__2")
 
+    params.model.use_vlah_biasing = False
     params.options.append('constrained_b2_01')
     
 def use_b2_01_b(params):
@@ -186,6 +202,7 @@ def use_b2_01_b(params):
     params.b2_01_b__1 = AttrDict(vary=True, fiducial=-1.9, prior='normal', mu=-1.9, sigma=0.6)
     params.b2_01_b__2 = AttrDict(vary=True, fiducial=0.9, prior='normal', mu=0.9, sigma=0.3)
     
+    params.model.use_vlah_biasing = False
     params.options.append('b2_01_b')
     
 def use_vary_sigmav(params):
