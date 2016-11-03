@@ -181,7 +181,7 @@ def submit_rsdfit_job(command, nodes, partition, time):
     if host == 'edison':
         command = "srun -n $N %s" %command
     elif host == 'cori':
-        command = "srun -n $N -c 2 %s" %command
+        command = "srun -n $N -c 1 %s" %command
     else:
         raise ValueError("host '%s' not understood" %host)
     
