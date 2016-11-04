@@ -125,6 +125,7 @@ def main():
         
     else:
         from mpi4py import MPI
+        from lsskit.rsdfit import batch
         
         # add the console logger
         add_console_logger()
