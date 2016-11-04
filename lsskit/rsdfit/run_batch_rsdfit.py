@@ -109,14 +109,14 @@ def main():
         # write out the iterating values to a temp file
         with tempfile.NamedTemporaryFile(delete=False) as ff:
             fname = ff.name
-            ff.write("".join(tasks))
+            ff.write(("".join(tasks)).encode())
         call_signature = [fname] + args
     
         # add the executable
         if ns.command is None: 
             ns.command = RSDFIT_BATCH
         call_signature = ns.command.split() + call_signature
-    
+
         # submit the job and return
         command = " ".join(call_signature)
         lib.submit_rsdfit_job(command, ns.nodes, ns.partition, ns.time)
