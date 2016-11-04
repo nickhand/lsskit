@@ -364,7 +364,15 @@ class RSDFitBatch(object):
         
         # update the attributes of the RSDFitDriver
         with self.command.update(kwargs, self.formatter) as command:
-            args = vars(self.parser.parse_args(command.args))
+            
+            args = None
+            if self.pool_comm.size > 1:
+                if self.pool_comm.rank == 0:
+                    args = vars(self.parser.parse_args(command.args))
+                args = self.pool_comm.bcast(args, root=0)
+            else:
+                args = vars(self.parser.parse_args(command.args))
+                
             for k in args:
                 setattr(self.driver, k, args[k])
             
