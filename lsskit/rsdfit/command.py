@@ -11,7 +11,7 @@ class BaseCommand(object):
     Base class to represent a ``rsdfit`` command
     """
     def __init__(self, config, stat, kmax, start_from=None,
-                    theory_options=[], options=[], tag="", executable=None):
+                    theory_options=[], options=[], tag="", executable=None, debug=False):
     
         # make sure the config file exists
         if not os.path.isfile(config):
@@ -31,6 +31,8 @@ class BaseCommand(object):
         self.output_dir = None
         self.param_file = None
         self.args       = None
+        
+        self.debug = debug
     
     def copy(self):
         """
@@ -79,6 +81,10 @@ class BaseCommand(object):
             xparams = os.path.join(RSDFIT, 'params', 'general', 'extra.params')
             if os.path.isfile(xparams):
                 self.args += ['-xp', xparams]
+                
+        # debug
+        if '--debug' not in self.args and self.debug:
+            self.args += ['--debug']
 
         # return
         return self

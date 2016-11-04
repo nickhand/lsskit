@@ -104,7 +104,7 @@ class RSDFitBatch(object):
         print_output : bool, optional
             just print the intended output directory and exit
         """
-        self.logger.setLevel(log_level)
+        self.logger.setLevel(log_level)    
         self.print_output    = print_output
         
         self.cpus_per_worker = cpus_per_worker
@@ -117,6 +117,10 @@ class RSDFitBatch(object):
         self.size      = comm.size
         self.rank      = comm.rank
         self.pool_comm = None
+        
+        # debug?
+        if self.logger.getEffectiveLevel() <= logging.DEBUG:
+            self.command.debug = True
         
         # the parser
         self.parser = rsdfit_parser()
@@ -156,12 +160,12 @@ class RSDFitBatch(object):
         
         # bcast the file name to all in the worker pool
         this_config = self.comm.bcast(this_config, root=0)
-        rsdfit_args = self.comm.bcast(rsdfit_args, root=0)
+        rsdfit_args = self.comm.bcast(rsdfit_args, root=0)        
         self.temp_config = this_config
 
         # get the args
         self.logger.debug("calling rsdfit with arguments: %s" %str(rsdfit_args))
-        
+    
         args = None
         if self.comm.size > 1:
             if self.comm.rank == 0:
