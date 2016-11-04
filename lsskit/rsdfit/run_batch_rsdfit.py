@@ -94,7 +94,7 @@ def main():
     
         # get the tasks
         if ns.tasks is not None:
-            tasks = open(ns.tasks, 'r').readlines()
+            tasks = ns.tasks.readlines()
         else:
             tasks = sys.stdin.readlines()
     
@@ -132,7 +132,7 @@ def main():
         
         # get the tasks
         if ns.tasks is not None:
-            tasks = open(ns.tasks, 'r').readlines()
+            tasks = ns.tasks.readlines()
         else:
             if MPI.COMM_WORLD.rank == 0:
                 tasks = sys.stdin.readlines()
