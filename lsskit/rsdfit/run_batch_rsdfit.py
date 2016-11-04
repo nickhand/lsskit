@@ -3,7 +3,7 @@ import sys
 import logging
 import tempfile
 
-from lsskit.rsdfit import lib, batch, RSDFIT_BATCH
+from lsskit.rsdfit import lib, RSDFIT_BATCH
 from lsskit.rsdfit.command import RSDFitBatchCommand
 
 
