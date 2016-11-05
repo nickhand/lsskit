@@ -91,7 +91,7 @@ def load_nbar(val):
     if nbar.size != 1:
         raise ValueError(("shot noise loaded from file should be one value; "
                           "please provide a slice via format [('key1', val), ('key2', val)]"))
-    nbar = 1.0 / nbar.values
+    nbar = 1.0 / nbar
     return nbar
      
 
