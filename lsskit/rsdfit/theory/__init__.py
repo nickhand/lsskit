@@ -1,5 +1,6 @@
 from .. import AttrDict, os
 import copy
+import numpy as np
 
 def replace_vars(s, D):
     """
@@ -79,7 +80,13 @@ def load_nbar(val):
         nbar = pickle.load(ff, encoding='latin1')
     if len(val) > 1:
         sl = dict(eval(val[1]))
-        nbar = nbar.sel(**sl)
+        
+        index = ()
+        for dim in nbar['dims']:
+            key = nbar['coords'][dim]['data'].index(sl[dim])
+            index += (key,)
+            
+        nbar = np.array(nbar['data'])[index]
         
     if nbar.size != 1:
         raise ValueError(("shot noise loaded from file should be one value; "
