@@ -87,10 +87,9 @@ def load_nbar(val):
             index += (key,)
             
         nbar = np.array(nbar['data'])[index]
-        
-    if nbar.size != 1:
-        raise ValueError(("shot noise loaded from file should be one value; "
-                          "please provide a slice via format [('key1', val), ('key2', val)]"))
+    else:
+        nbar = nbar['data']    
+    
     nbar = 1.0 / nbar
     return nbar
      
