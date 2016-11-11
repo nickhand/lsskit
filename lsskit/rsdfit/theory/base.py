@@ -49,8 +49,8 @@ class BaseTheoryParams(TheoryParams):
         self.sigma_so.update(vary=False, fiducial=0.)
 
         # amplitudes
-        self.NcBs.update(vary=False, expr="f1h_cBs / (fcB*(1 - fs)*nbar)")
-        self.NsBsB.update(vary=False, expr="f1h_sBsB / (fsB**2 * fs**2 * nbar) * (fcB*(1 - fs) - fs*(1-fsB))")
+        self.NcBs.update(vary=False, expr="f1h_cBs / (fcB*(1 - fs)*nbar*f_nbar)")
+        self.NsBsB.update(vary=False, expr="f1h_sBsB / (fsB**2 * fs**2 * nbar*f_nbar) * (fcB*(1 - fs) - fs*(1-fsB))")
         
         # nuisance
         self.gamma_b1sA.vary = True

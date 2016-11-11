@@ -197,8 +197,9 @@ class TheoryParams(object):
         self.delta_sigsA = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
         self.delta_sigsB = AttrDict(vary=False, fiducial=1., prior='normal', mu=1.0, sigma=0.2, min=0.)
         
-        self.f1h_sBsB  = AttrDict(vary=False, fiducial=4.0, prior='normal', mu=4.0, sigma=1.0, min=0.)
-        self.f1h_cBs   = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.5, sigma=0.75 , min=0)
+        self.f1h_sBsB = AttrDict(vary=False, fiducial=4.0, prior='normal', mu=4.0, sigma=1.0, min=0.)
+        self.f1h_cBs  = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.0, sigma=0.75 , min=0)
+        self.f_nbar   = AttrDict(vary=False, fiducial=1.0, prior='normal', mu=1.0, sigma=0.25 , min=0)
         
         # model parameters
         self.__dict__['model'] = ModelParams()

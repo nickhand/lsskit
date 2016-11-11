@@ -7,7 +7,8 @@
     __desc__   : apply various options to the parameter set
 """
 from .. import AttrDict
-valid_theory_options = ['free_sigma_sB', 'vlah_biasing', 'vary_sigmav', 'mu_corr', 'so_corr', 'vary_f1hcBs', 'delta_sigmas', 'fixed_alphas']
+valid_theory_options = ['vary_nbar', 'free_sigma_sB', 'vlah_biasing', 'vary_sigmav', 'mu_corr', 
+                        'so_corr', 'vary_f1hcBs', 'delta_sigmas', 'fixed_alphas']
 valid_theory_options += ['b2_00', 'b2_00_a', 'b2_00_b', 'b2_00_c', 'b2_00_d', 'b2_01_a', 'b2_01_b', 'constrained_b2_01']
 
 def use_free_sigma_sB(params):
@@ -262,6 +263,14 @@ def use_so_corr(params):
     
     # model params
     params.model.use_so_correction = True  
+
+def use_vary_nbar(params):
+    """
+    Use a varying f_nbar
+    """
+    # fit params
+    params.f_nbar.update(vary=True, fiducial=1.0)
+    params.options.append('vary_nbar')  
 
 def use_vary_f1hcBs(params):
     """
