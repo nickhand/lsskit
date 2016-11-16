@@ -144,12 +144,12 @@ class SpectraSet(xr.DataArray):
             dims = [dims]
         
         if not len(dims):
-            key = {k:v.get() for k,v in self.coords.items()}
+            key = {k:v.values for k,v in self.coords.items()}
             yield key, self
         else:
             for d in utils.ndindex(dims, self.coords):
                 val = self.loc[d]
-                key = {k:v.get() for k,v in val.coords.items()}
+                key = {k:v.values for k,v in val.coords.items()}
                 yield key, val
 
             
