@@ -153,7 +153,7 @@ class TheoryParams(object):
         fractions    = ['fcB', 'fsB', 'fs', 'Nsat_mult', 'f_so']
         sigmas       = ['sigma_c', 'sigma_sA', 'sigma_sB', 'sigma_so']
         amplitudes   = ['NcBs', 'NsBsB', 'nbar', 'N']
-        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs']
+        nuisance     = ['gamma_b1cB', 'gamma_b1sA', 'gamma_b1sB', 'delta_sigsA', 'delta_sigsB', 'f1h_sBsB', 'f1h_cBs', 'f_nbar']
         self.__dict__['valid_params'] = cosmo + biases + fractions + sigmas + amplitudes + nuisance
     
         # cosmology
