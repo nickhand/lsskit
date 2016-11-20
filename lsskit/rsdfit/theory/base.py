@@ -31,7 +31,8 @@ class BaseTheoryParams(TheoryParams):
 
         # biases
         self.b1_cA.vary = True
-        self.b1_cB.update(vary=False, expr="(1-fsB)*fs/(fcB*(1-fs)) * b1_sA + fs*fsB/(Nsat_mult*fcB*(1-fs)) * b1_sB")
+        expr = "(1-fsB)/(1+fsB*(1./Nsat_mult - 1)) * b1_sA +  (1 - (1-fsB)/(1+fsB*(1./Nsat_mult - 1))) * b1_sB"
+        self.b1_cB.update(vary=False, expr=expr)
         self.b1_sA.update(vary=False, expr="gamma_b1sA*b1_cA")
         self.b1_sB.update(vary=False, expr="gamma_b1sB*b1_cA")
     
