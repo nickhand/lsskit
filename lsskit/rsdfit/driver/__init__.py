@@ -187,7 +187,7 @@ class DriverParams(object):
         try:
             return self._lbfgs_options
         except:
-            return {'xtol':1e-4, 'ftol':1e-6, 'gtol':1e-5, 'maxiter':500}
+            return {}
     
     @lbfgs_options.setter
     def lbfgs_options(self, val):
