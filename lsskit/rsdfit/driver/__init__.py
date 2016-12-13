@@ -131,10 +131,7 @@ class DriverParams(object):
         try:
             return self._test_convergence
         except:
-            if self.solver_type != 'mcmc':
-                return True
-            else:
-                return False
+            return False
     
     @test_convergence.setter
     def test_convergence(self, val):
