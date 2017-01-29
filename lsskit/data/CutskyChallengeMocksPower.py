@@ -3,8 +3,6 @@ import os
 from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, tools, io
-from nbodykit.dataset import Power1dDataSet
-
 
 class CutskyChallengeMocksPower(PowerSpectraLoader):
     name = "CutskyChallengeMocksPower"

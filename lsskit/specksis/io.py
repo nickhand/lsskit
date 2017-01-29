@@ -4,12 +4,9 @@
 
     __author__ : Nick Hand
     __email__  : nhand@berkeley.edu
-    __desc__   : I/O tools for nbodykit's PkmuResult and PkResult
+    __desc__   : I/O tools 
 """
-from nbodykit import files
-from nbodykit.dataset import DataSet, Corr1dDataSet, Corr2dDataSet
-from nbodykit.dataset import Power1dDataSet, Power2dDataSet 
-from nbodykit.storage import MeasurementStorage
+from nbodykit.dataset import DataSet
 
 from . import tools
 from .. import numpy as np
@@ -43,7 +40,7 @@ def get_Pshot(power):
 #------------------------------------------------------------------------------
 def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
     """
-    Return a list of `Power1dDataSet` objects for each multipole in
+    Return a list of `DataSet` objects for each multipole in
     the input data file
     """
     data = np.loadtxt(filename, skiprows=skiprows, comments=None)
@@ -57,10 +54,11 @@ def read_cutsky_power_poles(filename, skiprows=31, **kwargs):
 
     toret = []
     columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-    meta = {'edges':edges}
+    edges = edges
     d = data[:,[1, 2, 3, 4, -1]]
-    
-    return Power1dDataSet.from_nbkit(d, meta, columns=columns, **kwargs)
+    dtype = np.dtype([('k','f8'), ('mono','f8'), ('quad','f8'), ('hexadec','f8'), ('modes','f8')])
+    d = np.squeeze(np.ascontiguousarray(d).view(dtype=dtype))
+    return DataSet(['k'], [edges], d, **kwargs)
     
     
 def load_momentum(filename, ell, ell_prime, **kwargs):
@@ -73,7 +71,7 @@ def load_momentum(filename, ell, ell_prime, **kwargs):
         raise ValueError("(ell, ell_prime) must be one of %s" %str(allowed))
     
     # load the multipoles
-    poles = Power1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
+    poles = DataSet.from_plaintext(['k'], filename)
     k = poles['k']
     power = []
     
@@ -140,9 +138,9 @@ def load_correlation(filename, mode, usecols=[], mapcols={}, **kwargs):
         raise ValueError("`mode` must be on of '1d' or '2d'")
 
     if mode == '1d':
-        toret = Corr1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
+        toret = DataSet.from_plaintext(['r'], filename, **kwargs)
     else:
-        toret = Corr2dDataSet.from_nbkit(*files.Read2DPlainText(filename), **kwargs)
+        toret = DataSet.from_plaintext(['r', 'mu'], filename, **kwargs)
     
     # rename any variables
     if len(mapcols):
@@ -163,9 +161,9 @@ def load_power(filename, mode, usecols=[], mapcols={}, **kwargs):
         raise ValueError("`mode` must be on of '1d' or '2d'")
 
     if mode == '1d':
-        toret = Power1dDataSet.from_nbkit(*files.Read1DPlainText(filename), **kwargs)
+        toret = DataSet.from_plaintext(['k'], filename, **kwargs)
     else:
-        toret = Power2dDataSet.from_nbkit(*files.Read2DPlainText(filename), **kwargs)
+        toret = DataSet.from_plaintext(['k', 'mu'], filename, **kwargs)
     
     # rename any variables
     if len(mapcols):
@@ -271,7 +269,7 @@ def write_analysis_file(kind,
         either write out a P(k), P(k,mu) spectrum or multipoles
     filename : str
         the desired name of the output file
-    power : {nbodykit.PkResult, nbodykit.PkmuResult, SpectraSet}
+    power : {DataSet, SpectraSet}
         the power instance to write
     columns : list of str
         list of strings specifying the names of the columns to write to 

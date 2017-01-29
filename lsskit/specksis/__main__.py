@@ -347,66 +347,7 @@ def compare_mcmc_fits():
         print(bestfit.to_comparison_table(data, args.output, **kwargs))
     else:
         bestfit.to_comparison_table(data, args.output, **kwargs)
-        
-def compute_multipoles():
-    """
-    Compute the power spectrum multipoles from a set of P(k, mu) measurements
-    """
-    from nbodykit import pkmuresult
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    rank = comm.rank
-    size = comm.size
-                    
-    # parse the input arguments
-    desc = "compute the power spectrum multipoles from a set of P(k, mu) measurements"
-    parser = argparse.ArgumentParser(description=desc)
-    
-    # required arguments
-    h = parse_tools.PowerSpectraParser.format_help()
-    parser.add_argument('data', type=parse_tools.PowerSpectraParser.data, help=h)
-    h = parse_tools.PowerSpectraCallable.format_help()
-    parser.add_argument('callable', type=parse_tools.PowerSpectraCallable.data, help=h)
-    h = 'the name of the output file'
-    parser.add_argument('-o', '--output', type=str, required=True, help=h)
-    h = 'the multipole numbers to compute'
-    parser.add_argument('-l', '--ell', nargs='+', type=int, help=h)
-    
-    args = parser.parse_args()
-    
-    # load the Pkmu spectra
-    pkmu = getattr(args.data, args.callable['name'])(**args.callable['kwargs'])
-    
-    # output string kwargs
-    str_kwargs = [kw for _, kw, _, _ in args.output._formatter_parser() if kw]
-    if 'pole' not in str_kwargs:
-        raise ValueError("`pole` must be a string format keyword in `output` for naming")
-    pole_names = {0:'mono', 2:'quad', 4:'hexadec'}
-    if any(ell not in pole_names.keys() for ell in args.ell):
-        raise ValueError("valid `ell` integers are %s" %str(pole_names.keys()))
-    
-    if isinstance(pkmu, pkmuresult.PkmuResult):
-        poles = pkmu.to_multipoles(*args.ell)
-        for iell , ell in enumerate(args.ell):
-            filename = args.output.format(pole=pole_names[ell])
-            poles[iell].to_plaintext(filename)
-    else:    
-        for i, (key, spec) in enumerate(pkmu.nditer()):
-            if i % size != rank:
-                continue    
-            key_str = " ".join(["%s = %s" %(k, str(v)) for k,v in key.items()])
-            print("rank %d: processing %s ..." %(rank, key_str))
-        
-            # compute the multipoles
-            spec = spec.get()
-            poles = spec.to_multipoles(*args.ell)
-        
-            valid = {k:v for k,v in key.items() if k in str_kwargs}
-            for iell , ell in enumerate(args.ell):
-                valid['pole'] = pole_names[ell]
-                filename = args.output.format(**valid)
-                poles[iell].to_plaintext(filename)
-            
+
         
     
     

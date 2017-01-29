@@ -2,7 +2,7 @@ from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, HaloSpectraSet
 from lsskit import numpy as np
 from pyRSD import data as sim_data
-from nbodykit.dataset import Power1dDataSet, Power2dDataSet
+from nbodykit.dataset import DataSet
 import os
 
 def make_kedges(data):
@@ -17,7 +17,7 @@ def make_kedges(data):
 def load_data(data, space, **meta):
     """
     Load the data, saved in columns to an ASCII file, into either
-    a ``PkmuResult`` or ``PkResult`` object
+    a DataSet
     """
     # make the edges
     k = data[:,0]
@@ -31,13 +31,20 @@ def load_data(data, space, **meta):
         k, mu = np.broadcast_arrays(k[...,None], mu[None,...])
         power = np.vstack([data[:,2*i+1] for i in range(Nmu)]).T
         error = np.vstack([data[:,2*(i+1)] for i in range(Nmu)]).T
-        data_dict = {'power':power, 'error':error*factor, 'k':k, 'mu':mu}
-        return Power2dDataSet([kedges, muedges], data_dict, **meta)
+        
+        dtype = np.dtype([('k','f8'), ('mu','f8'), ('power','f8'), ('error','f8')])
+        d = numpy.empty(k.shape, dtype=dtype)
+        d['k'] = k; d['mu'] = mu; d['power'] = power; d['error'] = error*factor
+        return DataSet(['k', 'mu'], [kedges, muedges],d, **meta)
+    
     elif space == 'real':
-        data_dict = {'power' : data[:,-2], 'error' : data[:,-1]*factor, 'k':k}
-        return Power1dDataSet(kedges, data_dict, **meta)
+        dtype = np.dtype([('k','f8'), ('power','f8'), ('error','f8')])
+        d = numpy.empty(len(k), dtype=dtype)
+        d['k'] = k; d['power'] = data[:,-2]; d['error'] = data[:,-1]*factor
+        return DataSet(['k'], [kedges], d, **meta)
+    
     else:
-        raise ValueError
+        raise ValueError("cannot load data; space should be 'redshift' or 'real'")
 
 
 class TeppeiSimsPower(PowerSpectraLoader):

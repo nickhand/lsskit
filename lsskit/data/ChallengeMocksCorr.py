@@ -2,7 +2,7 @@ from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, tools, io
 import os
-from nbodykit.dataset import Corr1dDataSet
+from nbodykit.dataset import DataSet
 
 def make_edges(rcen):
 
@@ -22,8 +22,9 @@ def load_data(root, box):
         
         errs = np.diag(C)**0.5
         data = np.concatenate([data, errs[:,None]], axis=1)
-        meta = {'edges' : make_edges(data[:,0])}
-        corr = Corr1dDataSet.from_nbkit(data, meta, columns=['r', 'corr', 'error'])
+        edges = make_edges(data[:,0])
+        data = np.squeeze(np.ascontiguousarray(data).view(dtype=numpy.dtype(dtype)))
+        corr = DataSet(['r'], [edges], data)
         toret.append(corr)
         
     return toret

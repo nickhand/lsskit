@@ -2,7 +2,6 @@ from lsskit import numpy as np
 from lsskit.data import PowerSpectraLoader
 from lsskit.specksis import SpectraSet, tools, io
 import os
-from nbodykit.dataset import Corr1dDataSet
     
 class RunPBCorr(PowerSpectraLoader):
     

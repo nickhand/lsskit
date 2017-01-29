@@ -45,7 +45,7 @@ def data_pkmu_gausscov(pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf, components=Fa
     
     Parameters
     ----------
-    pkmu : nbodykit.PkmuResult
+    pkmu : 
         the mean P(k,mu) measurement, on the finely-binned grid
     mu_bounds : array_like
         a list of tuples specifying (lower, upper) for each desired
@@ -83,7 +83,7 @@ def data_pole_gausscov(pkmu, ells, kmin=-np.inf, kmax=np.inf, components=False):
     
     Parameters
     ----------
-    pkmu : nbodykit.PkmuResult
+    pkmu : 
         the mean P(k,mu) measurement, on the finely-binned grid
     ells : array_like, (Nell,)
         the desired multipole numbers
@@ -120,7 +120,7 @@ def cutsky_pole_gausscov(pkmu, ells, cosmo, zbins, nbar_spline, P0, fsky, kmin=-
     
     Parameters
     ----------
-    pkmu : nbodykit.PkmuResult
+    pkmu : 
         the mean P(k,mu) periodic measurement, on the finely-binned grid
     ells : array_like, (Nell,)
         the desired multipole numbers
@@ -171,7 +171,7 @@ def model_pkmu_gausscov(model, pkmu, mu_bounds, kmin=-np.inf, kmax=np.inf):
     ----------
     model : pyRSD.rsd.GalaxySpectrum
         the model to compute P(k,mu) from
-    pkmu : nbodykit.PkmuResult
+    pkmu : 
         the power instance holding the mean P(k,mu) result, which defines the
         (k,mu) grid over from which binning effects are accounted for
     mu_bounds : array_like
@@ -214,7 +214,7 @@ def model_pole_gausscov(model, pkmu, ells, kmin=-np.inf, kmax=np.inf):
     ----------
     model : pyRSD.rsd.GalaxySpectrum
         the model to compute P(k,mu) from
-    pkmu : nbodykit.PkmuResult
+    pkmu : 
         the power instance holding the mean P(k,mu) result, which defines the
         (k,mu) grid over from which binning effects are accounted for
     ells : array_like
