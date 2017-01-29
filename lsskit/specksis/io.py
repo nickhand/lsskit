@@ -160,10 +160,17 @@ def load_power(filename, mode, usecols=[], mapcols={}, **kwargs):
     if mode not in ['1d', '2d']:
         raise ValueError("`mode` must be on of '1d' or '2d'")
 
+    columns = kwargs.pop('columns', None)
     if mode == '1d':
         toret = DataSet.from_plaintext(['k'], filename, **kwargs)
     else:
         toret = DataSet.from_plaintext(['k', 'mu'], filename, **kwargs)
+    
+    if columns is not None:
+        for icol, col in enumerate(columns):
+            name = 'col_%d' %icol
+            if name in toret:
+                toret.rename_variable(name, col)
     
     # rename any variables
     if len(mapcols):
@@ -288,7 +295,7 @@ def write_analysis_file(kind,
         Pshot = 0. if not subtract_shot_noise else get_Pshot(power)
         data = power.data.copy() # removes the mask
         data['power'] -= Pshot
-        coords = [power['k_cen'], power['mu_cen']]
+        coords = [power['k'], power['mu']]
     
     # case of multipoles
     elif kind == 'poles':
@@ -303,7 +310,7 @@ def write_analysis_file(kind,
         ells = list(power['ell'].values)
         if 0 in ells and subtract_shot_noise: 
             data['power'][:,ells.index(0)] -= get_Pshot(p)
-        coords = [p['k_cen'], np.array(ells, dtype=float)]
+        coords = [p['k'], np.array(ells, dtype=float)]
     else:
         raise ValueError("first argument to `write_analysis_file` must be `power` or `poles`")    
 

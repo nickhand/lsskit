@@ -48,7 +48,7 @@ class ChallengeMocksPower(PowerSpectraLoader):
             Pgal = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('2d',), kwargs=kwargs)
             
             # reindex and add the errors
-            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
             Pgal.add_power_errors()
             
             setattr(self, name, Pgal)
@@ -80,7 +80,7 @@ class ChallengeMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
 
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
@@ -199,13 +199,13 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             
             if isinstance(Pgal, SpectraSet):
                 # reindex and add the errors
-                Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+                Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
                 Pgal.add_power_errors()
             else:
                 
                 # reindex
                 if self.dk is not None:
-                    Pgal = Pgal.reindex('k_cen', self.dk, weights='modes', force=True)
+                    Pgal = Pgal.reindex('k', self.dk, weights='modes', force=True)
 
                 # add errors
                 Pgal['error'] =  (2./Pgal['modes'])**0.5 * Pgal['power']
@@ -266,7 +266,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
 
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
@@ -328,7 +328,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box', 'shift'], args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
 
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]

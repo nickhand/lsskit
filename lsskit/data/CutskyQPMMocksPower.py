@@ -46,7 +46,7 @@ class CutskyQPMMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, self.root, basename, [self.boxes], ['box'], kwargs=kwargs)
         
             # reindex
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
                         
             # unstack the poles
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]

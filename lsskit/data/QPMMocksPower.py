@@ -52,7 +52,7 @@ class QPMMocksPower(PowerSpectraLoader):
             
             # reindex
             if self.dk is not None:
-                Pgal = Pgal.reindex('k_cen', self.dk, weights='modes', force=True)
+                Pgal = Pgal.reindex('k', self.dk, weights='modes', force=True)
 
             # add errors
             Pgal['error'] =  (2./Pgal['modes'])**0.5 * Pgal['power']
@@ -94,7 +94,7 @@ class QPMMocksPower(PowerSpectraLoader):
             Pgal = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('2d',), kwargs=kwargs)
             
             # reindex
-            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
             
             # add the errors 
             Pgal.add_power_errors()
@@ -176,7 +176,7 @@ class QPMMocksPower(PowerSpectraLoader):
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kw)
             
             # reindex
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
             
             # now convert
             ells = [('mono',0), ('quad', 2), ('hexadec', 4)]

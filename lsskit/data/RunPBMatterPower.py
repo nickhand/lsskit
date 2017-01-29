@@ -62,7 +62,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             if self.dk is not None:
                 for ii, l in enumerate(loaded):
                     if isinstance(l, DataSet):
-                        loaded[ii] = l.reindex('k_cen', self.dk, weights='modes')
+                        loaded[ii] = l.reindex('k', self.dk, weights='modes')
         
             for k, mu in enumerate(self.mu):
                 if isinstance(loaded[k], DataSet):
@@ -155,7 +155,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             Pmm = SpectraSet.from_files(loader, d, basename, coords, dims=dims, args=('1d',), kwargs=kwargs)
             
             # reindex
-            Pmm = self.reindex(Pmm, 'k_cen', self.dk, weights='modes')
+            Pmm = self.reindex(Pmm, 'k', self.dk, weights='modes')
             
             # average?
             if average is not None:
@@ -197,7 +197,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             poles = SpectraSet(data, coords=[self.a, [0, 2, 4, 6, 8]], dims=['a', 'mu'])
             
             # reindex 
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
                 
             # add errors
             kw = {'save_errors':save_errors, 'ignore_cache':ignore_cache}
@@ -240,7 +240,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             poles = SpectraSet(data, coords=[self.a, [0, 2, 4, 6, 8]], dims=['a', 'mu'])
             
             # reindex 
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
             
             # not subtract the shot noise
             for key in poles.ndindex():

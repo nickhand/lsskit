@@ -1,5 +1,7 @@
 import numpy
 import os.path as path
+import warnings
+warnings.filterwarnings("ignore",category=DeprecationWarning)
 
 """
     Declare PluginMount and various extention points.

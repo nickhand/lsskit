@@ -49,7 +49,7 @@ class RunPBHaloPower(PowerSpectraLoader):
                                             args=('1d',), kwargs=kwargs)
             
             # reindex
-            Pmm = self.reindex(Pmm, 'k_cen', self.dk, weights='modes')
+            Pmm = self.reindex(Pmm, 'k', self.dk, weights='modes')
             
             # add errors
             Pmm.add_power_errors()
@@ -88,7 +88,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phh = self.reindex(Phh, 'k_cen', self.dk, weights='modes')
+            Phh = self.reindex(Phh, 'k', self.dk, weights='modes')
             
             # add errors
             Phh.add_power_errors()
@@ -120,7 +120,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
             
             # reindex
-            Phh = self.reindex(Phh, 'k_cen', self.dk, weights='modes')
+            Phh = self.reindex(Phh, 'k', self.dk, weights='modes')
             
             # remove NaNs
             Phh = Phh.dropna('mass1', 'all')
@@ -169,7 +169,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phh = self.reindex(Phh, 'k_cen', self.dk, weights='modes')
+            Phh = self.reindex(Phh, 'k', self.dk, weights='modes')
             
             # add the errors
             Phh.add_power_errors()
@@ -211,7 +211,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kw)
             
             # reindex
-            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_fof_gal_Phh(space=space)
@@ -259,7 +259,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phm = self.reindex(Phm, 'k_cen', self.dk, weights='modes')
+            Phm = self.reindex(Phm, 'k', self.dk, weights='modes')
             
             # average?
             if average is not None:
@@ -339,7 +339,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phh = self.reindex(Phh, 'k_cen', self.dk, weights='modes')
+            Phh = self.reindex(Phh, 'k', self.dk, weights='modes')
             
             # add errors
             Phh.add_power_errors()
@@ -378,7 +378,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phh = SpectraSet.from_files(loader,d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phh = self.reindex(Phh, 'k_cen', self.dk, weights='modes')
+            Phh = self.reindex(Phh, 'k', self.dk, weights='modes')
             
             # add the errors
             Phh.add_power_errors()
@@ -420,7 +420,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kw)
             
             # reindex
-            Phm = self.reindex(Phm, 'k_cen', self.dk, weights='modes')
+            Phm = self.reindex(Phm, 'k', self.dk, weights='modes')
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Phh_autos = self.get_so_gal_Phh(space=space)
@@ -466,7 +466,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Phm = self.reindex(Phm, 'k_cen', self.dk, weights='modes')
+            Phm = self.reindex(Phm, 'k', self.dk, weights='modes')
             
             # add errors
             Phm.add_power_errors(self.get_so_Phh(space), self.get_Pmm(space))

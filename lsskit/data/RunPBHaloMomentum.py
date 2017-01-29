@@ -88,7 +88,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
                 poles = SpectraSet(data, coords=coords+[self.mu], dims=dims+['mu'])
                 
                 # reindex 
-                poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+                poles = self.reindex(poles, 'k', self.dk, weights='modes')
                                     
                 # choose specific mu
                 if sel_mu is not None:
@@ -164,7 +164,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
                 if self.dk is not None:
                     for ii, l in enumerate(loaded):
                         if isinstance(l, DataSet):
-                            loaded[ii] = l.reindex('k_cen', self.dk, weights='modes')
+                            loaded[ii] = l.reindex('k', self.dk, weights='modes')
             
                 for k, mu in enumerate(self.mu):
                     if mu not in sel_mu: continue

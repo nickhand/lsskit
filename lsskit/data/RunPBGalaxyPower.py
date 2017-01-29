@@ -48,7 +48,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
                                             args=('1d',), kwargs=kwargs)
             
             # reindex
-            Pmm = self.reindex(Pmm, 'k_cen', self.dk, weights='modes')
+            Pmm = self.reindex(Pmm, 'k', self.dk, weights='modes')
             
             # add errors
             Pmm.add_power_errors()
@@ -101,7 +101,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=False, args=(mode,), kwargs=kw)
             
             # reindex
-            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
             
             # add the errors
             Pgal.add_power_errors()
@@ -155,7 +155,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             
             # load and reindex
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
-            poles = self.reindex(poles, 'k_cen', self.dk, weights='modes')
+            poles = self.reindex(poles, 'k', self.dk, weights='modes')
             if not poles.notnull().sum():
                 raise ValueError("there appears to be no non-null entries -- something probably went wrong")
             
@@ -198,7 +198,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
             # reindex
-            Pgal = self.reindex(Pgal, 'k_cen', self.dk, weights='modes')
+            Pgal = self.reindex(Pgal, 'k', self.dk, weights='modes')
             
             # now add errors, using Pmm at z = 0.55 and each galaxy auto spectrum
             Pgal_autos = self.get_Pgal(space=space)
