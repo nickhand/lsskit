@@ -79,7 +79,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
                         args = (ell, ell_prime, self.tag)
                         basename = 'poles_P%d%d_hh{mass}_runPB_%s_{a}.dat' %args
                 
-                kwargs = {'sum_only':['modes'], 'force_index_match':True}
+                kwargs = {'fields_to_sum':['modes']}
                 if columns is not None: kwargs['columns'] = columns
                 poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=(ell,ell_prime,), kwargs=kwargs)
             
@@ -156,7 +156,7 @@ class RunPBHaloMomentum(PowerSpectraLoader):
         
             # the matching files
             files = glob(pattern)
-            kw = {'sum_only':['modes'], 'force_index_match':True}
+            kw = {'fields_to_sum':['modes']}
         
             for j, f in enumerate(files):
             

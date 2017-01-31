@@ -54,7 +54,7 @@ class RunPBMatterPower(PowerSpectraLoader):
     
         # the matching files
         files = glob(pattern)
-        kw = {'sum_only':['modes'], 'force_index_match':True}
+        kw = {'fields_to_sum':['modes']}
     
         for j, f in enumerate(files):
         
@@ -189,7 +189,7 @@ class RunPBMatterPower(PowerSpectraLoader):
 
             # load
             loader = io.load_momentum
-            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['modes']}
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=(0,1,), kwargs=kwargs)
 
             # add the mu dimension
@@ -232,7 +232,7 @@ class RunPBMatterPower(PowerSpectraLoader):
             
             # load
             loader = io.load_momentum
-            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['modes']}
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=(1,1,), kwargs=kwargs)
             
             # add the mu dimension

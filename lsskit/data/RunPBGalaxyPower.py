@@ -96,7 +96,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             dims = ['a', 'sample']
             
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=False, args=(mode,), kwargs=kw)
             
@@ -151,7 +151,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             
             loader = io.load_power
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kw = {'columns':columns, 'force_index_match':True, 'sum_only':['modes']}
+            kw = {'columns':columns, 'fields_to_sum':['modes']}
             
             # load and reindex
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
@@ -193,7 +193,7 @@ class RunPBGalaxyPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             

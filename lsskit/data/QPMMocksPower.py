@@ -47,7 +47,7 @@ class QPMMocksPower(PowerSpectraLoader):
             filename = os.path.join(self.root, space, 'power', basename)
             
             # load the data and possibly re-index
-            kw = {'sum_only':['modes'], 'force_index_match':True}
+            kw = {'fields_to_sum':['modes']}
             Pgal = io.load_power(filename, '2d', **kw)
             
             # reindex
@@ -90,7 +90,7 @@ class QPMMocksPower(PowerSpectraLoader):
             coords = [self.boxes]
             
             loader = io.load_power
-            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['modes']}
             Pgal = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('2d',), kwargs=kwargs)
             
             # reindex
@@ -127,7 +127,7 @@ class QPMMocksPower(PowerSpectraLoader):
             filename = os.path.join(self.root, space, 'poles', basename)
             
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kw = {'columns':columns, 'force_index_match':True, 'sum_only':['modes']}
+            kw = {'columns':columns, 'fields_to_sum':['modes']}
             poles = io.load_power(filename, '1d', **kw)
             
             # reindex
@@ -171,7 +171,7 @@ class QPMMocksPower(PowerSpectraLoader):
 
             # load
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kw = {'columns':columns, 'force_index_match':True, 'sum_only':['modes']}
+            kw = {'columns':columns, 'fields_to_sum':['modes']}
             loader = io.load_power
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kw)
             

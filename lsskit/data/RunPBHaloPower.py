@@ -83,7 +83,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
@@ -116,7 +116,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load 
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes'], 'columns':['k', 'power', 'modes']}
+            kw = {'fields_to_sum':['modes'], 'columns':['k', 'power', 'modes']}
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, ignore_missing=True, args=('1d',), kwargs=kw)
             
             # reindex
@@ -163,7 +163,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             dims = ['a', 'sample']
             
             # load
-            kw = {'sum_only':['modes'], 'force_index_match':True}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             loader = io.load_power
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
@@ -207,7 +207,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'sum_only':['modes'], 'force_index_match':True, 'columns':['k', 'power', 'modes']}
+            kw = {'fields_to_sum':['modes'], 'columns':['k', 'power', 'modes']}
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kw)
             
             # reindex
@@ -334,7 +334,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Phh = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             
@@ -373,7 +373,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Phh = SpectraSet.from_files(loader,d, basename, coords, dims, args=(mode,), kwargs=kw)
             
@@ -416,7 +416,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes'], 'columns':['k', 'power', 'modes']}
+            kw = {'fields_to_sum':['modes'], 'columns':['k', 'power', 'modes']}
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kw)
             
             # reindex
@@ -461,7 +461,7 @@ class RunPBHaloPower(PowerSpectraLoader):
             
             # load
             loader = io.load_power
-            kw = {'force_index_match':True, 'sum_only':['modes']}
+            kw = {'fields_to_sum':['modes']}
             if columns is not None: kw['columns'] = columns
             Phm = SpectraSet.from_files(loader, d, basename, coords, dims, args=(mode,), kwargs=kw)
             

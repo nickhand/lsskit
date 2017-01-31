@@ -44,7 +44,7 @@ class ChallengeMocksPower(PowerSpectraLoader):
             d = os.path.join(self.root, 'power')
             
             loader = io.load_power
-            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['modes'], 'force_index_match':True}
             Pgal = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('2d',), kwargs=kwargs)
             
             # reindex and add the errors
@@ -76,7 +76,7 @@ class ChallengeMocksPower(PowerSpectraLoader):
             
             loader = io.load_power
             columns = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kwargs = {'sum_only':['modes'], 'force_index_match':True, 'columns':columns}
+            kwargs = {'fields_to_sum':['modes'], 'columns':columns}
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box'], args=('1d',), kwargs=kwargs)
 
             # reindex and add the errors
@@ -181,7 +181,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             d = os.path.join(self.root, 'power')
             
             loader = io.load_power
-            kwargs = {'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['modes']}
             Pgal = SpectraSet.from_files(loader, d, basename, coords, dims, args=('2d',), kwargs=kwargs)
             
             # take the real part
@@ -257,10 +257,10 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             d = os.path.join(self.root, 'poles')
             
             loader = io.load_power
-            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             if include_tetrahex: 
-                mapcols['power_6.real'] = 'tetrahex'
+                mapcols['power_6'] = 'tetrahex'
                 usecols.append('tetrahex')
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, coords, dims, args=('1d',), kwargs=kwargs)
@@ -322,7 +322,7 @@ class NSeriesChallengeMocksPower(PowerSpectraLoader):
             d = os.path.join(self.root, 'poles')
             
             loader = io.load_power
-            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, coords, ['box', 'shift'], args=('1d',), kwargs=kwargs)

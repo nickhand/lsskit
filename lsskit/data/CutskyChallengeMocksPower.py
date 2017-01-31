@@ -259,7 +259,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
 
             # read in the data
             loader = io.read_cutsky_power_poles
-            kwargs = {'skiprows' : 31, 'sum_only':['modes'], 'force_index_match':True}
+            kwargs = {'skiprows' : 31, 'fields_to_sum':['modes']}
             poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], kwargs=kwargs)
         
             # reindex

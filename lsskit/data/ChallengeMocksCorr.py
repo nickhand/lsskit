@@ -80,7 +80,7 @@ class ChallengeMocksCorr(PowerSpectraLoader):
             d = os.path.join(self.root, 'corr_poles')
                         
             loader = io.load_correlation
-            kwargs = {'sum_only':['RR', 'N'], 'force_index_match':True}
+            kwargs = {'fields_to_sum':['RR', 'N']}
             poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs)
             
             # reindex and add the errors
