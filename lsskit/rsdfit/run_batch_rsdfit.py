@@ -157,7 +157,7 @@ def main():
         task_values = task_values[1:]
 
         comm = MPI.COMM_WORLD
-        if len(tasks) == 1:
+        if len(task_values) == 1:
             logging.warning("changing cpus_per_worker to %d" %(comm.size-1))
             ns.cpus_per_worker = comm.size-1
             
