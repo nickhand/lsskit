@@ -12,9 +12,43 @@ def get_modified_time(o):
     return "last modified: %s" % time.ctime(os.path.getmtime(o))
     
 def format_output(o):
-    
     relpath = os.path.relpath(o, RSDFIT_FITS)
     return os.path.join("$RSDFIT_FITS", relpath)
+
+from argparse import ArgumentParser as BaseArgumentParser
+    
+class ArgumentParser(BaseArgumentParser):
+    """
+    An argument parser that pre-parses some arguments
+    """
+    preparser = BaseArgumentParser(add_help=False)
+    preparser.exit = lambda a, b: None
+    _preparser_args = {}
+    actions = []
+    
+    def __init__(self, *largs, **kwargs):
+
+        args = kwargs.pop('args', None)            
+        self.ns, unknown = self.preparser.parse_known_args(args) 
+        for a in self.actions:
+            if getattr(self.ns, a.dest) == a.default:
+                a(self.preparser, self.ns, a.default)
+                
+        BaseArgumentParser.__init__(self, *largs, **kwargs)
+        for name in self._preparser_args:
+            self.add_argument(name, **self._preparser_args[name])
+ 
+    @classmethod
+    def update_preparser(cls, name, **kws):
+        action = cls.preparser.add_argument(name, **kws)
+        cls.actions.append(action)
+        
+        kws.pop('action', None)
+        cls._preparser_args[name] = kws
+    
+    def parse_args(self, args=None):
+        return BaseArgumentParser.parse_args(self, args)
+        
         
 class OutputAction(argparse.Action):
     """
@@ -106,6 +140,10 @@ class RSDFitRunner(object):
         cls.commands.append(command)
         
     @classmethod
+    def update_preparser(cls, name, **kws):
+        ArgumentParser.update_preparser(name, **kws)
+    
+    @classmethod
     def execute(cls):
         """
         Execute the ``RSDFitRunner`` command
@@ -176,36 +214,47 @@ class RSDFitRunner(object):
             os.system(command)
 
     @classmethod
+    def get_parser(cls):
+        """
+        Return the parser
+        """
+        if not hasattr(cls, 'parser'):
+            desc = "run a ``rsdfit`` command from a set of registered commands"
+            parser = ArgumentParser(description=desc)
+        
+            h = 'the integer number of the test to run'
+            parser.add_argument('testno', type=int, help=h)
+        
+            h = 'print out the various commands'
+            parser.add_argument('-i', '--info', action=InfoAction, help=h)
+        
+            h = 'print out the output directories and last modified timees for each registerd command'
+            parser.add_argument('-o', '--output', action=OutputAction, help=h)
+        
+            h = 'remove all files from the specified output directory'
+            parser.add_argument('--clean', action='store_true', help=h)
+        
+            # nersc related options
+            nersc = parser.add_argument_group("NERSC-related options")
+            h = 'the number of nodes to request'
+            nersc.add_argument('-N', '--nodes', type=int, help=h)
+        
+            h = 'the NERSC partition to submit to'
+            nersc.add_argument('-p', '--partition', type=str, help=h)
+        
+            h = 'the requested amount of time'
+            nersc.add_argument('-t', '--time', type=str, help=h)
+            
+            cls.parser = parser
+        
+        return cls.parser
+        
+    @classmethod
     def parse_args(cls):
         """
         Parse the command-line arguments
         """
-        desc = "run a ``rsdfit`` command from a set of registered commands"
-        parser = argparse.ArgumentParser(description=desc)
-        
-        h = 'the integer number of the test to run'
-        parser.add_argument('testno', type=int, help=h)
-        
-        h = 'print out the various commands'
-        parser.add_argument('-i', '--info', action=InfoAction, help=h)
-        
-        h = 'print out the output directories and last modified timees for each registerd command'
-        parser.add_argument('-o', '--output', action=OutputAction, help=h)
-        
-        h = 'remove all files from the specified output directory'
-        parser.add_argument('--clean', action='store_true', help=h)
-        
-        # nersc related options
-        nersc = parser.add_argument_group("NERSC-related options")
-        h = 'the number of nodes to request'
-        nersc.add_argument('-N', '--nodes', type=int, help=h)
-        
-        h = 'the NERSC partition to submit to'
-        nersc.add_argument('-p', '--partition', type=str, help=h)
-        
-        h = 'the requested amount of time'
-        nersc.add_argument('-t', '--time', type=str, help=h)
-        
+        parser = cls.get_parser()
         ns = parser.parse_args()
         
         # make sure the integer value is valid
