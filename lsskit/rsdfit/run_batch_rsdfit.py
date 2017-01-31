@@ -156,11 +156,13 @@ def main():
         task_keys = task_values[0]
         task_values = task_values[1:]
 
+        comm = MPI.COMM_WORLD
         if len(tasks) == 1:
-            ns.cpus_per_worker = MPI.COMM_WORLD.size
+            logging.warning("changing cpus_per_worker to %d" %(comm.size-1))
+            ns.cpus_per_worker = comm.size-1
             
         # initialize the task manager
-        args = (MPI.COMM_WORLD, ns.cpus_per_worker, command, task_keys, task_values)
+        args = (comm, ns.cpus_per_worker, command, task_keys, task_values)
         manager = batch.RSDFitBatch(*args, log_level=ns.log_level, print_output=ns.print_output)
     
         # and run!
