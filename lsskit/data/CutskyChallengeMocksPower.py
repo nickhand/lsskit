@@ -42,7 +42,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
 
             # read in the data
             loader = io.load_power
-            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs)
@@ -115,7 +115,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
 
             # read in the data
             loader = io.load_power
-            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs, ignore_missing=True)
@@ -183,7 +183,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
 
             # read in the data
             loader = io.load_power
-            mapcols = {'power_0.real':'mono', 'power_2.real':'quad', 'power_4.real':'hexadec'}
+            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
             usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
             kwargs = {'usecols':usecols, 'mapcols':mapcols}
             
