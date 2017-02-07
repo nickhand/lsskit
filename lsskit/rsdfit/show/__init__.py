@@ -8,7 +8,9 @@ if not os.path.isfile(config_filename):
 
 # load the configuration
 model_kmax = None
-execfile(config_filename, globals())
+with open(config_filename) as f:
+    code = compile(f.read(), config_filename, 'exec')
+    exec(code, globals())
 
 
 def rsd_model():

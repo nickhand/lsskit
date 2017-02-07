@@ -26,6 +26,19 @@ class FittingSet(xr.DataArray):
     """
     A subclass of ``xarray.DataArray`` to hold a set of fitting results
     """
+    def get(self):
+        """
+        If a 0-d array, get the actual value
+        """
+        if self.ndim != 0:
+            print(self)
+            raise ValueError("can only use `get()` on a 0-dimensional object")
+        
+        if hasattr(self.values, 'tolist'):
+            return self.values.tolist()
+        else:
+            return self.values
+            
     @classmethod
     def from_results(cls, stat, basename, coords, dims, method='median'):
         """
@@ -34,7 +47,7 @@ class FittingSet(xr.DataArray):
         if len(dims) != len(coords):
             raise ValueError("shape mismatch between supplied `dims` and `coords`")
         
-        data = np.empty(map(len, coords), dtype=object)
+        data = np.empty(list(map(len, coords)), dtype=object)
         result_dir = os.path.join(fitting_home, stat)
     
         # loop over all the directories
