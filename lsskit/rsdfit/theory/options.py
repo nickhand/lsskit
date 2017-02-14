@@ -219,8 +219,8 @@ def use_fixed_alphas(params):
     """
     Set alphas to 1 and do not vary
     """
-    params.alpha_perp.update(vary=False, fiducial=1.0)
-    params.alpha_par.update(vary=False, fiducial=1.0)
+    params.alpha_perp.update(vary=False)
+    params.alpha_par.update(vary=False)
     params.options.append('fixed_alphas')
     
 def use_mu_corr(params):
