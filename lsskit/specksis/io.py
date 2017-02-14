@@ -295,7 +295,7 @@ def write_analysis_file(kind,
         Pshot = 0. if not subtract_shot_noise else get_Pshot(power)
         data = power.data.copy() # removes the mask
         data['power'] -= Pshot
-        coords = [power['k'], power['mu']]
+        coords = [power.coords['k'], power.coords['mu']]
     
     # case of multipoles
     elif kind == 'poles':

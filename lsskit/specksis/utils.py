@@ -106,7 +106,7 @@ def enum_files(result_dir, basename, dims, coords, ignore_missing=False):
             else:
                 yield idx, None
 
-def add_power_errors(power, power_x1=None, power_x2=None):
+def add_power_errors(power, power_x1=None, power_x2=None, name='error'):
     """
     Add the error on power spectrum measurement as the column `error`
     to the input ``power`` object.
@@ -140,9 +140,9 @@ def add_power_errors(power, power_x1=None, power_x2=None):
             err += (1./power['modes'])**0.5 * (abs(power_x1['power']*power_x2['power']))**0.5 
             
     # add the error variable
-    power['error'] = err
+    power[name] = err
     
-def add_power_pole_errors(pole, pkmu, ell):
+def add_power_pole_errors(pole, pkmu, ell, name='error'):
     """
     Add the error on power spectrum multipole measurement as the 
     column `error` to the input ``pole`` instance
@@ -177,7 +177,7 @@ def add_power_pole_errors(pole, pkmu, ell):
     variance = 2 * np.nansum(weights*((2*ell+1)*power*legendre(ell)(mu))**2, axis=-1) / N_1d
 
     # add the error variable
-    pole['error'] = variance**0.5
+    pole[name] = variance**0.5
     
     
 def load_data_from_file(filename, dims, shape):
