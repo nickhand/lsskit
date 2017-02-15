@@ -148,7 +148,7 @@ class TheoryParams(object):
     A base class to store the most general version of fitting parameters for the RSD model
     """    
     def __init__(self):
-        cosmo        = ['sigma8_z', 'f', 'alpha_perp', 'alpha_par']
+        cosmo        = ['sigma8_z', 'f', 'alpha_perp', 'alpha_par', 'alpha_drag']
         biases       = ['b1_cA', 'b1_cB', 'b1_sA', 'b1_sB']
         fractions    = ['fcB', 'fsB', 'fs', 'Nsat_mult', 'f_so']
         sigmas       = ['sigma_c', 'sigma_sA', 'sigma_sB', 'sigma_so']
@@ -161,6 +161,7 @@ class TheoryParams(object):
         self.f          = AttrDict(vary=False, fiducial=0.78, prior='uniform', lower=0.6, upper=1.0)
         self.alpha_perp = AttrDict(vary=False, fiducial=1.00, prior='uniform', lower=0.8, upper=1.2)
         self.alpha_par  = AttrDict(vary=False, fiducial=1.00, prior='uniform', lower=0.8, upper=1.2)
+        self.alpha_drag = AttrDict(vary=False, fiducial=1.00)
     
         # biases
         self.b1_cA      = AttrDict(vary=False, fiducial=1.90, prior='uniform', lower=1.2, upper=2.5)
