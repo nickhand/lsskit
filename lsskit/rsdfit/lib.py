@@ -113,7 +113,6 @@ def run_rsdfit(config, stat, kmax,
     
         # just print the output and return
         if print_output:
-            print(command.output_dir)
             if os.path.exists(command.param_file):
                os.remove(command.param_file)
             return
@@ -249,9 +248,9 @@ def make_temp_config(config, key, value):
     formatter.parse = lambda l: MyStringParse(formatter, l, key)
     
     d = dict(zip(key, value))
-    with tempfile.NamedTemporaryFile(delete=False) as ff:
+    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as ff:
         fname = ff.name
-        ff.write(formatter.format(config, **d))
+        ff.write(formatter.format(config, **d).encode())
         
     return fname
     
