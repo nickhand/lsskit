@@ -1,6 +1,72 @@
 from .. import AttrDict, os
 import copy
 
+
+def replace_vars(s, D):
+    """
+    Given a string s and a dictionary of variables D, replace all variable
+    names with the value from the dict D
+
+    variable names in s are denoted by '$(' at the beginning and ')' at
+    the end, or '$' at the beginning and a non-variable character at the
+    end.  Variables must be valid python variable names, that is they
+    consist of only alphanumeric characters (A-Z,a-z,0-9) and underscores,
+    and cannot start with a number.
+
+    example:
+    >> D = {'my_var1' : 'abc',
+            'my_var2' : '123' }
+    >> s = "I know my $(my_var1)s and $my_var2's"
+    >> print replace_vars(s,D)
+
+    I know my abcs and 123's
+    """
+    s_in = str(s)
+    s_out = ''
+
+    while True:
+        i = s_in.find('$')
+        if i==-1:
+            s_out += s_in
+            break
+
+        s_out += s_in[:i]
+        s_in = s_in[i+1:]
+
+        if len(s_in)==0:
+            raise ValueError("trailing $")
+
+        elif s_in[0] == '(':
+            i = s_in.find(')')
+            if i==-1:
+                raise ValueError("unmatched '('")
+            var = s_in[1:i]
+
+            s_in = s_in[i+1:]
+            try:
+                s_out += str(D[var])
+            except:
+                s_out += os.environ[var]
+
+        else:
+            var = ''
+            i = 0
+            while True:
+                if i>=len(s_in):
+                    break
+                s = s_in[i]
+                if (s >= 'a' and s <= 'z') \
+                        or (s >= 'A' and s <= 'Z') \
+                        or (s >= '0' and s <= '9') \
+                        or s=='_':
+                    var += s
+                    i += 1
+                else:
+                    break
+            s_in = s_in[i:]
+            s_out += str(D[var])
+    return s_out
+
 class DriverParams(object):
     """
     Class to hold and manipulate the driver parameters required for fitting
@@ -87,7 +153,6 @@ class DriverParams(object):
     @output.setter
     def output(self, val):
         if '$' in val:
-            from pyRSD.rsdfit.parameters.tools import replace_vars
             val = replace_vars(val, {})
         self._output = val
         
