@@ -154,6 +154,8 @@ def get_Pshot(power):
     attrs = power.attrs
     if 'shot_noise' in attrs and attrs['shot_noise'] > 0.:
         Pshot = attrs['shot_noise']
+    elif 'shotnoise' in attrs and attrs['shotnoise'] > 0.:
+        Pshot = attrs['shotnoise']
     elif 'volume' in attrs and 'N1' in attrs:
         Pshot = attrs['volume'] / attrs['N1']
     elif 'box_size' in attrs and 'N1' in attrs:
@@ -235,11 +237,27 @@ def trim_and_align_data(coords, arr, kmin=-np.inf, kmax=np.inf, k_axes=[0]):
         cnts = np.sum(cnts, axis=axes)
     first, last = trim_zeros_indices(cnts)
     
-    # do the cases of structured array or normal array
-    copy = arr.copy()    
-    if is_structured(arr):        
+    # do the cases of structured array or normal array  
+    if is_structured(arr):
+        dtype = []
+        for name in arr.dtype.names:
+            if arr.dtype[name] == np.integer:
+                dtype.append((name, 'f8'))
+            else:
+                dtype.append((name, arr.dtype[name]))
+                 
+        copy = np.empty_like(arr, dtype=dtype)
+        for name in arr.dtype.names:
+            copy[name] = arr[name].copy()
+        
+        for name in copy.dtype.names:
+            if copy.dtype[name] == np.integer:
+                copy[name] = copy[name].astype(float)
         copy[nan_idx] = tuple([np.nan]*len(copy.dtype))
     else:
+        copy = arr.copy()
+        if copy.dtype == np.integer:
+            copy = copy.astype(float)
         copy[nan_idx] = np.nan
     
     key = [slice(None)]*np.ndim(copy)
