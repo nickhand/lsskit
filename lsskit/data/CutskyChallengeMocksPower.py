@@ -85,8 +85,8 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             setattr(self, name, poles)
             return poles
             
-    def get_my_poles(self, space='redshift', scaled=False, average=False, tag="", 
-                        subtract_shot_noise=True):
+    def get_my_poles(self, space='redshift', scaled=False, average=False, 
+                    subtract_shot_noise=True, with_fkp=False, include_ells=[0,2,4,6]):
         """
         Return the cutsky galaxy multipoles in redshift space, measured
         for my 84 box realizations
@@ -95,30 +95,28 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             raise ValueError("`space` should be 'real' or 'redshift'")
         
         scaled_tag = 'scaled' if scaled else 'unscaled'
-        name = '_my_poles_%s_%s' %(space, scaled_tag)
-        if average: name += '_mean'
+        fkp_tag = 'no_fkp' if not with_fkp else 'fkp_1e4'
+        name = '_my_poles_%s_%s_%s' %(space, scaled_tag, fkp_tag)
     
-        if tag: 
-            tag = '_'+tag
-            name += tag
-        
+        if average: name += '_mean'        
         try:
             return getattr(self, name)         
         except AttributeError:
         
+            LMAX = 6
+            
             # form the filename and load the data
             d = os.path.join(self.root, 'nbodykit/poles')
             if space == 'redshift':
-                basename = 'poles_my_cutskyN{box:d}_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
+                basename = 'poles_my_cutskyN{box:d}_redshift_%s_%s_dk005_lmax6_interlaced.json' %(scaled_tag, fkp_tag)
             else:
-                basename = 'poles_my_cutskyN{box:d}_real_%s_no_fkp_dk005%s.dat' %(scaled_tag, tag)
+                raise ValueError("no real space results available!")
 
             # read in the data
-            loader = io.load_power
-            mapcols = {'power_0':'mono', 'power_2':'quad', 'power_4':'hexadec'}
-            usecols = ['k', 'mono', 'quad', 'hexadec', 'modes']
-            kwargs = {'usecols':usecols, 'mapcols':mapcols}
-            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], args=('1d',), kwargs=kwargs, ignore_missing=True)
+            loader = io.load_convfftpower
+            usecols = ['k'] + ['power_%d' %ell for ell in range(0, LMAX+1, 2)]  + ['modes']
+            kwargs = {'usecols':usecols}
+            poles = SpectraSet.from_files(loader, d, basename, [self.boxes], ['box'], kwargs=kwargs)
 
             # remove null
             valid_boxes = []
@@ -131,7 +129,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
             poles = self.reindex(poles, 'k', self.dk, weights='modes')
             
             # unstack the poles
-            ells = [('mono',0), ('quad', 2), ('hexadec', 4)]
+            ells = [('power_%d' %ell, ell) for ell in range(0, LMAX+1, 2) if ell in include_ells] 
             poles = tools.unstack_multipoles(poles, ells, 'power')
             
             # compute errors
@@ -150,7 +148,7 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
                 for key in poles.ndindex():
                     if key['ell'] == 0:
                         p = poles.loc[key].get()
-                        p['power'] = p['power'] - p.attrs['shot_noise']
+                        p['power'] = p['power'] - p.attrs['shotnoise']
             
             # average?
             if average:
