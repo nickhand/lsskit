@@ -24,6 +24,8 @@ def get_Pshot(power):
     attrs = power.attrs
     if 'shot_noise' in attrs and attrs['shot_noise'] > 0.:
         Pshot = attrs['shot_noise']
+    elif 'shotnoise' in attrs and attrs['shotnoise'] > 0.:
+        Pshot = attrs['shotnoise']
     elif 'volume' in attrs and 'N1' in attrs:
         Pshot = attrs['volume'] / attrs['N1']
     elif 'box_size' in attrs and 'N1' in attrs:
@@ -153,6 +155,39 @@ def load_correlation(filename, mode, usecols=[], mapcols={}, **kwargs):
 
     return toret
     
+def load_convfftpower(filename, usecols=[], mapcols={}, **kwargs):
+    """
+    Load a ConvolvedFFTPower result
+    """
+    from nbodykit.algorithms import ConvolvedFFTPower
+
+    columns = kwargs.pop('columns', None)
+    r = ConvolvedFFTPower.load(filename)
+    toret = r.poles
+    toret.attrs.update(r.attrs)
+    
+    if columns is not None:
+        for icol, col in enumerate(columns):
+            name = 'col_%d' %icol
+            if name in toret:
+                toret.rename_variable(name, col)
+    
+    # rename any variables
+    if len(mapcols):
+        for old_name in mapcols:
+            toret.rename_variable(old_name, mapcols[old_name])
+    
+    # only return certain variables
+    if len(usecols):
+        toret = toret[usecols]
+
+    # convert to real
+    for name in toret:
+        if np.iscomplexobj(toret[name]):
+            toret[name] = toret[name].real
+
+    return toret
+
 def load_power(filename, mode, usecols=[], mapcols={}, **kwargs):
     """
     Load a 1D or 2D power measurement and return a `DataSet`
