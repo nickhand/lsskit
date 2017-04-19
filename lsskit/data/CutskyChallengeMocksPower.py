@@ -278,8 +278,8 @@ class CutskyChallengeMocksPower(PowerSpectraLoader):
         Return the formatted window function for the cutsky challenge mocks
         """
         if scaled:
-            filename = 'window_cmass_ngc_50x_randoms_scaled_ellmax8.dat'
+            filename = 'window_cmass_ngc_50x_randoms_scaled_ellmax10.dat'
         else:
-            filename = 'window_cmass_ngc_50x_randoms_unscaled_ellmax8.dat'
+            filename = 'window_cmass_ngc_50x_randoms_unscaled_ellmax10.dat'
         filename = os.path.join(self.root, 'extra', 'window', filename)
         return np.loadtxt(filename)
