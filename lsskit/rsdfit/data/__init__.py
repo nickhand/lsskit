@@ -180,7 +180,7 @@ class DataParams(object):
     @usedata.setter
     def usedata(self, val):
         self._usedata = val
-        
+                
     @property
     def kmin(self):
         try:
@@ -190,11 +190,7 @@ class DataParams(object):
     
     @kmin.setter
     def kmin(self, val):
-        self._kmin = np.empty(self.size)
-        try:
-            self._kmin[:] = val
-        except:
-            raise ValueError("`kmin` should be a scalar or list of length %d" %self.size)
+        self._kmin = val
             
     @property
     def kmax(self):
@@ -205,15 +201,16 @@ class DataParams(object):
     
     @kmax.setter
     def kmax(self, val):
-        self._kmax = np.empty(self.size)
-        try:
-            self._kmax[:] = val
-        except:
-            raise ValueError("`kmax` should be a scalar or list of length %d" %self.size)
+        self._kmax = val
         
     @property
     def fitting_range(self):
-        return list(zip(self.kmin, self.kmax))
+        kmin = np.empty(self.size)
+        kmin[:] = self.kmin
+        kmax = np.empty(self.size)
+        kmax[:] = self.kmax
+        
+        return list(zip(kmin, kmax))
         
     @property
     def name(self):
