@@ -410,8 +410,9 @@ class RSDFitBatch(object):
             self.driver.algorithm.theory.update_model()
         
         # write the parameters to file
-        filename = os.path.join(self.driver.folder, params_filename)
-        self.driver.algorithm.to_file(filename)
+        if self.comm.rank == 0:
+            filename = os.path.join(self.driver.folder, params_filename)
+            self.driver.algorithm.to_file(filename)
             
         # okay, now run
         self.driver.run()
