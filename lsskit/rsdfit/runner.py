@@ -10,49 +10,49 @@ from . import RSDFIT_FITS
 
 def get_modified_time(o):
     return "last modified: %s" % time.ctime(os.path.getmtime(o))
-    
+
 def format_output(o):
     relpath = os.path.relpath(o, RSDFIT_FITS)
     return os.path.join("$RSDFIT_FITS", relpath)
 
 from argparse import ArgumentParser as BaseArgumentParser
-    
+
 class ArgumentParser(BaseArgumentParser):
     """
     An argument parser that pre-parses some arguments
     """
-    preparser = BaseArgumentParser(add_help=False)
-    preparser.exit = lambda a, b: None
+    preparser = BaseArgumentParser(add_help=True)
+    #preparser.exit = lambda a, b: None
     _preparser_args = {}
     actions = []
-    
+
     def __init__(self, *largs, **kwargs):
 
-        args = kwargs.pop('args', None)            
-        self.ns, unknown = self.preparser.parse_known_args(args) 
+        args = kwargs.pop('args', None)
+        self.ns, unknown = self.preparser.parse_known_args(args)
         for a in self.actions:
             if getattr(self.ns, a.dest) == a.default:
                 a(self.preparser, self.ns, a.default)
-                
+
         BaseArgumentParser.__init__(self, *largs, **kwargs)
         for name in self._preparser_args:
             self.add_argument(name, **self._preparser_args[name])
- 
+
     @classmethod
     def update_preparser(cls, name, **kws):
         action = cls.preparser.add_argument(name, **kws)
         cls.actions.append(action)
-        
+
         kws.pop('action', None)
         cls._preparser_args[name] = kws
-    
+
     def parse_args(self, args=None):
         return BaseArgumentParser.parse_args(self, args)
-        
-        
+
+
 class OutputAction(argparse.Action):
     """
-    Action similar to ``help`` to print out 
+    Action similar to ``help`` to print out
     the output directories and the last modified times
     """
     def __init__(self,
@@ -68,18 +68,18 @@ class OutputAction(argparse.Action):
             help=help)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        
+
         print("Output directories\n" + "-"*20)
         for i, command in enumerate(RSDFitRunner.commands):
-            
+
             command += " --output"
-            
+
             # print test number first
             toprint = "%d:\n" %i
-            
+
             # get the output directories
             output = RSDFitRunner._execute(command, output_only=True)
-            for o in output: 
+            for o in output:
                 if 'warning' not in o:
                     o_ = format_output(o)
                 else:
@@ -93,14 +93,14 @@ class OutputAction(argparse.Action):
                 else:
                     s += " "*8 + o[8:] + '\n'
                 toprint += s
-                
+
             print(toprint)
-            
+
         parser.exit()
 
 class InfoAction(argparse.Action):
     """
-    Action similar to ``help`` to print out 
+    Action similar to ``help`` to print out
     the various registered commands for the ``RSDFitRunner``
     class
     """
@@ -117,13 +117,13 @@ class InfoAction(argparse.Action):
             help=help)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        
+
         print("Registered commands\n" + "-"*20)
         for i, command in enumerate(RSDFitRunner.commands):
             c = tw.dedent(command).strip()
             c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
             print("%d:\n%s\n" %(i, c))
-            
+
         parser.exit()
 
 class RSDFitRunner(object):
@@ -131,18 +131,18 @@ class RSDFitRunner(object):
     Class to run ``rsdfit`` commands
     """
     commands = []
-    
+
     @classmethod
     def register(cls, command):
         """
         Register a new ``rsdfit`` command
         """
         cls.commands.append(command)
-        
+
     @classmethod
     def update_preparser(cls, name, **kws):
         ArgumentParser.update_preparser(name, **kws)
-    
+
     @classmethod
     def execute(cls):
         """
@@ -150,27 +150,27 @@ class RSDFitRunner(object):
         """
         # parse and get the command
         ns = cls.parse_args()
-        
+
         # append any NERSC-related options
         command = cls.commands[ns.testno]
         if ns.nodes is not None and ns.partition is not None and ns.time is not None:
             print("submitting job: requesting %d nodes for time %s on '%s' queue" %(ns.nodes, ns.time, ns.partition))
             command += " -N %d -p %s -t %s" %(ns.nodes, ns.partition, ns.time)
-        
+
         # execute
         cls._execute(command, clean=ns.clean)
-            
+
     @classmethod
     def _execute(cls, command, output_only=False, clean=False):
         """
         Internal function to execute the command
-        """        
+        """
         # extract the relevant output directories
         if output_only or clean:
-            
+
             if "--output" not in command:
                 command += " --output"
-                
+
             with tempfile.TemporaryFile(mode='r') as stderr:
                 try:
                     out = subprocess.check_output(command, shell=True, stderr=stderr).decode("utf-8")
@@ -178,10 +178,10 @@ class RSDFitRunner(object):
                     stderr.seek(0)
                     error = stderr.read()
                     if len(error):
-                        
+
                         if clean:
                             raise ValueError("cannot clean specified output directory due to exception")
-                        
+
                         if "`start_from`" in error:
                             return ["warning: `start_from` variable does not currently exist"]
                         elif "the input configuration file does not exist" in error:
@@ -191,7 +191,7 @@ class RSDFitRunner(object):
                             error = error.split("\n")
                             error = "\n".join([indent + l for l in error])
                             return ["warning: unknown exception raised:\n%s" %error]
-                            
+
             dirs = [o for o in out.split("\n") if o]
             if not clean:
                 return dirs
@@ -200,16 +200,16 @@ class RSDFitRunner(object):
                     if os.path.isdir(d):
                         p = os.path.join(d, '*')
                         os.system("rm -i -r %s" %p)
-                
-            
+
+
         # just run the command
         else:
-        
+
             # print the command
             c = tw.dedent(command).strip()
             c = tw.fill(c, initial_indent=' '*4, subsequent_indent=' '*4, width=80)
             print("executing:\n%s" %c)
-        
+
             # execute
             os.system(command)
 
@@ -221,34 +221,34 @@ class RSDFitRunner(object):
         if not hasattr(cls, 'parser'):
             desc = "run a ``rsdfit`` command from a set of registered commands"
             parser = ArgumentParser(description=desc)
-        
+
             h = 'the integer number of the test to run'
             parser.add_argument('testno', type=int, help=h)
-        
+
             h = 'print out the various commands'
             parser.add_argument('-i', '--info', action=InfoAction, help=h)
-        
+
             h = 'print out the output directories and last modified timees for each registerd command'
             parser.add_argument('-o', '--output', action=OutputAction, help=h)
-        
+
             h = 'remove all files from the specified output directory'
             parser.add_argument('--clean', action='store_true', help=h)
-        
+
             # nersc related options
             nersc = parser.add_argument_group("NERSC-related options")
             h = 'the number of nodes to request'
             nersc.add_argument('-N', '--nodes', type=int, help=h)
-        
+
             h = 'the NERSC partition to submit to'
             nersc.add_argument('-p', '--partition', type=str, help=h)
-        
+
             h = 'the requested amount of time'
             nersc.add_argument('-t', '--time', type=str, help=h)
-            
+
             cls.parser = parser
-        
+
         return cls.parser
-        
+
     @classmethod
     def parse_args(cls):
         """
@@ -256,10 +256,10 @@ class RSDFitRunner(object):
         """
         parser = cls.get_parser()
         ns = parser.parse_args()
-        
+
         # make sure the integer value is valid
         if not (0 <= ns.testno < len(cls.commands)):
             N = len(cls.commands)
             raise ValueError("input ``testno`` must be between [0, %d]" %N)
-            
+
         return ns
