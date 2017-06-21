@@ -100,7 +100,7 @@ def run_rsdfit(config, stat, kmax, mode=None,
     print_output : bool, optional
         just print the intended output directory and exit
     """
-    if mode is None:
+    if mode not in ['nlopt', 'mcmc']:
         raise ValueError("mode should be nlopt or mcmc")
 
     # make the call signature

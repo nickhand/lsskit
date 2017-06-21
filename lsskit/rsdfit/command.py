@@ -177,7 +177,7 @@ class RSDFitBatchCommand(BaseCommand):
     """
     Class to represent a ``rsdfit`` command in batch mode
     """
-    def __init__(self, config, stat, kmax, start_from=None,
+    def __init__(self, config, stat, kmax, start_from=None, mode=None,
                     theory_options=[], options=[], tag="", executable=None):
         """
         Parameters
@@ -198,9 +198,12 @@ class RSDFitBatchCommand(BaseCommand):
         executable : str
             the executable command to call
         """
+        if mode not in ['nlopt', 'mcmc']:
+            raise ValueError("mode should be nlopt or mcmc")
+
         # initial the base class
         kws = {'theory_options':theory_options, 'options':options, 'tag':tag,
-                'executable':executable, 'start_from':start_from}
+                'executable':executable, 'start_from':start_from, 'mode':mode}
         super(RSDFitBatchCommand, self).__init__(config, stat, kmax, **kws)
 
         # read the template file into a string and store
