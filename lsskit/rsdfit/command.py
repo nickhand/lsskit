@@ -10,13 +10,15 @@ class BaseCommand(object):
     """
     Base class to represent a ``rsdfit`` command
     """
-    def __init__(self, config, stat, kmax, start_from=None,
+    def __init__(self, config, stat, kmax, start_from=None, mode=None,
                     theory_options=[], options=[], tag="", executable=None, debug=False):
-    
+
         # make sure the config file exists
         if not os.path.isfile(config):
             raise ValueError("the input configuration file does not exist")
-    
+        if mode not in ['mcmc', 'nlopt']:
+            raise ValueError("mode should be either 'nlopt' or 'mcmc'")
+
         # just store the options
         self.config         = config
         self.stat           = stat
@@ -24,29 +26,30 @@ class BaseCommand(object):
         self.theory_options = theory_options
         self.input_options  = options
         self.tag            = tag
-        self.executable     = executable   
-        self.start_from     = start_from         
-                            
+        self.executable     = executable
+        self.start_from     = start_from
+        self.mode           = mode
+
         # initialize the components
         self.output_dir = None
         self.param_file = None
         self.args       = None
-        
+
         self.debug = debug
-    
+
     def copy(self):
         """
         Return a copy
         """
-        return copy.copy(self)    
-    
+        return copy.copy(self)
+
     @property
     def initialized(self):
         """
         Whether the commmand has been properly initialized
         """
         return self.param_file is not None
-    
+
     def __enter__(self):
         """
         Initialize the temporary file and write the parameters
@@ -54,23 +57,23 @@ class BaseCommand(object):
         # write out the parameters to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as ff:
             self.param_file = ff.name
-        
+
             # write out the parameters to the specified output
             self.driver.to_file(ff)
             self.data.to_file(ff)
             self.theory.to_file(ff)
-            
+
         # get the output name
         tags = [x.name for x in [self.data, self.theory, self.driver] if x.name]
         if self.tag: tags.append(self.tag)
         self.output_dir = os.path.join(self.driver.output, self.driver.solver_type + '_' + "_".join(tags))
-            
+
         # initialize the options
-        self.args = ['run', '-o', self.output_dir, '-p', self.param_file]
-        
+        self.args = [self.mode, '-o', self.output_dir, '-p', self.param_file]
+
         # add the input options specified
         self.args += list(self.input_options)
-        
+
         # add the model?
         if self.driver.model_file is not None:
             if all(x not in self.args for x in ['-m', '--model']):
@@ -81,14 +84,14 @@ class BaseCommand(object):
             xparams = os.path.join(RSDFIT, 'params', 'general', 'extra.params')
             if os.path.isfile(xparams):
                 self.args += ['-xp', xparams]
-                
+
         # debug
         if '--debug' not in self.args and self.debug:
             self.args += ['--debug']
 
         # return
         return self
-        
+
     def __exit__(self, *args):
         """
         Reset the command
@@ -103,24 +106,24 @@ class BaseCommand(object):
         The string representation of the command
         """
         return " ".join(self.__call__())
-    
+
     def __call__(self):
         """
         Return the `split` command as a list
         """
         if not self.initialized:
             raise ValueError("``rsdfit`` command not currently initialized")
-        
+
         return self.executable.split() + self.args
-        
+
 
 class RSDFitCommand(BaseCommand):
     """
     Class to represent a ``rsdfit`` command
     """
-    def __init__(self, config, stat, kmax, start_from=None,
+    def __init__(self, config, stat, kmax, start_from=None, mode=None,
                     theory_options=[], options=[], tag="", executable=None):
-        """    
+        """
         Parameters
         ----------
         config : str
@@ -139,12 +142,12 @@ class RSDFitCommand(BaseCommand):
         executable : str
             the executable command to call
 
-        """    
+        """
         # initial the base class
-        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 
-                'executable':executable, 'start_from':start_from}
+        kws = {'theory_options':theory_options, 'options':options, 'tag':tag,
+                'executable':executable, 'start_from':start_from, 'mode':mode}
         super(RSDFitCommand, self).__init__(config, stat, kmax, **kws)
-                    
+
         # initialize the driver, theory, and data parameter objects
         self.driver = DriverParams.from_file(self.config, ignore=['theory', 'model', 'data'])
         self.theory = BaseTheoryParams.from_file(self.config, ignore=['driver', 'data'])
@@ -152,31 +155,31 @@ class RSDFitCommand(BaseCommand):
             self.data = PkmuDataParams.from_file(self.config, ignore=['theory', 'model', 'driver'])
         else:
             self.data = PoleDataParams.from_file(self.config, ignore=['theory', 'model', 'driver'])
-            
+
         # apply any options to the theory model
         if self.theory_options is not None and len(self.theory_options):
             self.theory.apply_options(*self.theory_options)
-        
+
         # set the kmax
         self.data.kmax = self.kmax
-        
+
         # update the executable
-        if self.executable is None: 
+        if self.executable is None:
             self.executable = RSDFIT_BIN
-            
+
         # set the start from variable
         if self.start_from is not None:
             self.driver.init_from = 'result'
             self.driver.start_from = self.start_from
-    
-        
+
+
 class RSDFitBatchCommand(BaseCommand):
     """
     Class to represent a ``rsdfit`` command in batch mode
     """
     def __init__(self, config, stat, kmax, start_from=None,
                     theory_options=[], options=[], tag="", executable=None):
-        """    
+        """
         Parameters
         ----------
         config : str
@@ -194,28 +197,28 @@ class RSDFitBatchCommand(BaseCommand):
             the name of the tag to append to the output directory
         executable : str
             the executable command to call
-        """    
+        """
         # initial the base class
-        kws = {'theory_options':theory_options, 'options':options, 'tag':tag, 
+        kws = {'theory_options':theory_options, 'options':options, 'tag':tag,
                 'executable':executable, 'start_from':start_from}
         super(RSDFitBatchCommand, self).__init__(config, stat, kmax, **kws)
-        
+
         # read the template file into a string and store
         self.config = open(self.config, 'r').read()
-        
+
         # update the executable
-        if self.executable is None: 
+        if self.executable is None:
             self.executable = RSDFIT_BATCH
-            
+
     def update(self, kwargs, formatter=None):
         """
         Update the template config file.
-        
+
         This is designed to be used as:
-        
+
         >> with command.update(kwargs, formatter) as c:
         >>  .... (do stuff with ``c``) ....
-         
+
         Parameters
         ----------
         kwargs : dict
@@ -233,7 +236,7 @@ class RSDFitBatchCommand(BaseCommand):
                 config = self.config.format(**kwargs)
         except Exeception as e:
             raise RuntimeError("error trying to format batch template config file: %s" %str(e))
-                    
+
         # initialize the driver, theory, and data parameter objects
         self.driver = DriverParams.from_file(config, ignore=['theory', 'model', 'data'])
         self.theory = BaseTheoryParams.from_file(config, ignore=['driver', 'data'])
@@ -241,17 +244,17 @@ class RSDFitBatchCommand(BaseCommand):
             self.data = PkmuDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
         else:
             self.data = PoleDataParams.from_file(config, ignore=['theory', 'model', 'driver'])
-            
+
         # apply any options to the theory model
         if self.theory_options is not None and len(self.theory_options):
             self.theory.apply_options(*self.theory_options)
-        
+
         # set the kmax
         self.data.kmax = self.kmax
-        
+
         # set the start from variable
         if self.start_from is not None:
             self.driver.init_from = 'result'
             self.driver.start_from = self.start_from
-        
+
         return self
