@@ -39,11 +39,11 @@ def main():
             worker, when iterating over the tasks in parallel"""
     parser.add_argument('cpus_per_worker', type=int, help=h)
 
-    h = 'the name of the file holding the template configuration parameters'
-    parser.add_argument('config_template', type=str, help=h)
-
     h = 'the mode to run, either nlopt or mcmc'
     parser.add_argument('mode', type=str, choices=['nlopt', 'mcmc'], help=h)
+
+    h = 'the name of the file holding the template configuration parameters'
+    parser.add_argument('config_template', type=str, help=h)
 
     h = 'the executable command to call, i.e, ``rsdfit`` or ``mpirun -n 2 rsdfit``'
     parser.add_argument('--command', type=str, help=h)
